@@ -105,12 +105,49 @@ for 1.21.1 on Fabric before Phase 1.
    - *Open decision (owner):* whether Overgrown Abyss should deliberately honour mod-added or overridden Ancient City pieces. Not decided. Default until decided: do not promise support, and do not block it. If wanted later, the cheap route is Lithostitched-style pool injection or documenting how packs can extend our pools (see library notes).
 6. Existing spec risks stand (fluid override fragility, still reads as Deep Dark, footprint/cavern alignment).
 
-## 6. Next steps
+## 6. Decisions made while building Phases 3 and 4
 
-1. Owner decisions: confirm Architectury API vs Lithostitched, `ravine-core` layout, cavern floor Y, wall style count, whether to honour mod-added/overridden Ancient City pieces (risk 5).
-2. Phase 0: scaffold the three-module build, `docs/PINS.md`, test world.
-3. Extract vanilla Ancient City JSON with the data generator; read the real jigsaw settings and terrain adaptation
-   (resolves the spec's `[recall]` items).
-4. Phase 1 spike. Implemented in code (cells, carve, density wrap, fluid override); the visual gate is still open.
-   `ravine-core` lives for now as loader-free packages inside `common` (`ravine` for shape logic, `compat` and
-   `mixin` for the hooks), to be extracted into a shared source module when Rift starts.
+- **Floor follows the world bottom.** `floor` and `top` in `ravine/carve.json` are vanilla `VerticalAnchor`s. The floor is
+  `above_bottom: 24`, so it is y=-40 in vanilla (min_y -64) and y=-104 with Larion 4.3.0 (min_y -128), and follows any
+  other mod that changes the world height. Verified on both.
+- **Cavern is radius 160, height 80** (was 128 / 48), so the city's 116-block reach plus terrain adaptation stays
+  inside the dome with about 55 blocks of headroom at its edge. Tunable in the same JSON.
+- **City placement** is `overgrown_abyss:ravine_centre`, one start chunk per ravine cell. It extends vanilla's
+  random-spread placement because `/locate` special-cases that class. Cells without a ravine, and levels that were not
+  carved, produce no start.
+- **Pool wiring uses `pool_aliases`.** The vanilla templates hard-code `minecraft:ancient_city/*` pool names in their
+  jigsaw blocks, so copies of the pools only take effect through aliases on the structure. Template locations still
+  point at the vanilla NBT files.
+- **A custom swap processor replaces the spec's vanilla rule processors** for the reskin. Vanilla's rule processor
+  resets the whole block state, which would lose stair facing, slab type, wall sides and log axis (about 150 distinct
+  states in the templates). `swap_blocks` keeps shared properties; `processor_list` nests the reskin table so it is
+  written once. Chest loot still uses vanilla `append_loot` rules.
+- **Risk 5 update:** template lookup still follows pack priority, so a pack replacing vanilla ancient-city NBT changes
+  our city too. Only pool and processor JSON are isolated. Not checked in-game.
+
+## 7. Status and open issues (2026-10-03)
+
+Run on a fixed seed (20261003) in dev dedicated servers, NeoForge 21.1.252 and Fabric 0.19.5: both boot without errors,
+`/locate structure overgrown_abyss:city` finds the city at the ravine centre chunk, and force-loading the area generates 77
+pieces with no errors. Identical results on both loaders. With Larion 4.3.0 (NeoForge only) the floor resolves to y=-104
+and the city stands on it. The generated chunks contain no deepslate bricks or tiles, sculk or soul blocks, and all 24
+chests carry `overgrown_abyss:chests/city`.
+
+Not verified:
+- **Nothing was looked at.** No screenshots from the rim, mid-air or floor; the Phase 1 visual gate is still open.
+- **Fabric with Larion:** not run. Only the NeoForge Larion jar was available.
+- **"Every door opens to a path":** not checked.
+- **Lava in the cavern is not solved.** In the vanilla-terrain run, 299 lava blocks sit at or above the floor (y>=-40) inside
+  the cavern radius: 73 at floor level, the rest in columns running down the walls from y 24 to 72. With Larion there are
+  425 blocks between y -75 and 49, none at floor level. This is lava from surface features or springs flowing in, which
+  the aquifer override does not cover (it only handles noise-fill fluids). Needs a fix before the Phase 1 gate can pass.
+- **Terrain outside the footprint matching the same seed without the mod:** not compared.
+- Loot tables are vanilla plus one jungle pool; the vanilla part still has Deep Dark items (echo shards, disc fragments).
+- Sculk patches are removed outright; nothing replaces them yet.
+
+## 8. Next steps
+
+1. Review the rim, mid-air and floor views; tune carve and city numbers.
+2. Stop lava flowing into the cavern.
+3. Wall styles (Phase 2) and `BiomeInjector`.
+4. Extract `ravine-core` into a shared source module when Rift starts.

@@ -37,5 +37,12 @@ Re-check these on every Minecraft bump:
 | `common/.../mixin/RandomStateMixin.java` | `RandomState` class |
 | `common/.../compat/RavineDensityHook.java` | `NoiseRouter` and `NoiseGeneratorSettings` record components |
 | `common/.../compat/FootprintAquifer.java` | `Aquifer` interface |
+| `common/.../compat/RavineCentrePlacement.java` | `RandomSpreadStructurePlacement` (`placementCodec`, `getPotentialStructureChunk`, `spacing`) and `StructurePlacement.ExclusionZone` (deprecated). Extends the random-spread class only because `/locate` special-cases it |
+| `common/.../compat/RavineCityStructure.java` | `Structure.findGenerationPoint`, `JigsawPlacement.addPieces` signature (11 parameters in 1.21.1), `PoolAliasBinding`, `JigsawStructure` default constants. `JigsawStructure` is final, so this wraps `addPieces` instead of extending it |
+| `common/.../compat/SwapBlocksProcessor.java`, `NestedProcessorListProcessor.java` | `StructureProcessor.processBlock` signature, `StructureBlockInfo` record, `StructureProcessorType.LIST_CODEC` |
 | `data/overgrown_abyss/worldgen/density_function/**` | Density-function JSON format; `InclusiveRange` field names (`min_inclusive`, `max_inclusive`) |
 | `data/overgrown_abyss/tags/worldgen/noise_settings/**` | Tag folder layout |
+| `data/overgrown_abyss/worldgen/structure/**`, `structure_set/**` | Jigsaw settings fields, `pool_aliases` format, placement codec fields |
+| `data/overgrown_abyss/worldgen/template_pool/city/**` | Pool element format; template locations are vanilla `minecraft:ancient_city/**` IDs |
+| `data/overgrown_abyss/worldgen/processor_list/city/**` | `rule` processor, `append_loot` modifier, `blockstate_match` predicate, `protected_blocks` |
+| `data/overgrown_abyss/loot_table/**` | Folder name (`loot_table`, singular, since 1.21) |
