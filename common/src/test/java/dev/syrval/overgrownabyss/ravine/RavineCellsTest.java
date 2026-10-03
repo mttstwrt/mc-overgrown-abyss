@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 import net.minecraft.util.InclusiveRange;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.VerticalAnchor;
 import org.junit.jupiter.api.Test;
 
@@ -68,5 +69,27 @@ class RavineCellsTest {
     void containingMapsNegativeCoordinatesToTheRightCell() {
         assertEquals(RavineCells.at(5L, SETTINGS, -1, -1), RavineCells.containing(5L, SETTINGS, -0.5, -2047));
         assertEquals(RavineCells.at(5L, SETTINGS, -2, 0), RavineCells.containing(5L, SETTINGS, -2049, 0));
+    }
+
+    @Test
+    void centreChunkContainsTheRavineCentreForEveryChunkOfTheCell() {
+        RavineSettings always = new RavineSettings(
+                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+        RavineCell cell = RavineCells.at(5L, always, -1, 2).orElseThrow();
+        ChunkPos expected = new ChunkPos(Math.floorDiv((int) Math.floor(cell.centreX()), 16), Math.floorDiv((int) Math.floor(cell.centreZ()), 16));
+        // Cell (-1, 2) spans chunks x -128..-1 and z 256..383.
+        for (int chunkX : new int[] {-128, -64, -1}) {
+            for (int chunkZ : new int[] {256, 300, 383}) {
+                assertEquals(expected, RavineCells.centreChunk(5L, always, chunkX, chunkZ));
+            }
+        }
+    }
+
+    @Test
+    void centreChunkFallsBackToTheCellMiddleWhenThereIsNoRavine() {
+        RavineSettings never = new RavineSettings(
+                42L, 2048, 0F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+        assertEquals(new ChunkPos(64, 64), RavineCells.centreChunk(5L, never, 3, 100));
+        assertEquals(new ChunkPos(-64, 64), RavineCells.centreChunk(5L, never, -1, 0));
     }
 }

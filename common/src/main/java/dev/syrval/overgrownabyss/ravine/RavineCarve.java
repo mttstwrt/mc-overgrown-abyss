@@ -33,6 +33,14 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         this.wallNoise = new SimplexNoise(new XoroshiroRandomSource(seed, settings.salt()));
     }
 
+    /** The ravine settings behind a datapack reference; fails loudly if the reference is not a ravine carve. */
+    public static RavineSettings settingsOf(DensityFunction function) {
+        if (function instanceof RavineCarve carve) {
+            return carve.settings;
+        }
+        throw new IllegalStateException("Expected an overgrown_abyss:ravine_carve density function but got " + function);
+    }
+
     public RavineCarve bind(long seed, RavineBounds bounds) {
         return new RavineCarve(settings, seed, bounds);
     }

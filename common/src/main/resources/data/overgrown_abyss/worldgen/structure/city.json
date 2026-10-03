@@ -1,0 +1,78 @@
+{
+  "type": "overgrown_abyss:city",
+  "biomes": "#minecraft:is_overworld",
+  "ravine": "overgrown_abyss:ravine/carve",
+  "start_pool": "overgrown_abyss:city/city_center",
+  "start_jigsaw_name": "minecraft:city_anchor",
+  "size": 7,
+  "max_distance_from_center": 116,
+  "start_height_above_floor": 23,
+  "step": "underground_decoration",
+  "terrain_adaptation": "beard_box",
+  "spawn_overrides": {
+    "ambient": {
+      "bounding_box": "full",
+      "spawns": []
+    },
+    "axolotls": {
+      "bounding_box": "full",
+      "spawns": []
+    },
+    "creature": {
+      "bounding_box": "full",
+      "spawns": []
+    },
+    "misc": {
+      "bounding_box": "full",
+      "spawns": []
+    },
+    "monster": {
+      "bounding_box": "full",
+      "spawns": []
+    },
+    "underground_water_creature": {
+      "bounding_box": "full",
+      "spawns": []
+    },
+    "water_ambient": {
+      "bounding_box": "full",
+      "spawns": []
+    },
+    "water_creature": {
+      "bounding_box": "full",
+      "spawns": []
+    }
+  },
+  "pool_aliases": [
+    {
+      "type": "minecraft:direct",
+      "alias": "minecraft:ancient_city/city_center/walls",
+      "target": "overgrown_abyss:city/city_center/walls"
+    },
+    {
+      "type": "minecraft:direct",
+      "alias": "minecraft:ancient_city/city/entrance",
+      "target": "overgrown_abyss:city/city/entrance"
+    },
+    {
+      "type": "minecraft:direct",
+      "alias": "minecraft:ancient_city/walls",
+      "target": "overgrown_abyss:city/walls"
+    },
+    {
+      "type": "minecraft:direct",
+      "alias": "minecraft:ancient_city/walls/no_corners",
+      "target": "overgrown_abyss:city/walls/no_corners"
+    },
+    {
+      "type": "minecraft:direct",
+      "alias": "minecraft:ancient_city/structures",
+      "target": "overgrown_abyss:city/structures"
+    },
+    {
+      "type": "minecraft:direct",
+      "alias": "minecraft:ancient_city/sculk",
+      "target": "overgrown_abyss:city/sculk"
+    }
+  ]
+}

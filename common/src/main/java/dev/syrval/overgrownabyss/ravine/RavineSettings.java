@@ -61,6 +61,10 @@ public record RavineSettings(
     }
 
     private static DataResult<RavineSettings> validate(RavineSettings s) {
+        // Structure placement works in chunks, so a cell must be a whole number of them.
+        if (s.cellSize % 16 != 0) {
+            return DataResult.error(() -> "cell_size " + s.cellSize + " must be a multiple of 16");
+        }
         // Each ravine must fit inside its own cell so a sample only ever has to look at one cell.
         if (s.cellSize < 2 * s.maxReach()) {
             return DataResult.error(() -> "cell_size " + s.cellSize + " is too small for a ravine reaching " + s.maxReach());

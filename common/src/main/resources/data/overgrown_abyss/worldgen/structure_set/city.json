@@ -1,0 +1,13 @@
+{
+  "placement": {
+    "type": "overgrown_abyss:ravine_centre",
+    "salt": 1094861637,
+    "ravine": "overgrown_abyss:ravine/carve"
+  },
+  "structures": [
+    {
+      "structure": "overgrown_abyss:city",
+      "weight": 1
+    }
+  ]
+}

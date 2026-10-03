@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import java.util.Optional;
+import net.minecraft.world.level.ChunkPos;
 
 /**
  * Hashed jittered grid: each {@code cell_size} square holds at most one ravine, derived only from the world seed,
@@ -30,6 +31,21 @@ public final class RavineCells {
         double length = lerp(unit(h, 4), settings.length().minInclusive(), settings.length().maxInclusive());
         double width = lerp(unit(h, 5), settings.width().minInclusive(), settings.width().maxInclusive());
         return Optional.of(new RavineCell(centreX, centreZ, Math.cos(angle), Math.sin(angle), length / 2, width / 2));
+    }
+
+    /**
+     * The one chunk of the cell containing chunk {@code (chunkX, chunkZ)} that may start the city: the chunk holding
+     * the ravine centre, or the cell's middle chunk when the cell has no ravine (the structure then declines to
+     * generate there). Settings guarantee cells span whole chunks.
+     */
+    public static ChunkPos centreChunk(long seed, RavineSettings settings, int chunkX, int chunkZ) {
+        int size = settings.cellSize();
+        long cellX = Math.floorDiv(chunkX * 16L, size);
+        long cellZ = Math.floorDiv(chunkZ * 16L, size);
+        Optional<RavineCell> cell = at(seed, settings, cellX, cellZ);
+        double blockX = cell.map(RavineCell::centreX).orElse(cellX * (double) size + size / 2.0);
+        double blockZ = cell.map(RavineCell::centreZ).orElse(cellZ * (double) size + size / 2.0);
+        return new ChunkPos(Math.floorDiv((int) Math.floor(blockX), 16), Math.floorDiv((int) Math.floor(blockZ), 16));
     }
 
     /** The {@code index}-th uniform value in {@code [0, 1)} drawn from a cell hash. */

@@ -74,6 +74,13 @@ class RavineShapeTest {
         assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
     }
 
+    @Test
+    void codecRejectsACellThatIsNotWholeChunks() {
+        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, SETTINGS).getOrThrow().getAsJsonObject();
+        json.addProperty("cell_size", 2056);
+        assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
+    }
+
     private static RavineSettings withTerrace(int step, float strength) {
         return new RavineSettings(SETTINGS.salt(), SETTINGS.cellSize(), SETTINGS.chance(), SETTINGS.length(),
                 SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), SETTINGS.bottomWidthFactor(),
