@@ -1,0 +1,61 @@
+plugins {
+    id 'dev.architectury.loom' version '1.13-SNAPSHOT' apply false
+    id 'architectury-plugin' version '3.4-SNAPSHOT'
+    id 'com.gradleup.shadow' version '8.3.6' apply false
+}
+
+architectury {
+    minecraft = project.minecraft_version
+}
+
+allprojects {
+    group = rootProject.maven_group
+    version = rootProject.mod_version
+}
+
+subprojects {
+    apply plugin: 'dev.architectury.loom'
+    apply plugin: 'architectury-plugin'
+
+    base {
+        archivesName = "$rootProject.archives_name-$project.name"
+    }
+
+    loom {
+        silentMojangMappingsLicense()
+    }
+
+    dependencies {
+        minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
+        mappings loom.officialMojangMappings()
+    }
+
+    java {
+        withSourcesJar()
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        it.options.release = 21
+    }
+}
+
+// Portability rule (AGENTS.md section 3): `common` must not touch loader APIs.
+tasks.register('checkCommonPurity') {
+    group = 'verification'
+    description = 'Fails if common sources import Fabric or NeoForge APIs.'
+    def sources = fileTree('common/src') { include '**/*.java' }
+    inputs.files(sources)
+    doLast {
+        def banned = ~/(?m)^\s*import\s+(static\s+)?net\.(fabricmc|neoforged)\./
+        def offenders = sources.files.findAll { it.text =~ banned }
+        if (!offenders.isEmpty()) {
+            throw new GradleException("Loader imports in common:\n" + offenders.collect { "  " + it }.join('\n'))
+        }
+    }
+}
+
+subprojects {
+    tasks.matching { it.name == 'check' }.configureEach { dependsOn rootProject.tasks.named('checkCommonPurity') }
+}

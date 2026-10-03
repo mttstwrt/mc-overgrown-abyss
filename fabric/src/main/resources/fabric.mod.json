@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "overgrown_abyss",
+  "version": "${version}",
+  "name": "Overgrown Abyss",
+  "description": "A giant ravine leading down to a ruined jungle city",
+  "authors": [
+    "syrval"
+  ],
+  "license": "All Rights Reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.syrval.overgrownabyss.fabric.OvergrownAbyssFabric"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "architectury": ">=13.0.0",
+    "fabric-api": "*"
+  }
+}
