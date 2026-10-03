@@ -31,3 +31,6 @@ type = "required"
 versionRange = "[13.0.0,)"
 ordering = "AFTER"
 side = "BOTH"
+
+[[mixins]]
+config = "overgrown_abyss.mixins.json"

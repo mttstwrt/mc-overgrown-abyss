@@ -1,0 +1,24 @@
+{
+  "type": "overgrown_abyss:ravine_carve",
+  "salt": 1094861636,
+  "cell_size": 2048,
+  "chance": 0.5,
+  "length": {
+    "min_inclusive": 240,
+    "max_inclusive": 400
+  },
+  "width": {
+    "min_inclusive": 70,
+    "max_inclusive": 110
+  },
+  "floor_y": -40,
+  "top_y": 80,
+  "bottom_width_factor": 0.35,
+  "cavern_radius": 128,
+  "cavern_height": 48,
+  "terrace_step": 12,
+  "terrace_strength": 0.85,
+  "wall_noise_scale": 0.03,
+  "wall_noise_amplitude": 10,
+  "edge_falloff": 6
+}

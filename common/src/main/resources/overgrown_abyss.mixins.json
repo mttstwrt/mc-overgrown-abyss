@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "dev.syrval.overgrownabyss.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "mixins": [
+    "ChunkMapMixin",
+    "NoiseChunkMixin",
+    "RandomStateMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
