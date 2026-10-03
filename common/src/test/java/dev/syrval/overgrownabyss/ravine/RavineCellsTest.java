@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.InclusiveRange;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.VerticalAnchor;
@@ -15,9 +18,12 @@ class RavineCellsTest {
         MinecraftBootstrap.init();
     }
 
+    static final RavineEnvironment ENVIRONMENT = new RavineEnvironment(
+            TagKey.create(Registries.BIOME, ResourceLocation.parse("overgrown_abyss:ravine_forbidden")),
+            Optional.empty());
     static final RavineSettings SETTINGS = new RavineSettings(
             42L, 2048, 0.5F, new InclusiveRange<>(240, 400), new InclusiveRange<>(70, 110),
-            VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+            VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
 
     @Test
     void sameInputsGiveSameCell() {
@@ -27,9 +33,9 @@ class RavineCellsTest {
     @Test
     void seedAndSaltChangeTheLayout() {
         RavineSettings otherSalt = new RavineSettings(
-                43L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+                43L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
         RavineSettings always = new RavineSettings(
-                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
         assertNotEquals(RavineCells.at(1L, always, 0, 0), RavineCells.at(2L, always, 0, 0));
         assertNotEquals(RavineCells.at(1L, always, 0, 0), RavineCells.at(1L, otherSalt, 0, 0));
     }
@@ -74,7 +80,7 @@ class RavineCellsTest {
     @Test
     void centreChunkContainsTheRavineCentreForEveryChunkOfTheCell() {
         RavineSettings always = new RavineSettings(
-                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
         RavineCell cell = RavineCells.at(5L, always, -1, 2).orElseThrow();
         ChunkPos expected = new ChunkPos(Math.floorDiv((int) Math.floor(cell.centreX()), 16), Math.floorDiv((int) Math.floor(cell.centreZ()), 16));
         // Cell (-1, 2) spans chunks x -128..-1 and z 256..383.
@@ -88,7 +94,7 @@ class RavineCellsTest {
     @Test
     void centreChunkFallsBackToTheCellMiddleWhenThereIsNoRavine() {
         RavineSettings never = new RavineSettings(
-                42L, 2048, 0F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+                42L, 2048, 0F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
         assertEquals(new ChunkPos(64, 64), RavineCells.centreChunk(5L, never, 3, 100));
         assertEquals(new ChunkPos(-64, 64), RavineCells.centreChunk(5L, never, -1, 0));
     }

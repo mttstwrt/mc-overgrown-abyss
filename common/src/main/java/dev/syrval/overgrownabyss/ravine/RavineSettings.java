@@ -29,7 +29,8 @@ public record RavineSettings(
         float terraceStrength,
         float wallNoiseScale,
         float wallNoiseAmplitude,
-        float edgeFalloff) {
+        float edgeFalloff,
+        RavineEnvironment environment) {
 
     public static final MapCodec<RavineSettings> MAP_CODEC = RecordCodecBuilder.<RavineSettings>mapCodec(i -> i.group(
             Codec.LONG.fieldOf("salt").forGetter(RavineSettings::salt),
@@ -46,7 +47,8 @@ public record RavineSettings(
             Codec.floatRange(0, 1).fieldOf("terrace_strength").forGetter(RavineSettings::terraceStrength),
             Codec.floatRange(0, 1).fieldOf("wall_noise_scale").forGetter(RavineSettings::wallNoiseScale),
             Codec.floatRange(0, 256).fieldOf("wall_noise_amplitude").forGetter(RavineSettings::wallNoiseAmplitude),
-            Codec.floatRange(0.5F, 64).fieldOf("edge_falloff").forGetter(RavineSettings::edgeFalloff)
+            Codec.floatRange(0.5F, 64).fieldOf("edge_falloff").forGetter(RavineSettings::edgeFalloff),
+            RavineEnvironment.CODEC.fieldOf("environment").forGetter(RavineSettings::environment)
     ).apply(i, RavineSettings::new)).validate(RavineSettings::validate);
 
     /** Furthest horizontal distance from a ravine centre that the carve can reach. */

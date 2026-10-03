@@ -7,8 +7,9 @@ import net.minecraft.world.level.levelgen.Aquifer;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 /**
- * Leaves every open block inside a ravine footprint as air. Without this, the carved volume below the global lava
- * level fills with lava, and aquifers place water and lava pockets in the open shaft.
+ * Leaves every open block inside the carved ravine volume as air. Without this, the volume fills with aquifer water
+ * and lava pockets, or with the global lava level when the floor is deep. Natural terrain next to the volume keeps
+ * its vanilla fluids, so lava and water meet the ravine walls as they would any other cave.
  */
 public record FootprintAquifer(Aquifer delegate, RavineFootprint footprint) implements Aquifer {
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
@@ -20,7 +21,7 @@ public record FootprintAquifer(Aquifer delegate, RavineFootprint footprint) impl
     @Override
     public BlockState computeSubstance(DensityFunction.FunctionContext context, double density) {
         // Vanilla treats density > 0 as solid and leaves it to the default block; only open blocks are ours.
-        if (density <= 0 && footprint.contains(context.blockX(), context.blockZ())) {
+        if (density <= 0 && footprint.isOpen(context)) {
             return AIR;
         }
         return delegate.computeSubstance(context, density);

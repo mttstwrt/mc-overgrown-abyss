@@ -110,8 +110,9 @@ for 1.21.1 on Fabric before Phase 1.
 - **Floor follows the world bottom.** `floor` and `top` in `ravine/carve.json` are vanilla `VerticalAnchor`s. The floor is
   `above_bottom: 24`, so it is y=-40 in vanilla (min_y -64) and y=-104 with Larion 4.3.0 (min_y -128), and follows any
   other mod that changes the world height. Verified on both.
-- **Cavern is radius 160, height 80** (was 128 / 48), so the city's 116-block reach plus terrain adaptation stays
-  inside the dome with about 55 blocks of headroom at its edge. Tunable in the same JSON.
+- **Cavern is radius 136, height 56.** First pass 128/48 felt cramped, second pass 160/80 too big (owner review). The
+  city spans about 220 blocks, so 136 leaves a margin and the dome is 33 high at the city's edge, taller than every piece
+  except the 31-tall centre. Tunable in the same JSON.
 - **City placement** is `overgrown_abyss:ravine_centre`, one start chunk per ravine cell. It extends vanilla's
   random-spread placement because `/locate` special-cases that class. Cells without a ravine, and levels that were not
   carved, produce no start.
@@ -125,29 +126,57 @@ for 1.21.1 on Fabric before Phase 1.
 - **Risk 5 update:** template lookup still follows pack priority, so a pack replacing vanilla ancient-city NBT changes
   our city too. Only pool and processor JSON are isolated. Not checked in-game.
 
+- **Ravines open on land only (owner review).** Each cell is checked once: five columns along the centre line (both
+  ends, midpoints and centre) are sampled at sea level through the level's biome source, and the ravine is dropped if any
+  is in `#overgrown_abyss:ravine_forbidden` (ocean, river, beach by default; editable in the datapack). Biome-based so it
+  follows whatever biome source the terrain mod brings. Costs ravine count: on seed 20261003 only 3 of 7 cells near spawn
+  survive in vanilla terrain and 1 of 7 under Larion, whose spawn area is mostly ocean. Raise `chance` to compensate.
+- **The cavern is a lush caves biome (owner review).** `environment.cavern_biome` in `ravine/carve.json`. The biome
+  resolver is wrapped where chunks fill their biomes (`NoiseBasedChunkGeneratorMixin`), so the level's biome source is
+  untouched and only the dome plus a 4-block margin (floor, walls, roof surfaces) changes. Lush caves features then place
+  themselves, because decoration runs for any biome in the source's possible set and vanilla includes lush caves.
+  Omit `cavern_biome` to keep the natural biome. If a terrain mod's biome source lacks lush caves, its features are
+  skipped but the biome still applies.
+- **Natural lava and water may meet the cavern (owner review).** The aquifer override now applies only inside the carved
+  volume, found by evaluating the carve, instead of every open block in the ravine's columns. The old behaviour also
+  drained oceans and emptied lava lakes beside and below the ravine. Surface water now pours down as waterfalls.
+  Nothing smooths these meetings beyond the carve's 6-block edge falloff.
+
 ## 7. Status and open issues (2026-10-03)
 
-Run on a fixed seed (20261003) in dev dedicated servers, NeoForge 21.1.252 and Fabric 0.19.5: both boot without errors,
-`/locate structure overgrown_abyss:city` finds the city at the ravine centre chunk, and force-loading the area generates 77
-pieces with no errors. Identical results on both loaders. With Larion 4.3.0 (NeoForge only) the floor resolves to y=-104
-and the city stands on it. The generated chunks contain no deepslate bricks or tiles, sculk or soul blocks, and all 24
-chests carry `overgrown_abyss:chests/city`.
+Owner reviewed the first build in game: the chasm and the city look good. This round (land-only, smaller cavern, lush
+caves, natural fluids) was checked in dev dedicated servers on a fixed seed (20261003) after a full `./gradlew build`.
+
+| Check | NeoForge 21.1.252 | Fabric 0.19.5 | NeoForge + Larion 4.3.0 |
+|---|---|---|---|
+| Boots, no errors | yes | yes | yes |
+| Ravines kept near spawn (of 7 hashed) | 3 | 3 | 1 |
+| `/locate structure overgrown_abyss:city` | finds it | finds it | finds it |
+| City generates, pieces | 77 | 77 | 78 |
+| Floor y | -40 | -40 | -104 |
+| Chests with our loot table | 28 | 28 | 26 + 1 ice box |
+| Deepslate bricks, sculk | none | none | none |
+| Lush caves biome present, vegetation present | yes | yes | yes |
+
+Biome probes on the vanilla NeoForge ravine: lush caves from the floor to the roof and 130 blocks out, not 40 blocks above
+the dome, not 8 blocks under the floor. The six cells rejected under Larion are all ocean (probed at y 63 and 100).
+In the Larion cavern, water and lava are 2.3% of the cavity: floor pools plus thin waterfalls from the surface, not a
+flooded cavern.
 
 Not verified:
-- **Nothing was looked at.** No screenshots from the rim, mid-air or floor; the Phase 1 visual gate is still open.
-- **Fabric with Larion:** not run. Only the NeoForge Larion jar was available.
+- **Nothing was looked at this round.** No screenshots; the Phase 1 visual gate is still open.
+- **Fabric with Larion:** not run (only the NeoForge Larion jar was available).
 - **"Every door opens to a path":** not checked.
-- **Lava in the cavern is not solved.** In the vanilla-terrain run, 299 lava blocks sit at or above the floor (y>=-40) inside
-  the cavern radius: 73 at floor level, the rest in columns running down the walls from y 24 to 72. With Larion there are
-  425 blocks between y -75 and 49, none at floor level. This is lava from surface features or springs flowing in, which
-  the aquifer override does not cover (it only handles noise-fill fluids). Needs a fix before the Phase 1 gate can pass.
+- **A user's ice ocean seed:** not reproduced. Ocean rejection was checked on generated seeds, not on that world.
 - **Terrain outside the footprint matching the same seed without the mod:** not compared.
+- **River-centred ravines:** two of the vanilla rejections were centred on rivers. If you would rather keep those, remove
+  `#minecraft:is_river` from the tag.
 - Loot tables are vanilla plus one jungle pool; the vanilla part still has Deep Dark items (echo shards, disc fragments).
 - Sculk patches are removed outright; nothing replaces them yet.
 
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
-2. Stop lava flowing into the cavern.
-3. Wall styles (Phase 2) and `BiomeInjector`.
+2. Wall styles (Phase 2) and `BiomeInjector`.
+3. Decide whether lush caves features on the city floor suit the look, or whether the city should keep its own ground.
 4. Extract `ravine-core` into a shared source module when Rift starts.

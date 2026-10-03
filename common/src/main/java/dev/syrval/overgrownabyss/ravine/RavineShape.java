@@ -24,6 +24,19 @@ public final class RavineShape {
         return Math.min(shaft, cavern);
     }
 
+    /**
+     * Whether a point is inside the cavern dome grown outwards by {@code margin} blocks. The margin reaches the floor,
+     * walls and roof surfaces, so features placed on them are placed in the cavern's biome too.
+     */
+    public static boolean cavernContains(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z, double margin) {
+        double above = y - bounds.floorY();
+        if (above < -margin || above >= settings.cavernHeight() + margin) {
+            return false;
+        }
+        double t = Math.clamp(above / settings.cavernHeight(), 0, 1);
+        return cell.distanceToCentre(x, z) <= settings.cavernRadius() * Math.sqrt(1 - t * t) + margin;
+    }
+
     static double halfWidthAt(RavineSettings settings, RavineBounds bounds, RavineCell cell, double y) {
         double t = Math.clamp((terraced(settings, bounds, y) - bounds.floorY()) / (bounds.topY() - bounds.floorY()), 0, 1);
         double bottom = settings.bottomWidthFactor();

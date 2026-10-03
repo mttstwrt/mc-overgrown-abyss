@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import com.mojang.serialization.MapCodec;
+import java.util.Optional;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
@@ -20,11 +21,14 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
             RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null), RavineCarve::settings);
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
+    private static final double CAVERN_BIOME_MARGIN = 4;
+
     private final RavineSettings settings;
     private final long seed;
     // Null only for the unbound instance the codec produces.
     private final RavineBounds bounds;
     private final SimplexNoise wallNoise;
+    private final LandGate landGate = new LandGate();
 
     private RavineCarve(RavineSettings settings, long seed, RavineBounds bounds) {
         this.settings = settings;
@@ -57,10 +61,31 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         return bounds;
     }
 
+    /** Only cells whose sample columns all pass {@code check} hold a ravine. Called once, before any chunk is built. */
+    public void restrictToLand(LandCheck check) {
+        landGate.use(check);
+    }
+
+    /** Whether the cell holds a ravine in this level (the hash may place one, but not over an ocean). */
+    public boolean isActive(RavineCell cell) {
+        return landGate.allows(cell);
+    }
+
+    private Optional<RavineCell> cellAt(int x, int z) {
+        return RavineCells.containing(seed, settings, x, z).filter(this::isActive);
+    }
+
     /** Whether the column at {@code (x, z)} can be touched by the carve, including wall noise and falloff. */
     public boolean isInFootprint(int x, int z) {
-        return RavineCells.containing(seed, settings, x, z)
+        return cellAt(x, z)
                 .filter(cell -> RavineShape.horizontalDistance(settings, cell, x, z) <= wallMargin())
+                .isPresent();
+    }
+
+    /** Whether a point is in the cavern's biome volume: the dome plus a margin around its surfaces. */
+    public boolean isCavern(int x, int y, int z) {
+        return bounds != null && cellAt(x, z)
+                .filter(cell -> RavineShape.cavernContains(settings, bounds, cell, x, y, z, CAVERN_BIOME_MARGIN))
                 .isPresent();
     }
 
@@ -72,7 +97,7 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         int x = context.blockX();
         int y = context.blockY();
         int z = context.blockZ();
-        var cell = RavineCells.containing(seed, settings, x, z);
+        var cell = cellAt(x, z);
         if (cell.isEmpty()) {
             return maxValue();
         }

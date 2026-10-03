@@ -1,27 +1,78 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import java.util.List;
+import java.util.Optional;
+import net.minecraft.core.Holder;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.levelgen.DensityFunction;
 
-/** The columns a world's ravines can open up, used to keep vanilla fluids out of them. */
-@FunctionalInterface
+/** What a level's ravines do to the world around them, as seen by noise fill, biome assignment and structures. */
 public interface RavineFootprint {
-    RavineFootprint NONE = (x, z) -> false;
+    RavineFootprint NONE = new RavineFootprint() {
+        @Override
+        public boolean contains(int x, int z) {
+            return false;
+        }
 
+        @Override
+        public boolean isOpen(DensityFunction.FunctionContext context) {
+            return false;
+        }
+
+        @Override
+        public Optional<Holder<Biome>> cavernBiome(int x, int y, int z) {
+            return Optional.empty();
+        }
+    };
+
+    /** Whether the column is touched by an active ravine, including wall noise and falloff. */
     boolean contains(int x, int z);
 
-    static RavineFootprint of(List<RavineCarve> carves) {
-        List<RavineCarve> copy = List.copyOf(carves);
+    /** Whether the point lies in the carved volume itself, as opposed to natural terrain next to it. */
+    boolean isOpen(DensityFunction.FunctionContext context);
+
+    /** The biome the cavern takes at this point, if it is inside a cavern that has one configured. */
+    Optional<Holder<Biome>> cavernBiome(int x, int y, int z);
+
+    /** One bound carve and the biome (if any) resolved for its cavern. */
+    record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome) {}
+
+    static RavineFootprint of(List<Region> regions) {
+        List<Region> copy = List.copyOf(regions);
         if (copy.isEmpty()) {
             return NONE;
         }
-        // Called for every open block during noise fill, so avoid streams here.
-        return (x, z) -> {
-            for (RavineCarve carve : copy) {
-                if (carve.isInFootprint(x, z)) {
-                    return true;
+        // These run for every open block or biome cell during generation, so avoid streams.
+        return new RavineFootprint() {
+            @Override
+            public boolean contains(int x, int z) {
+                for (Region region : copy) {
+                    if (region.carve().isInFootprint(x, z)) {
+                        return true;
+                    }
                 }
+                return false;
             }
-            return false;
+
+            @Override
+            public boolean isOpen(DensityFunction.FunctionContext context) {
+                for (Region region : copy) {
+                    if (region.carve().compute(context) <= 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            @Override
+            public Optional<Holder<Biome>> cavernBiome(int x, int y, int z) {
+                for (Region region : copy) {
+                    if (region.cavernBiome().isPresent() && region.carve().isCavern(x, y, z)) {
+                        return region.cavernBiome();
+                    }
+                }
+                return Optional.empty();
+            }
         };
     }
 }

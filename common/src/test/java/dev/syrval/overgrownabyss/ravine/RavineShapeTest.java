@@ -59,12 +59,26 @@ class RavineShapeTest {
         try (var in = RavineShapeTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/density_function/ravine/carve.json")) {
             var json = JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
             json.remove("type");
+            assertEquals("minecraft:lush_caves", json.getAsJsonObject("environment").get("cavern_biome").getAsString());
             RavineSettings parsed = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
             assertEquals(2048, parsed.cellSize());
             assertEquals(parsed, RavineSettings.MAP_CODEC.codec()
                     .parse(JsonOps.INSTANCE, RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, parsed).getOrThrow())
                     .getOrThrow());
         }
+    }
+
+    @Test
+    void cavernBiomeVolumeIsTheDomeGrownByTheMargin() {
+        int floor = BOUNDS.floorY();
+        // Dome radius is 128 and height 48 in the test settings.
+        assertTrue(RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor + 1, 100, 4));
+        assertTrue(RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor + 1, 131, 4), "margin reaches past the wall");
+        assertTrue(!RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor + 1, 133, 4));
+        assertTrue(RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor - 3, 0, 4), "margin reaches under the floor");
+        assertTrue(!RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor - 5, 0, 4));
+        assertTrue(RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor + 50, 0, 4), "margin reaches above the roof");
+        assertTrue(!RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor + 53, 0, 4));
     }
 
     @Test
@@ -85,6 +99,6 @@ class RavineShapeTest {
         return new RavineSettings(SETTINGS.salt(), SETTINGS.cellSize(), SETTINGS.chance(), SETTINGS.length(),
                 SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), SETTINGS.bottomWidthFactor(),
                 SETTINGS.cavernRadius(), SETTINGS.cavernHeight(), step, strength, SETTINGS.wallNoiseScale(),
-                SETTINGS.wallNoiseAmplitude(), SETTINGS.edgeFalloff());
+                SETTINGS.wallNoiseAmplitude(), SETTINGS.edgeFalloff(), SETTINGS.environment());
     }
 }

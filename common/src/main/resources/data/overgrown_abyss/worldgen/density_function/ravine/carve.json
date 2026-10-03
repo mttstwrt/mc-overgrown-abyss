@@ -18,11 +18,15 @@
     "absolute": 80
   },
   "bottom_width_factor": 0.35,
-  "cavern_radius": 160,
-  "cavern_height": 80,
+  "cavern_radius": 136,
+  "cavern_height": 56,
   "terrace_step": 12,
   "terrace_strength": 0.85,
   "wall_noise_scale": 0.03,
   "wall_noise_amplitude": 10,
-  "edge_falloff": 6
+  "edge_falloff": 6,
+  "environment": {
+    "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",
+    "cavern_biome": "minecraft:lush_caves"
+  }
 }

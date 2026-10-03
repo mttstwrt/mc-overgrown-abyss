@@ -1,5 +1,8 @@
 package dev.syrval.overgrownabyss.ravine;
 
+import java.util.List;
+import java.util.stream.Stream;
+
 /**
  * One ravine: a horizontal segment through {@code (centreX, centreZ)} along the unit vector {@code (dirX, dirZ)},
  * widened to {@code halfWidth} at the top. All values in blocks.
@@ -30,5 +33,17 @@ public record RavineCell(double centreX, double centreZ, double dirX, double dir
         double dx = x - centreX;
         double dz = z - centreZ;
         return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** A block column. */
+    public record Column(int x, int z) {}
+
+    /** Columns along the centre line, from one end to the other, that must all be land for the ravine to exist. */
+    public List<Column> samplePoints() {
+        return Stream.of(-1.0, -0.5, 0.0, 0.5, 1.0)
+                .map(t -> new Column(
+                        (int) Math.floor(centreX + dirX * halfLength * t),
+                        (int) Math.floor(centreZ + dirZ * halfLength * t)))
+                .toList();
     }
 }
