@@ -111,4 +111,6 @@ for 1.21.1 on Fabric before Phase 1.
 2. Phase 0: scaffold the three-module build, `docs/PINS.md`, test world.
 3. Extract vanilla Ancient City JSON with the data generator; read the real jigsaw settings and terrain adaptation
    (resolves the spec's `[recall]` items).
-4. Phase 1 spike.
+4. Phase 1 spike. Implemented in code (cells, carve, density wrap, fluid override); the visual gate is still open.
+   `ravine-core` lives for now as loader-free packages inside `common` (`ravine` for shape logic, `compat` and
+   `mixin` for the hooks), to be extracted into a shared source module when Rift starts.
