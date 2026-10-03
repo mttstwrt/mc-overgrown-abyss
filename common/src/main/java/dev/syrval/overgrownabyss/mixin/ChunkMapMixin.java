@@ -33,6 +33,6 @@ abstract class ChunkMapMixin {
             @Local(argsOnly = true) ServerLevel level,
             @Local(argsOnly = true) ChunkGenerator generator) {
         return RavineDensityHook.createRandomState(
-                level.registryAccess(), generator, settings, seed, wrapped -> original.call(wrapped, noises, seed));
+                level.registryAccess(), generator, level, settings, seed, wrapped -> original.call(wrapped, noises, seed));
     }
 }

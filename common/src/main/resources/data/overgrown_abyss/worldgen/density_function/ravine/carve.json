@@ -11,11 +11,15 @@
     "min_inclusive": 70,
     "max_inclusive": 110
   },
-  "floor_y": -40,
-  "top_y": 80,
+  "floor": {
+    "above_bottom": 24
+  },
+  "top": {
+    "absolute": 80
+  },
   "bottom_width_factor": 0.35,
-  "cavern_radius": 128,
-  "cavern_height": 48,
+  "cavern_radius": 160,
+  "cavern_height": 80,
   "terrace_step": 12,
   "terrace_strength": 0.85,
   "wall_noise_scale": 0.03,

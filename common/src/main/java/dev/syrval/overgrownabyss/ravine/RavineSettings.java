@@ -4,11 +4,15 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
 import net.minecraft.util.InclusiveRange;
+import net.minecraft.world.level.levelgen.VerticalAnchor;
+import net.minecraft.world.level.levelgen.WorldGenerationContext;
 
 /**
  * Datapack tunables for the ravine shape. Lengths and widths are in blocks; {@code width} is the full width at
- * {@code top_y}, narrowing towards {@code floor_y} by {@code bottom_width_factor}.
+ * {@code top}, narrowing towards {@code floor} by {@code bottom_width_factor}. The vertical bounds are anchors so the
+ * cavern floor follows the world bottom of whatever terrain source is in use (vanilla, Larion, ...).
  */
 public record RavineSettings(
         long salt,
@@ -16,8 +20,8 @@ public record RavineSettings(
         float chance,
         InclusiveRange<Integer> length,
         InclusiveRange<Integer> width,
-        int floorY,
-        int topY,
+        VerticalAnchor floor,
+        VerticalAnchor top,
         float bottomWidthFactor,
         int cavernRadius,
         int cavernHeight,
@@ -33,8 +37,8 @@ public record RavineSettings(
             Codec.floatRange(0, 1).fieldOf("chance").forGetter(RavineSettings::chance),
             InclusiveRange.codec(Codec.intRange(1, 4096)).fieldOf("length").forGetter(RavineSettings::length),
             InclusiveRange.codec(Codec.intRange(2, 4096)).fieldOf("width").forGetter(RavineSettings::width),
-            Codec.INT.fieldOf("floor_y").forGetter(RavineSettings::floorY),
-            Codec.INT.fieldOf("top_y").forGetter(RavineSettings::topY),
+            VerticalAnchor.CODEC.fieldOf("floor").forGetter(RavineSettings::floor),
+            VerticalAnchor.CODEC.fieldOf("top").forGetter(RavineSettings::top),
             Codec.floatRange(0, 1).fieldOf("bottom_width_factor").forGetter(RavineSettings::bottomWidthFactor),
             Codec.intRange(0, 4096).fieldOf("cavern_radius").forGetter(RavineSettings::cavernRadius),
             Codec.intRange(1, 1024).fieldOf("cavern_height").forGetter(RavineSettings::cavernHeight),
@@ -51,10 +55,12 @@ public record RavineSettings(
         return Math.max(ravine, cavernRadius) + wallNoiseAmplitude + edgeFalloff;
     }
 
+    /** Resolves the anchors for one level; empty when the level is too short to hold the ravine. */
+    public Optional<RavineBounds> resolveBounds(WorldGenerationContext context) {
+        return RavineBounds.of(floor.resolveY(context), top.resolveY(context));
+    }
+
     private static DataResult<RavineSettings> validate(RavineSettings s) {
-        if (s.topY <= s.floorY) {
-            return DataResult.error(() -> "top_y must be above floor_y");
-        }
         // Each ravine must fit inside its own cell so a sample only ever has to look at one cell.
         if (s.cellSize < 2 * s.maxReach()) {
             return DataResult.error(() -> "cell_size " + s.cellSize + " is too small for a ravine reaching " + s.maxReach());

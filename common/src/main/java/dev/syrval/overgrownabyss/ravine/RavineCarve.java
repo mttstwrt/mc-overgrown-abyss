@@ -12,25 +12,29 @@ import net.minecraft.world.level.levelgen.synth.SimplexNoise;
  * the ravine keeps its exact sign and therefore its blocks.
  *
  * <p>Vanilla wiring only hands the world seed to noise holders, so the carve is created unseeded by the codec and
- * re-created with the seed by the density hook ({@link #withSeed}).
+ * re-created with the seed and the level's vertical bounds by the density hook ({@link #bind}); until then it is inert
+ * and reads as solid everywhere.
  */
 public final class RavineCarve implements DensityFunction.SimpleFunction {
     public static final MapCodec<RavineCarve> MAP_CODEC =
-            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0), RavineCarve::settings);
+            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null), RavineCarve::settings);
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
     private final RavineSettings settings;
     private final long seed;
+    // Null only for the unbound instance the codec produces.
+    private final RavineBounds bounds;
     private final SimplexNoise wallNoise;
 
-    private RavineCarve(RavineSettings settings, long seed) {
+    private RavineCarve(RavineSettings settings, long seed, RavineBounds bounds) {
         this.settings = settings;
         this.seed = seed;
+        this.bounds = bounds;
         this.wallNoise = new SimplexNoise(new XoroshiroRandomSource(seed, settings.salt()));
     }
 
-    public RavineCarve withSeed(long seed) {
-        return new RavineCarve(settings, seed);
+    public RavineCarve bind(long seed, RavineBounds bounds) {
+        return new RavineCarve(settings, seed, bounds);
     }
 
     public RavineSettings settings() {
@@ -39,6 +43,10 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
 
     public long seed() {
         return seed;
+    }
+
+    public RavineBounds bounds() {
+        return bounds;
     }
 
     /** Whether the column at {@code (x, z)} can be touched by the carve, including wall noise and falloff. */
@@ -50,6 +58,9 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
 
     @Override
     public double compute(FunctionContext context) {
+        if (bounds == null) {
+            return maxValue();
+        }
         int x = context.blockX();
         int y = context.blockY();
         int z = context.blockZ();
@@ -57,7 +68,7 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         if (cell.isEmpty()) {
             return maxValue();
         }
-        double distance = RavineShape.signedDistance(settings, cell.get(), x, y, z);
+        double distance = RavineShape.signedDistance(settings, bounds, cell.get(), x, y, z);
         if (distance >= wallMargin()) {
             return maxValue();
         }

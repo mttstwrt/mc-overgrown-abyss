@@ -6,12 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 import net.minecraft.util.InclusiveRange;
+import net.minecraft.world.level.levelgen.VerticalAnchor;
 import org.junit.jupiter.api.Test;
 
 class RavineCellsTest {
+    static {
+        MinecraftBootstrap.init();
+    }
+
     static final RavineSettings SETTINGS = new RavineSettings(
             42L, 2048, 0.5F, new InclusiveRange<>(240, 400), new InclusiveRange<>(70, 110),
-            -40, 80, 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+            VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
 
     @Test
     void sameInputsGiveSameCell() {
@@ -21,9 +26,9 @@ class RavineCellsTest {
     @Test
     void seedAndSaltChangeTheLayout() {
         RavineSettings otherSalt = new RavineSettings(
-                43L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), -40, 80, 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+                43L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
         RavineSettings always = new RavineSettings(
-                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), -40, 80, 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
+                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6);
         assertNotEquals(RavineCells.at(1L, always, 0, 0), RavineCells.at(2L, always, 0, 0));
         assertNotEquals(RavineCells.at(1L, always, 0, 0), RavineCells.at(1L, otherSalt, 0, 0));
     }

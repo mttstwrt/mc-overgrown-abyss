@@ -11,25 +11,26 @@ import org.junit.jupiter.api.Test;
 class RavineShapeTest {
     static final RavineSettings SETTINGS = RavineCellsTest.SETTINGS;
     // Along the x axis, 300 long and 100 wide at the top.
+    static final RavineBounds BOUNDS = new RavineBounds(-40, 80);
     static final RavineCell CELL = new RavineCell(0, 0, 1, 0, 150, 50);
 
     @Test
     void openAboveTheFloorAndSolidBelowIt() {
-        assertTrue(RavineShape.signedDistance(SETTINGS, CELL, 0, SETTINGS.floorY(), 0) < 0);
-        assertEquals(Double.POSITIVE_INFINITY, RavineShape.signedDistance(SETTINGS, CELL, 0, SETTINGS.floorY() - 1, 0));
+        assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, 0, BOUNDS.floorY(), 0) < 0);
+        assertEquals(Double.POSITIVE_INFINITY, RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, 0, BOUNDS.floorY() - 1, 0));
     }
 
     @Test
     void wallsSitAtTheHalfWidthAtTheTop() {
-        assertEquals(-10, RavineShape.signedDistance(SETTINGS, CELL, 100, 200, 40), 1e-9);
-        assertEquals(10, RavineShape.signedDistance(SETTINGS, CELL, 100, 200, 60), 1e-9);
-        assertEquals(10, RavineShape.signedDistance(SETTINGS, CELL, 210, 200, 0), 1e-9);
+        assertEquals(-10, RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, 100, 200, 40), 1e-9);
+        assertEquals(10, RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, 100, 200, 60), 1e-9);
+        assertEquals(10, RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, 210, 200, 0), 1e-9);
     }
 
     @Test
     void shaftNarrowsTowardsTheFloor() {
-        double top = RavineShape.halfWidthAt(SETTINGS, CELL, SETTINGS.topY());
-        double bottom = RavineShape.halfWidthAt(SETTINGS, CELL, SETTINGS.floorY());
+        double top = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, BOUNDS.topY());
+        double bottom = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, BOUNDS.floorY());
         assertEquals(50, top, 1e-9);
         assertEquals(50.0 * SETTINGS.bottomWidthFactor(), bottom, 1e-9);
     }
@@ -37,10 +38,10 @@ class RavineShapeTest {
     @Test
     void terracesHoldWidthWithinAStepAndJumpBetweenSteps() {
         RavineSettings flat = withTerrace(12, 1F);
-        int stepStart = SETTINGS.floorY() + 24;
-        double inside1 = RavineShape.halfWidthAt(flat, CELL, stepStart + 1);
-        double inside2 = RavineShape.halfWidthAt(flat, CELL, stepStart + 11);
-        double next = RavineShape.halfWidthAt(flat, CELL, stepStart + 12);
+        int stepStart = BOUNDS.floorY() + 24;
+        double inside1 = RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 1);
+        double inside2 = RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 11);
+        double next = RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 12);
         assertEquals(inside1, inside2, 1e-9);
         assertTrue(next > inside2 + 1, "each step should leave a ledge");
     }
@@ -48,8 +49,8 @@ class RavineShapeTest {
     @Test
     void cavernHasAFlatFloorAndADomedRoof() {
         // 120 out from the centre across the ravine: outside the shaft but inside the 128 cavern radius at the floor.
-        assertTrue(RavineShape.signedDistance(SETTINGS, CELL, 0, SETTINGS.floorY(), 120) < 0);
-        assertTrue(RavineShape.signedDistance(SETTINGS, CELL, 0, SETTINGS.floorY() + 40, 120) > 0);
+        assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, 0, BOUNDS.floorY(), 120) < 0);
+        assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, 0, BOUNDS.floorY() + 40, 120) > 0);
         assertEquals(-8, RavineShape.horizontalDistance(SETTINGS, CELL, 0, 120), 1e-9);
     }
 
@@ -75,7 +76,7 @@ class RavineShapeTest {
 
     private static RavineSettings withTerrace(int step, float strength) {
         return new RavineSettings(SETTINGS.salt(), SETTINGS.cellSize(), SETTINGS.chance(), SETTINGS.length(),
-                SETTINGS.width(), SETTINGS.floorY(), SETTINGS.topY(), SETTINGS.bottomWidthFactor(),
+                SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), SETTINGS.bottomWidthFactor(),
                 SETTINGS.cavernRadius(), SETTINGS.cavernHeight(), step, strength, SETTINGS.wallNoiseScale(),
                 SETTINGS.wallNoiseAmplitude(), SETTINGS.edgeFalloff());
     }

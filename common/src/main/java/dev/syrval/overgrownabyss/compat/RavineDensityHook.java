@@ -1,17 +1,20 @@
 package dev.syrval.overgrownabyss.compat;
 
 import dev.syrval.overgrownabyss.OvergrownAbyss;
+import dev.syrval.overgrownabyss.ravine.RavineBounds;
 import dev.syrval.overgrownabyss.ravine.RavineCarve;
 import dev.syrval.overgrownabyss.ravine.RavineCells;
 import dev.syrval.overgrownabyss.ravine.RavineFootprint;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -19,6 +22,7 @@ import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.WorldGenerationContext;
 
 /**
  * Wraps the final density of every noise-settings in {@code #overgrown_abyss:carved} with
@@ -34,6 +38,7 @@ public final class RavineDensityHook {
     public static RandomState createRandomState(
             RegistryAccess registries,
             ChunkGenerator generator,
+            LevelHeightAccessor level,
             NoiseGeneratorSettings settings,
             long seed,
             Function<NoiseGeneratorSettings, RandomState> factory) {
@@ -46,14 +51,25 @@ public final class RavineDensityHook {
             return factory.apply(settings);
         }
         List<RavineCarve> seeded = new ArrayList<>();
+        var context = new WorldGenerationContext(generator, level);
+        boolean[] invalid = {false};
         DensityFunction seededCarve = carve.get().mapAll(function -> {
-            if (function instanceof RavineCarve ravine) {
-                RavineCarve withSeed = ravine.withSeed(seed);
-                seeded.add(withSeed);
-                return withSeed;
+            if (!(function instanceof RavineCarve ravine)) {
+                return function;
             }
-            return function;
+            Optional<RavineBounds> bounds = ravine.settings().resolveBounds(context);
+            if (bounds.isEmpty()) {
+                invalid[0] = true;
+                return function;
+            }
+            RavineCarve bound = ravine.bind(seed, bounds.get());
+            seeded.add(bound);
+            return bound;
         });
+        if (invalid[0]) {
+            OvergrownAbyss.LOGGER.error("Ravine top is not above its floor in this level's height range; ravines are disabled");
+            return factory.apply(settings);
+        }
         DensityFunction finalDensity = DensityFunctions.min(settings.noiseRouter().finalDensity(), seededCarve);
         RandomState state = factory.apply(withFinalDensity(settings, finalDensity));
         ((RavineFootprintHolder) (Object) state).overgrownAbyss$setFootprint(RavineFootprint.of(seeded));
@@ -81,7 +97,7 @@ public final class RavineDensityHook {
             for (int cellZ = -1; cellZ <= 1; cellZ++) {
                 RavineCells.at(carve.seed(), carve.settings(), cellX, cellZ).ifPresent(cell -> OvergrownAbyss.LOGGER.info(
                         "Ravine centre at x={} z={} (floor y={})",
-                        Math.round(cell.centreX()), Math.round(cell.centreZ()), carve.settings().floorY()));
+                        Math.round(cell.centreX()), Math.round(cell.centreZ()), carve.bounds().floorY()));
             }
         }
     }
