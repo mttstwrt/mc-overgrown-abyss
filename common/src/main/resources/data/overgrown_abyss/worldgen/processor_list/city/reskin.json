@@ -1,0 +1,415 @@
+{
+  "processors": [
+    {
+      "processor_type": "overgrown_abyss:swap_blocks",
+      "swaps": [
+        {
+          "from": "minecraft:deepslate_bricks",
+          "to": [
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate_tiles",
+          "to": [
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 6
+            },
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cracked_deepslate_bricks",
+          "to": [
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cracked_deepslate_tiles",
+          "to": [
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate_brick_stairs",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_stairs",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_stairs",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate_brick_slab",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_slab",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_slab",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate_brick_wall",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_wall",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_wall",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate_tile_stairs",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_stairs",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_stairs",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate_tile_slab",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_slab",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_slab",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate_tile_wall",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_wall",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_wall",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:deepslate",
+          "to": [
+            {
+              "block": "minecraft:stone",
+              "weight": 6
+            },
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:andesite",
+              "weight": 2
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cobbled_deepslate",
+          "to": [
+            {
+              "block": "minecraft:cobblestone",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 5
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cobbled_deepslate_stairs",
+          "to": [
+            {
+              "block": "minecraft:cobblestone_stairs",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_cobblestone_stairs",
+              "weight": 5
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cobbled_deepslate_slab",
+          "to": [
+            {
+              "block": "minecraft:cobblestone_slab",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_cobblestone_slab",
+              "weight": 5
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cobbled_deepslate_wall",
+          "to": [
+            {
+              "block": "minecraft:cobblestone_wall",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_cobblestone_wall",
+              "weight": 5
+            }
+          ]
+        },
+        {
+          "from": "minecraft:polished_deepslate",
+          "to": [
+            {
+              "block": "minecraft:polished_andesite",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:polished_deepslate_stairs",
+          "to": [
+            {
+              "block": "minecraft:polished_andesite_stairs",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:polished_deepslate_slab",
+          "to": [
+            {
+              "block": "minecraft:polished_andesite_slab",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:polished_deepslate_wall",
+          "to": [
+            {
+              "block": "minecraft:andesite_wall",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:chiseled_deepslate",
+          "to": [
+            {
+              "block": "minecraft:chiseled_stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:reinforced_deepslate",
+          "to": [
+            {
+              "block": "minecraft:chiseled_stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:gray_wool",
+          "to": [
+            {
+              "block": "minecraft:moss_block",
+              "weight": 7
+            },
+            {
+              "block": "minecraft:green_wool",
+              "weight": 3
+            }
+          ]
+        },
+        {
+          "from": "minecraft:gray_carpet",
+          "to": [
+            {
+              "block": "minecraft:moss_carpet",
+              "weight": 7
+            },
+            {
+              "block": "minecraft:green_carpet",
+              "weight": 3
+            }
+          ]
+        },
+        {
+          "from": "minecraft:blue_wool",
+          "to": [
+            {
+              "block": "minecraft:green_wool",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:blue_carpet",
+          "to": [
+            {
+              "block": "minecraft:green_carpet",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:light_blue_wool",
+          "to": [
+            {
+              "block": "minecraft:lime_wool",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:light_blue_carpet",
+          "to": [
+            {
+              "block": "minecraft:lime_carpet",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cyan_wool",
+          "to": [
+            {
+              "block": "minecraft:green_wool",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cyan_carpet",
+          "to": [
+            {
+              "block": "minecraft:green_carpet",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:polished_basalt",
+          "to": [
+            {
+              "block": "minecraft:stripped_jungle_log",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:smooth_basalt",
+          "to": [
+            {
+              "block": "minecraft:smooth_stone",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:dark_oak_planks",
+          "to": [
+            {
+              "block": "minecraft:jungle_planks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:dark_oak_log",
+          "to": [
+            {
+              "block": "minecraft:jungle_log",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:dark_oak_fence",
+          "to": [
+            {
+              "block": "minecraft:jungle_fence",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:soul_lantern",
+          "to": [
+            {
+              "block": "minecraft:lantern",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:soul_sand",
+          "to": [
+            {
+              "block": "minecraft:moss_block",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:soul_fire",
+          "to": [
+            {
+              "block": "minecraft:air",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:sculk_sensor",
+          "to": [
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
