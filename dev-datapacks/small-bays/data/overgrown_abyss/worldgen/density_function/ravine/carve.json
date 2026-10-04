@@ -42,7 +42,8 @@
     "max_lip": 2.0,
     "row_jitter": 0.4,
     "through_chance": 0.15,
-    "through_max_radius": 100
+    "through_max_radius": 100,
+    "large_offset_bonus": 0.45
   },
   "environment": {
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",

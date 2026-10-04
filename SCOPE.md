@@ -453,6 +453,40 @@ but also cut the through share below 10%, so the through share and the sealing n
 Not verified: nothing was looked at in game or rendered; Fabric and Larion not run; the city and descent not checked
 against sealing.
 
+### Large discs set back
+
+Owner (after seeing it in game): the sealing is from large discs generating towards the middle of the chasm, so move the
+centre of large discs back from it.
+
+- New `large_offset_bonus` (0.45): an ordinary disc's offset (how far its centre sits inside the wall, as a fraction of its
+  radius) grows with its radius, by up to the bonus for the largest. A radius 50 disc now sits at 0.45 to 0.85 instead of
+  0 to 0.4, and no ordinary disc reaches more than about 31 blocks into the shaft (up to 50 before). The cell-reach check
+  includes it, and `max_offset + large_offset_bonus` must stay at or below 0.95.
+- **Through discs ignore it** and stay at `min_offset`. Setting a through disc back needs a larger radius to still cross
+  (`radius = width / (1 - offset)`), so its floor covers a longer stretch of the centre line, not a shorter one.
+
+Measured on 900 sampled ravines (the 830 with a length of 120 or more), walking the centre line along its length and up from
+the cavern roof to the ceiling margin; "over 20% closed" counts ravines where more than a fifth of that line is solid:
+
+| Setting | through share | vanilla height: avg closed / over 20% closed | Larion height |
+|---|---|---|---|
+| bonus 0 (before) | 16.4% / 16.6% | 13.4% / 30 | 17.9% / 217 |
+| bonus 0.3 | 15.5% / 15.3% | 10.1% / 3 | 13.7% / 33 |
+| **bonus 0.45 (shipped)** | 15.3% / 15.1% | 9.0% / 1 | 12.2% / 6 |
+| bonus 0.6 | 15.3% / 15.0% | 8.4% / 0 | 11.2% / 2 |
+| no through discs, bonus 0.45 | 0.1% / 0.2% | 1.6% / 0 | 2.7% / 0 |
+
+What is still closed (about 9 to 12% of the line) is nearly all through discs, which seal where they cross by definition.
+Lower `through_chance` for less of that.
+
+| Check | Result |
+|---|---|
+| Unit tests: offsets grow with radius, no ordinary disc reaches past 31 blocks into the shaft, all earlier tests | pass (`./gradlew build`) |
+| NeoForge dedicated server, seed 20261003, 143 chunks around the ravine at 981,-695, new settings in the log, no errors | yes |
+
+Not verified: nothing was rendered or looked at in game by me; Fabric and Larion not run; city and descent not checked.
+`wide-bays` uses a bonus of 0.2 because its max offset is 0.75.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

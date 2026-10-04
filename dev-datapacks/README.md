@@ -17,7 +17,7 @@ the mod's file. The log line `Ravine settings:` at world load shows which values
 
 The mod's own defaults are `spacing` 45, `row_spacing` 20, `row_jitter` 0.4 (neighbouring rows' floors at least 12 apart), `max_lip` 2
 (a floor may run through the far wall), `through_chance` 0.15 (that share of discs is sized to reach the far wall, up to
-radius `through_max_radius` 100), radius 20 to 50, `min_offset` 0, `max_offset` 0.4.
+radius `through_max_radius` 100), `large_offset_bonus` 0.45 (large discs sit further back in the wall), radius 20 to 50, `min_offset` 0, `max_offset` 0.4.
 
 - `wide-bays`: spacing 40, radius 22 to 55, offset 0.4 to 0.75. Rooms reach deeper into the rock and merge into one
   large cavity with a scalloped edge.

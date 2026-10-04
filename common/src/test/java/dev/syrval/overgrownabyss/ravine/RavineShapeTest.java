@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class RavineShapeTest {
     static final RavineSettings SETTINGS = RavineCellsTest.SETTINGS;
     /** The same ravine with the ceiling margin so large that no disc room fits: just the shaft and the cavern. */
-    static final RavineSettings PLAIN = withDiscs(new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 128, 0.4F, 0.75F, 4, 0.4F, 0.8F, 0F, 100F));
+    static final RavineSettings PLAIN = withDiscs(new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 128, 0.4F, 0.75F, 4, 0.4F, 0.8F, 0F, 100F, 0F));
     static final RavineBounds BOUNDS = new RavineBounds(-40, 80);
     // Along the x axis, 300 long and 100 wide at the top.
     static final RavineCell CELL = new RavineCell(0, 0, 1, 0, 150, 50);

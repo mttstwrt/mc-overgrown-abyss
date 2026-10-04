@@ -155,7 +155,7 @@ class RavineDomesTest {
 
     @Test
     void floorsOfNeighbouringRowsStayAtLeastTheMinimumApart() {
-        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0.4F, 0F, 100F);
+        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0.4F, 0F, 100F, 0F);
         RavineSettings settings = RavineShapeTest.withDiscs(discs);
         double minimum = (1 - discs.rowJitter()) * discs.rowSpacing();
         int compared = 0;
@@ -224,12 +224,56 @@ class RavineDomesTest {
         assertTrue(share > 0.1 && share < 0.2, "share " + share + " of " + rooms);
     }
 
+    @Test
+    void largerDiscsSitFurtherBackInTheWall() {
+        RavineSettings settings = RavineShapeTest.withDiscs(
+                new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 2F, 0.4F, 0F, 100F, 0.45F));
+        double smallOffsets = 0;
+        double largeOffsets = 0;
+        int small = 0;
+        int large = 0;
+        for (RavineDomes.Dome d : roomsOf(settings)) {
+            assertTrue(d.offset() <= 0.4 + 0.45 + 1e-9);
+            if (d.radius() < 28) {
+                smallOffsets += d.offset();
+                small++;
+            } else if (d.radius() > 40) {
+                largeOffsets += d.offset();
+                large++;
+            }
+        }
+        assertTrue(small > 10 && large > 5, small + " small, " + large + " large");
+        assertTrue(largeOffsets / large > smallOffsets / small + 0.2, "large " + largeOffsets / large + " vs small " + smallOffsets / small);
+    }
+
+    @Test
+    void settingLargeDiscsBackKeepsEveryOrdinaryDiscsReachUnderTheirBound() {
+        RavineSettings settings = RavineShapeTest.withDiscs(
+                new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 2F, 0.4F, 0F, 100F, 0.45F));
+        // Without the bonus a radius 50 disc with offset 0 would reach 50 into the shaft; with it, no disc reaches past 31.
+        for (RavineDomes.Dome d : roomsOf(settings)) {
+            assertTrue(d.radius() * (1 - d.offset()) <= 31, "reach of " + d);
+        }
+    }
+
+    private static List<RavineDomes.Dome> roomsOf(RavineSettings settings) {
+        var rooms = new ArrayList<RavineDomes.Dome>();
+        for (int side : new int[] {1, -1}) {
+            for (int row = 0; row < RavineDomes.rows(settings, BOUNDS); row++) {
+                for (int slot = 0; slot < RavineDomes.slots(settings, CELL); slot++) {
+                    RavineDomes.at(settings, BOUNDS, CELL, side, row, slot).ifPresent(rooms::add);
+                }
+            }
+        }
+        return rooms;
+    }
+
     private static RavineDiscs withThrough(float chance, float maxRadius) {
-        return new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 2F, 0.4F, chance, maxRadius);
+        return new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 2F, 0.4F, chance, maxRadius, 0F);
     }
 
     private static RavineDiscs withLip(float maxLip) {
-        return new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, maxLip, 0.8F, 0F, 100F);
+        return new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, maxLip, 0.8F, 0F, 100F, 0F);
     }
 
     private static List<RavineDomes.Dome> allRooms() {

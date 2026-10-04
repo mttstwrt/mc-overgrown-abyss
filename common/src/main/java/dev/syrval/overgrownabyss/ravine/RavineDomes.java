@@ -49,7 +49,8 @@ final class RavineDomes {
         int base = HASH_BASE + 8 * (((side > 0 ? 1 : 0) * MAX_ROWS + row) * MAX_SLOTS + slot);
         double floor = lowestFloor(settings, bounds) + (row + 0.5 + (RavineCells.unit(cell.hash(), base) - 0.5) * discs.rowJitter()) * discs.rowSpacing();
         double radius = radius(discs, cell, base);
-        double offset = lerp(RavineCells.unit(cell.hash(), base + 2), discs.minOffset(), discs.maxOffset());
+        double largeness = discs.maxRadius() > discs.minRadius() ? (radius - discs.minRadius()) / (discs.maxRadius() - discs.minRadius()) : 0;
+        double offset = lerp(RavineCells.unit(cell.hash(), base + 2), discs.minOffset(), discs.maxOffset()) + largeness * discs.largeOffsetBonus();
         if (RavineCells.unit(cell.hash(), base + 4) < discs.throughChance()) {
             // Sized from the chasm's width at this floor, so the same chance gives the same share of through discs in
             // narrow and wide chasms. The lowest offset is used because it needs the smallest radius.

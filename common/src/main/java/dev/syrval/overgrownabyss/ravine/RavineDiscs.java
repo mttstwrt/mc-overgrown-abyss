@@ -29,11 +29,16 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param throughChance fraction of discs sized to run all the way through the chasm into the opposite wall, whatever the
  *                      chasm's width at their height; a disc that would need more than {@code throughMaxRadius} stays ordinary
  * @param throughMaxRadius largest radius a through disc may have, so very wide chasms are not crossed
+ * @param largeOffsetBonus how much further back into the wall the largest ordinary disc sits than the smallest, as a fraction
+ *                      of its radius; in between it grows with the radius. Large discs set back like this poke less far into
+ *                      the shaft, so they do not wall off the middle of it. Through discs ignore it, as setting one back
+ *                      makes it need a larger radius and cover more of the shaft
  */
 public record RavineDiscs(
         float spacing, float rowSpacing, float minRadius, float maxRadius, float heightRatio, float minHeight,
         float ceilingMargin, float minOffset, float maxOffset, float floorThickness, float maxLip,
-        float rowJitter, float throughChance, float throughMaxRadius) {
+        float rowJitter, float throughChance, float throughMaxRadius,
+        float largeOffsetBonus) {
 
     public static final MapCodec<RavineDiscs> MAP_CODEC = RecordCodecBuilder.<RavineDiscs>mapCodec(i -> i.group(
             Codec.floatRange(8, 1024).fieldOf("spacing").forGetter(RavineDiscs::spacing),
@@ -49,13 +54,14 @@ public record RavineDiscs(
             Codec.floatRange(0, 2).fieldOf("max_lip").forGetter(RavineDiscs::maxLip),
             Codec.floatRange(0, 0.9F).fieldOf("row_jitter").forGetter(RavineDiscs::rowJitter),
             Codec.floatRange(0, 1).fieldOf("through_chance").forGetter(RavineDiscs::throughChance),
-            Codec.floatRange(4, 256).fieldOf("through_max_radius").forGetter(RavineDiscs::throughMaxRadius)
+            Codec.floatRange(4, 256).fieldOf("through_max_radius").forGetter(RavineDiscs::throughMaxRadius),
+            Codec.floatRange(0, 0.9F).fieldOf("large_offset_bonus").forGetter(RavineDiscs::largeOffsetBonus)
     ).apply(i, RavineDiscs::new)).validate(RavineDiscs::validate);
     public static final Codec<RavineDiscs> CODEC = MAP_CODEC.codec();
 
     /** Furthest a disc can reach past the wall it opens from, in blocks; ravine reach must allow for it. */
     public double extraReach() {
-        return Math.max(maxRadius * (1 + maxOffset), throughChance > 0 ? throughMaxRadius * (1 + minOffset) : 0);
+        return Math.max(maxRadius * (1 + maxOffset + largeOffsetBonus), throughChance > 0 ? throughMaxRadius * (1 + minOffset) : 0);
     }
 
     /** The largest radius any disc can have. */
@@ -74,6 +80,10 @@ public record RavineDiscs(
         }
         if (d.minOffset > d.maxOffset) {
             return DataResult.error(() -> "min_offset must not exceed max_offset");
+        }
+        // An offset of 1 would leave a disc with no reach into the shaft at all.
+        if (d.maxOffset + d.largeOffsetBonus > 0.95F) {
+            return DataResult.error(() -> "max_offset plus large_offset_bonus must not exceed 0.95");
         }
         // A through disc's radius is the chasm width divided by (1 - min_offset).
         if (d.throughChance > 0 && d.minOffset > 0.9F) {
