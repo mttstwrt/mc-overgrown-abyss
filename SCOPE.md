@@ -271,6 +271,33 @@ Not verified:
   (nearest city 42,137 blocks away instead of 1,037). The cavern biome swap probably already stops a vanilla city starting
   inside the cavern, but that was not tested, and an overlap at the edges is still possible.
 
+### Tiered walls experiment
+
+Goal from the owner's cross-section sketches: more, but not complete, blocking of the view from the bottom, with the
+opening zigzagging as it rises. Tunables are in `walls.tiers` in `carve.json`, so this can be pushed further or backed off
+without code changes.
+
+What it does: the shaft above the cavern roof is split into 1 to 3 stacked levels (more on bigger ravines, none under
+size 0.3). Each level slides the whole opening sideways by up to 0.9 half widths and sets its width between 0.5 and 1.1
+of normal, blending over 4 blocks, so shelves and ceilings appear where levels meet. Neighbouring levels always overlap by
+at least half a half width, so the shaft stays one passage. Bridges and ledges follow the shifted walls.
+
+| Check | Result |
+|---|---|
+| Unit tests: levels stay within limits, neighbours overlap, small ravines get none, an upper level opens sideways while the lower one stays rock there and keeps the centre line | pass |
+| Vertical sight lines (roof to rim, sampled, 980 ravines over 150 long): ravines with a fully clear vertical column 979 before, 901 after; share of columns that are clear 39% before, 15% after | measured on the shape alone, no wall noise |
+| NeoForge dedicated server, seed 20261003, ravine at 2620,764 (318 long, 3 levels, 1 bridge) generated, no errors | yes |
+| Cross-sections of the generated blocks at four places along it show large shelves jutting from one wall, a notch on the other, and the opening drifting sideways with height | seen in rendered slices |
+
+Not verified:
+- **Nothing was looked at in game.** The renders are 2D slices of the generated blocks.
+- **Fabric and Larion were not run.** On vanilla height the shaft above the cavern roof is only about 50 blocks (roof at
+  y=16, surface about y=65), so there is room for 2 or 3 levels at most. Larion's taller world should show the sketches'
+  proportions better and has not been tried.
+- **A straight shot still exists in about 90% of ravines**, only narrower. Raising `max_shift` or `max_count`, or lowering
+  the cavern, closes it further. Whether that is the right balance is the owner's call.
+- The sight-line measure is vertical lines only, not views from the cavern floor at an angle.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
@@ -357,6 +384,14 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
 - **Testing:** `/place structure minecraft:stronghold` can force one into a ravine; both loaders and chunk generation
   time need checking.
 - **Related, unresolved:** a vanilla ancient city overlapping our cavern. See the Size and curve round above.
+
+### Stems and disc platforms (owner idea)
+
+- **Idea:** large circular discs, overlapping and at different heights, as a main chasm feature but not covering the
+  walls. Some stand on thin stems, and later vines could end in huge lily-pad-like platforms in mid-chasm. Waterfalls
+  between discs (like Streams Reflowed) come after the shape is settled. Reference mood: Made in Abyss, Hell's Paradise.
+- **Notes:** the Phase 1 sketch shapes (stacked tiers, fluted faces) are the first step; discs would be a new carve
+  or placed-rock term alongside bridges and ledges, in the same analytic style so they stay seed-stable.
 
 ### When this is picked up
 

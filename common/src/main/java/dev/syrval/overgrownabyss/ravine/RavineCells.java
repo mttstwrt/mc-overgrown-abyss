@@ -13,6 +13,9 @@ import net.minecraft.world.level.ChunkPos;
 public final class RavineCells {
     private static final int MAX_FREE_LEDGES = 40;
     private static final double S_CURVE_CHANCE = 0.75;
+    private static final double ZIGZAG_CHANCE = 0.8;
+    /** Least width, in half widths, that two neighbouring levels share. */
+    private static final double MIN_TIER_OVERLAP = 0.5;
     private static final long GOLDEN = 0x9E3779B97F4A7C15L;
 
     private RavineCells() {}
@@ -44,7 +47,8 @@ public final class RavineCells {
                 lean(h, settings.curvature()),
                 new RavineCell.Wobble(side(h, 10, settings.walls()), side(h, 14, settings.walls())),
                 bridges,
-                ledges(h, settings.ledges(), scale, halfLength, bridges)));
+                ledges(h, settings.ledges(), scale, halfLength, bridges),
+                tiers(h, settings.walls().tiers(), scale)));
     }
 
     // Curving a short ravine by the full amount would fold it onto itself, so the bend follows its size.
@@ -61,6 +65,30 @@ public final class RavineCells {
         // The bow opposes the lean most of the time, which makes the shaft an S in section instead of a plain slant.
         double bow = unit(h, 9) * curvature.maxBow() * (unit(h, 13) < S_CURVE_CHANCE ? -1 : 1);
         return new RavineCell.Lean(Math.cos(angle), Math.sin(angle), unit(h, 8) * curvature.maxLean(), bow);
+    }
+
+    // Each level is placed beside the one below, at most as far as keeps them overlapping, so the shaft stays connected.
+    private static RavineCell.Tiers tiers(long h, RavineTiers config, double scale) {
+        if (scale < config.minSize() || config.maxCount() == 0) {
+            return RavineCell.Tiers.NONE;
+        }
+        int count = 1 + (int) Math.round(unit(h, 1000) * (config.maxCount() - 1));
+        List<RavineCell.Tiers.Level> levels = new ArrayList<>();
+        levels.add(RavineCell.Tiers.Level.NEUTRAL);
+        RavineCell.Tiers.Level previous = RavineCell.Tiers.Level.NEUTRAL;
+        double direction = signed(h, 1001) >= 0 ? 1 : -1;
+        for (int i = 1; i <= count; i++) {
+            double start = (i + 0.4 * signed(h, 1002 + 4 * i)) / (count + 1);
+            double width = lerp(unit(h, 1003 + 4 * i), config.minWidth(), config.maxWidth());
+            if (unit(h, 1004 + 4 * i) < ZIGZAG_CHANCE) {
+                direction = -direction;
+            }
+            double step = lerp(unit(h, 1005 + 4 * i), 0.5, 1) * Math.max(0, previous.width() + width - MIN_TIER_OVERLAP);
+            double shift = Math.clamp(previous.shift() + direction * step, -config.maxShift(), config.maxShift());
+            previous = new RavineCell.Tiers.Level(start, shift, width);
+            levels.add(previous);
+        }
+        return new RavineCell.Tiers(levels);
     }
 
     private static RavineCell.Side side(long h, int index, RavineWalls walls) {

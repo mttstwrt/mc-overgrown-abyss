@@ -49,8 +49,10 @@ public final class RavineShape {
                 continue;
             }
             double u = unitAlong(cell, bridge.along());
-            double sideways = Math.abs(frame.sideways() - cell.bend().offset(u));
-            double span = Math.min(sideways / halfWidthAt(settings, bounds, cell, top, 0), 1.2);
+            double base = halfWidthAt(settings, bounds, cell, top, 0);
+            RavineCell.Tiers.Level tier = tierAt(settings, bounds, cell, top);
+            double sideways = Math.abs(frame.sideways() - cell.bend().offset(u) - tier.shift() * base);
+            double span = Math.min(sideways / (base * tier.width()), 1.2);
             double bottom = top - bridge.thickness() * (1 + 1.5 * span * span);
             double distance = Math.max(Math.abs(frame.along() - bridge.along()) - bridge.width() / 2, Math.max(y - top, bottom - y));
             nearest = Math.min(nearest, distance);
@@ -77,8 +79,10 @@ public final class RavineShape {
                 frame = leanedFrame(bounds, cell, x, y, z);
             }
             RavineCell.Side wobble = ledge.side() > 0 ? cell.wobble().left() : cell.wobble().right();
-            double halfWidth = halfWidthAt(settings, bounds, cell, top, 0) * (1 + wobble.at(top));
-            double wall = cell.bend().offset(unitAlong(cell, ledge.along())) + ledge.side() * halfWidth;
+            double base = halfWidthAt(settings, bounds, cell, top, 0);
+            RavineCell.Tiers.Level tier = tierAt(settings, bounds, cell, top);
+            double halfWidth = base * tier.width() * (1 + wobble.at(top));
+            double wall = cell.bend().offset(unitAlong(cell, ledge.along())) + tier.shift() * base + ledge.side() * halfWidth;
             double along = frame.along() - ledge.along();
             double inward = ledge.side() > 0 ? wall - frame.sideways() : frame.sideways() - wall;
             double cos = Math.cos(ledge.yaw());
@@ -133,14 +137,21 @@ public final class RavineShape {
             RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z, double terraceShift) {
         RavineCell.Frame frame = leanedFrame(bounds, cell, x, y, z);
         double u = unitAlong(cell, frame.along());
-        double lateral = frame.sideways() - cell.bend().offset(u);
+        double base = halfWidthAt(settings, bounds, cell, y, terraceShift);
+        RavineCell.Tiers.Level tier = tierAt(settings, bounds, cell, y + terraceShift);
+        double lateral = frame.sideways() - cell.bend().offset(u) - tier.shift() * base;
         // The curve is longer than its chord, so a step along the chord covers less of the wall than it seems to.
         double slope = cell.halfLength() == 0 ? 0 : cell.bend().slope(u) / cell.halfLength();
         double across = lateral / Math.sqrt(1 + slope * slope);
         double beyond = Math.max(Math.abs(frame.along()) - cell.halfLength(), 0);
         RavineCell.Side side = lateral >= 0 ? cell.wobble().left() : cell.wobble().right();
-        double halfWidth = halfWidthAt(settings, bounds, cell, y, terraceShift) * (1 + side.at(y));
+        double halfWidth = base * tier.width() * (1 + side.at(y));
         return Math.sqrt(across * across + beyond * beyond) - halfWidth;
+    }
+
+    // Levels are measured from the cavern roof so the shaft's lowest level always meets the dome.
+    private static RavineCell.Tiers.Level tierAt(RavineSettings settings, RavineBounds bounds, RavineCell cell, double y) {
+        return cell.tiers().at(y, bounds.floorY() + settings.cavernHeight(), bounds.topY(), settings.walls().tiers().ramp());
     }
 
     // The whole shaft slides sideways with height, so view the point from where the shaft is at that height.

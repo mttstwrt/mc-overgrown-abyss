@@ -33,7 +33,15 @@
     "strata_amplitude": 8,
     "strata_scale": 0.025,
     "width_wobble": 0.12,
-    "edge_falloff": 6
+    "edge_falloff": 6,
+    "tiers": {
+      "max_count": 3,
+      "min_size": 0.3,
+      "max_shift": 0.9,
+      "min_width": 0.5,
+      "max_width": 1.1,
+      "ramp": 4
+    }
   },
   "curvature": {
     "max_bend": 70,

@@ -20,7 +20,8 @@ public record RavineCell(
         Lean lean,
         Wobble wobble,
         List<Bridge> bridges,
-        List<Ledge> ledges) {
+        List<Ledge> ledges,
+        Tiers tiers) {
 
     public RavineCell {
         if (halfLength < 0 || halfWidth <= 0) {
@@ -31,6 +32,13 @@ public record RavineCell(
         }
         bridges = List.copyOf(bridges);
         ledges = List.copyOf(ledges);
+    }
+
+    /** A ravine with every level at the normal width. */
+    public RavineCell(
+            double centreX, double centreZ, double dirX, double dirZ, double halfLength, double halfWidth,
+            Bend bend, Lean lean, Wobble wobble, List<Bridge> bridges, List<Ledge> ledges) {
+        this(centreX, centreZ, dirX, dirZ, halfLength, halfWidth, bend, lean, wobble, bridges, ledges, Tiers.NONE);
     }
 
     /** A straight, plain ravine. */
@@ -115,6 +123,46 @@ public record RavineCell(
             double slow = Math.sin(2 * Math.PI * y / period + phase);
             double quick = Math.sin(2 * Math.PI * y / (period * 0.618) + phase * 1.7);
             return amplitude * (0.6 * slow + 0.4 * quick);
+        }
+    }
+
+    /**
+     * Stacked levels of the shaft above the cavern. A level starts at {@code start}, a fraction of the way up from the
+     * cavern roof to the rim; the opening there is moved {@code shift} half widths to the left (negative: right) and
+     * scaled by {@code width}. The first level always starts at 0 and is neutral so the shaft meets the cavern.
+     */
+    public record Tiers(List<Level> levels) {
+        public static final Tiers NONE = new Tiers(List.of(Level.NEUTRAL));
+
+        public Tiers {
+            levels = List.copyOf(levels);
+            if (levels.isEmpty() || levels.get(0).start() != 0) {
+                throw new IllegalArgumentException("the first level must start at 0");
+            }
+        }
+
+        /** The shift and width at {@code y}, blending from the level below over {@code ramp} blocks. */
+        public Level at(double y, double low, double high, double ramp) {
+            double span = high - low;
+            if (span <= 0 || levels.size() == 1) {
+                return levels.get(0);
+            }
+            int current = 0;
+            while (current + 1 < levels.size() && low + levels.get(current + 1).start() * span <= y) {
+                current++;
+            }
+            if (current == 0) {
+                return levels.get(0);
+            }
+            Level above = levels.get(current);
+            Level below = levels.get(current - 1);
+            double t = Math.clamp((y - (low + above.start() * span)) / ramp, 0, 1);
+            t = t * t * (3 - 2 * t);
+            return new Level(0, below.shift() + (above.shift() - below.shift()) * t, below.width() + (above.width() - below.width()) * t);
+        }
+
+        public record Level(double start, double shift, double width) {
+            public static final Level NEUTRAL = new Level(0, 0, 1);
         }
     }
 
