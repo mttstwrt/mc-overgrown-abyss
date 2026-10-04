@@ -39,7 +39,7 @@ public final class RavineCells {
         double centreZ = cellZ * size + reach + unit(h, 2) * (size - 2 * reach);
         double angle = unit(h, 3) * Math.PI;
         // One draw sets both dimensions so small ravines are short as well as narrow: a round hole at 0, the
-        // configured maximum at 1. The size_bias exponent makes the large ones the rare ones.
+        // configured maximum at 1. The size_bias exponent moves the mix towards large ravines (below 1) or small ones (above 1).
         double scale = Math.pow(unit(h, 4), settings.sizeBias());
         double halfLength = lerp(scale, settings.length().minInclusive(), settings.length().maxInclusive()) / 2;
         double halfWidth = lerp(scale, settings.width().minInclusive(), settings.width().maxInclusive()) / 2;

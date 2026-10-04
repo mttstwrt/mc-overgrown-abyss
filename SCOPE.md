@@ -261,7 +261,7 @@ Checked with `./gradlew :common:test` and one NeoForge dedicated server boot (se
 
 | Check | Result |
 |---|---|
-| Unit tests: sizes skew small (under 28% of ravines over 250 long, against 37% before), about three quarters of ravines bow against their lean, every ravine keeps at least half its wiggle | pass |
+| Unit tests: sizes skewed small at the time (under 28% of ravines over 250 long, against 37% before); this was later reversed, see the note below the table, about three quarters of ravines bow against their lean, every ravine keeps at least half its wiggle | pass |
 | NeoForge boot with the new `size_bias` field, no errors; `/locate structure overgrown_abyss:city` still finds a city (1037 blocks away) | yes |
 
 Not verified:
@@ -270,6 +270,9 @@ Not verified:
   chunks, and ancient cities are spaced 24 chunks apart, so with `chunk_count` 16 it forbade our city almost everywhere
   (nearest city 42,137 blocks away instead of 1,037). The cavern biome swap probably already stops a vanilla city starting
   inside the cavern, but that was not tested, and an overlap at the edges is still possible.
+
+Update: the owner then asked to undo this and aim for medium to large chasms. `size_bias` is now 0.5 (the square root of a
+uniform draw), which gives about 61% of ravines over 250 long and about 9% under 120; the codec now accepts 0.25 to 8.
 
 ### Tiered walls experiment
 

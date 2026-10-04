@@ -29,7 +29,7 @@ class RavineCellsTest {
 
     static RavineSettings settings(long salt, float chance) {
         return new RavineSettings(
-                salt, 2048, chance, 2F, new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110),
+                salt, 2048, chance, 1F, new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110),
                 VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48,
                 WALLS, CURVATURE, BRIDGES, LEDGES, ENVIRONMENT);
     }
@@ -127,18 +127,25 @@ class RavineCellsTest {
     }
 
     @Test
-    void sizeBiasMakesLongRavinesRare() {
-        RavineSettings always = settings(42L, 1F);
+    void sizeBiasBelowOneFavoursLargeRavines() {
+        RavineSettings large = new RavineSettings(
+                42L, 2048, 1F, 0.5F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), SETTINGS.bottomWidthFactor(),
+                SETTINGS.cavernRadius(), SETTINGS.cavernHeight(), SETTINGS.walls(), SETTINGS.curvature(), SETTINGS.bridges(),
+                SETTINGS.ledges(), SETTINGS.environment());
         int total = 0;
         int longCount = 0;
+        int small = 0;
         for (int x = -50; x < 50; x++) {
             for (int z = -50; z < 50; z++) {
+                double length = RavineCells.at(7L, large, x, z).orElseThrow().halfLength() * 2;
                 total++;
-                longCount += RavineCells.at(7L, always, x, z).orElseThrow().halfLength() * 2 > 250 ? 1 : 0;
+                longCount += length > 250 ? 1 : 0;
+                small += length < 120 ? 1 : 0;
             }
         }
-        // A uniform draw would give 37%; the squared draw gives about 21%.
-        assertTrue(longCount < total * 0.28, longCount + " of " + total + " are over 250 long");
+        // A uniform draw would give 37% over 250 and 30% under 120; the square root gives about 61% and 9%.
+        assertTrue(longCount > total * 0.5, longCount + " of " + total + " are over 250 long");
+        assertTrue(small < total * 0.15, small + " of " + total + " are under 120 long");
     }
 
     @Test
