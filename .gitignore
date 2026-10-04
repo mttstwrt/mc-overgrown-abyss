@@ -28,3 +28,6 @@ bin/
 
 # --- Architectury Loom / Transformer tooling output ---
 .architectury-transformer/
+
+# --- Generated testing datapack zips ---
+dev-datapacks/*.zip
