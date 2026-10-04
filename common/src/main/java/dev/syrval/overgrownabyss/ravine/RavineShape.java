@@ -4,13 +4,20 @@ package dev.syrval.overgrownabyss.ravine;
  * Signed distance, in blocks, from a point to the open volume of one ravine: negative inside (air), positive outside.
  * The volume is the ravine shaft from the floor upwards, joined to a domed cavern centred on the cell whose floor is
  * flat. The shaft follows a centre line that bends in plan view and sways sideways with height, narrows towards the
- * floor in wandering terraces, and has two walls that swell and narrow independently. Bridges are separate: they are
- * rock inside the open volume, see {@link #bridgeDistance}.
+ * floor in wandering terraces, and has two walls that swell and narrow independently. Bridges and ledges are separate:
+ * they are rock inside the open volume, see {@link #bridgeDistance} and {@link #ledgeDistance}.
  *
  * <p>These are distance estimates, exact for a straight shaft and close for gentle curves, which is all the carve
  * needs: it only uses the sign and a few blocks of falloff either side of the wall.
  */
 public final class RavineShape {
+    /** How far a ledge reaches into the rock behind the wall, so wall noise cannot leave it floating. */
+    static final double LEDGE_ROOT = 24;
+    private static final double LEDGE_SLACK = 12;
+    private static final double MAX_LEDGE_REACH = 0.45;
+    private static final double FEATURE_MARGIN_ABOVE_ROOF = 8;
+    private static final double FEATURE_MARGIN_BELOW_RIM = 10;
+
     private RavineShape() {}
 
     /** {@code terraceShift} moves the ledge heights at this position; it comes from noise, so the caller supplies it. */
@@ -26,8 +33,9 @@ public final class RavineShape {
 
     /**
      * Signed distance to the nearest bridge, or infinity if the ravine has none: negative inside the rock. Each is an
-     * arch, a slab {@code width} long along the ravine, flat on top and thin in the middle, thickening towards the
-     * walls where it springs from. Subtract it from the open volume with {@code max(open, -bridge)}.
+     * arch, a slab {@code width} long along the ravine, level on top and thin in the middle, thickening towards the
+     * walls where it springs from. Its top is at {@link #featureTop}, the same height as the ledges it lands on.
+     * Add it to the rock with {@code max(open, -bridge)}.
      */
     public static double bridgeDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
         double nearest = Double.POSITIVE_INFINITY;
@@ -36,21 +44,68 @@ public final class RavineShape {
         }
         RavineCell.Frame frame = leanedFrame(bounds, cell, x, y, z);
         for (RavineCell.Bridge bridge : cell.bridges()) {
-            double low = bounds.floorY() + settings.cavernHeight() + bridge.thickness();
-            double high = bounds.topY() - bridge.thickness();
-            if (high <= low) {
+            double top = featureTop(settings, bounds, bridge.height());
+            if (Double.isNaN(top)) {
                 continue;
             }
-            double centreY = low + bridge.height() * (high - low);
             double u = unitAlong(cell, bridge.along());
             double sideways = Math.abs(frame.sideways() - cell.bend().offset(u));
-            double span = Math.min(sideways / halfWidthAt(settings, bounds, cell, centreY, 0), 1.2);
-            double top = centreY + bridge.thickness() * 0.5;
-            double bottom = centreY - bridge.thickness() * (0.5 + 1.5 * span * span);
+            double span = Math.min(sideways / halfWidthAt(settings, bounds, cell, top, 0), 1.2);
+            double bottom = top - bridge.thickness() * (1 + 1.5 * span * span);
             double distance = Math.max(Math.abs(frame.along() - bridge.along()) - bridge.width() / 2, Math.max(y - top, bottom - y));
             nearest = Math.min(nearest, distance);
         }
         return nearest;
+    }
+
+    /**
+     * Signed distance to the nearest ledge, or infinity if none is near: negative inside the rock. A ledge is a slab with
+     * a level top, standing out from its wall by {@code depth} and reaching {@link #LEDGE_ROOT} blocks into the rock
+     * behind so it always joins the wall; it is thickest at the root and thinner towards the lip. Add it to the rock with
+     * {@code max(open, -ledge)}.
+     */
+    public static double ledgeDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
+        double nearest = Double.POSITIVE_INFINITY;
+        RavineCell.Frame frame = null;
+        for (RavineCell.Ledge ledge : cell.ledges()) {
+            double top = featureTop(settings, bounds, ledge.height());
+            // Skip ledges the point is clearly above or below; this runs for every block near the wall.
+            if (Double.isNaN(top) || y > top + LEDGE_SLACK || y < top - ledge.thickness() * 1.4 - LEDGE_SLACK) {
+                continue;
+            }
+            if (frame == null) {
+                frame = leanedFrame(bounds, cell, x, y, z);
+            }
+            RavineCell.Side wobble = ledge.side() > 0 ? cell.wobble().left() : cell.wobble().right();
+            double halfWidth = halfWidthAt(settings, bounds, cell, top, 0) * (1 + wobble.at(top));
+            double wall = cell.bend().offset(unitAlong(cell, ledge.along())) + ledge.side() * halfWidth;
+            double along = frame.along() - ledge.along();
+            double inward = ledge.side() > 0 ? wall - frame.sideways() : frame.sideways() - wall;
+            double cos = Math.cos(ledge.yaw());
+            double sin = Math.sin(ledge.yaw());
+            // However it is turned, a ledge may reach at most this fraction of the way across; shrinking it keeps the
+            // centre line open and leaves room to get past, even in a narrow ravine.
+            double reach = ledge.depth() * cos + ledge.length() / 2 * Math.abs(sin);
+            double fit = Math.min(1, MAX_LEDGE_REACH * halfWidth / reach);
+            double depth = ledge.depth() * fit;
+            double alongLedge = along * cos + inward * sin;
+            double fromWall = -along * sin + inward * cos;
+            double bottom = top - ledge.thickness() * (0.6 + 0.8 * Math.clamp(1 - fromWall / depth, 0, 1));
+            double horizontal = Math.max(Math.abs(alongLedge) - ledge.length() * fit / 2, Math.max(-LEDGE_ROOT - fromWall, fromWall - depth));
+            nearest = Math.min(nearest, Math.max(horizontal, Math.max(y - top, bottom - y)));
+        }
+        return nearest;
+    }
+
+    /**
+     * Height of a bridge or ledge placed at {@code fraction} of the span from just above the cavern roof to just below
+     * the rim, or NaN if the shaft is too short to hold one. Bridges and ledges share this so a bridge's top is level
+     * with the ledges it lands on whatever the world height.
+     */
+    static double featureTop(RavineSettings settings, RavineBounds bounds, double fraction) {
+        double low = bounds.floorY() + settings.cavernHeight() + FEATURE_MARGIN_ABOVE_ROOF;
+        double high = bounds.topY() - FEATURE_MARGIN_BELOW_RIM;
+        return high <= low ? Double.NaN : low + fraction * (high - low);
     }
 
     /**

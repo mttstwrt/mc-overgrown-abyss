@@ -11,6 +11,7 @@ import net.minecraft.world.level.ChunkPos;
  * so callers only need the cell that contains the sample point.
  */
 public final class RavineCells {
+    private static final int MAX_FREE_LEDGES = 40;
     private static final long GOLDEN = 0x9E3779B97F4A7C15L;
 
     private RavineCells() {}
@@ -35,12 +36,14 @@ public final class RavineCells {
         double scale = unit(h, 4);
         double halfLength = lerp(scale, settings.length().minInclusive(), settings.length().maxInclusive()) / 2;
         double halfWidth = lerp(scale, settings.width().minInclusive(), settings.width().maxInclusive()) / 2;
+        List<RavineCell.Bridge> bridges = bridges(h, settings, scale, halfLength);
         return Optional.of(new RavineCell(
                 centreX, centreZ, Math.cos(angle), Math.sin(angle), halfLength, halfWidth,
                 bend(h, settings.curvature(), scale),
                 lean(h, settings.curvature()),
                 new RavineCell.Wobble(side(h, 10, settings.walls()), side(h, 14, settings.walls())),
-                bridges(h, settings, scale, halfLength)));
+                bridges,
+                ledges(h, settings.ledges(), scale, halfLength, bridges)));
     }
 
     // Curving a short ravine by the full amount would fold it onto itself, so the bend follows its size.
@@ -90,6 +93,34 @@ public final class RavineCells {
         double blockX = cell.map(RavineCell::centreX).orElse(cellX * (double) size + size / 2.0);
         double blockZ = cell.map(RavineCell::centreZ).orElse(cellZ * (double) size + size / 2.0);
         return new ChunkPos(Math.floorDiv((int) Math.floor(blockX), 16), Math.floorDiv((int) Math.floor(blockZ), 16));
+    }
+
+    // Every bridge gets a ledge on each wall at its own height and position, so it lands on level, walkable rock.
+    // The rest are scattered along both walls, each turned a little so neighbours at different heights cross.
+    private static List<RavineCell.Ledge> ledges(long h, RavineLedges config, double scale, double halfLength, List<RavineCell.Bridge> bridges) {
+        List<RavineCell.Ledge> ledges = new ArrayList<>();
+        for (RavineCell.Bridge bridge : bridges) {
+            for (int side : new int[] {1, -1}) {
+                ledges.add(new RavineCell.Ledge(bridge.along(), side, bridge.height(), bridge.width() + 12, config.maxDepth(), config.thickness(), 0));
+            }
+        }
+        if (scale < config.minSize()) {
+            return ledges;
+        }
+        int count = (int) Math.min(MAX_FREE_LEDGES, Math.round(halfLength * 2 / 100 * config.density() * lerp(unit(h, 60), 0.7, 1.3)));
+        double maxYaw = Math.toRadians(config.maxYaw());
+        for (int i = 0; i < count; i++) {
+            int base = 100 + 8 * i;
+            ledges.add(new RavineCell.Ledge(
+                    signed(h, base) * 0.9 * halfLength,
+                    unit(h, base + 1) < 0.5 ? 1 : -1,
+                    lerp(unit(h, base + 2), config.minHeight(), config.maxHeight()),
+                    lerp(unit(h, base + 3), config.minLength(), config.maxLength()),
+                    lerp(unit(h, base + 4), config.minDepth(), config.maxDepth()),
+                    config.thickness(),
+                    signed(h, base + 5) * maxYaw));
+        }
+        return ledges;
     }
 
     /** The {@code index}-th uniform value in {@code [0, 1)} drawn from a cell hash. */

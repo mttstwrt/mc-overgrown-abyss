@@ -161,6 +161,23 @@ for 1.21.1 on Fabric before Phase 1.
   - *Cost:* `maxReach` now includes every curve and the wall wobble (about 485 blocks for the shipped numbers), so cells
     must be at least twice that. The shipped 2048 is fine.
 
+- **Wall form: ledges and strata (owner review: walls too rounded and generated).** Walls were one smooth tube with noise
+  on top. Now:
+  - *Ledges* (`ledges` in `ravine/carve.json`): flat-topped rock shelves standing out from the walls into the shaft,
+    thickest at the wall and thinner at the lip, 14 to 46 long and 6 to 16 deep, about 3.5 per 100 blocks of ravine
+    length, each turned up to 30 degrees off the wall so ledges at different heights overlap and cross. A ledge reaches
+    24 blocks back into the rock so it always joins the wall. Whatever its size it is shrunk so it never reaches more than
+    45% of the way across, so the shaft stays open. Small ravines (under 15% of the way to full size) get none.
+  - *Bridges land on ledges:* every bridge gets a ledge on each wall at exactly its top height and position, so a bridge
+    connects two level, walkable shelves. Bridges and ledges share one height function (`RavineShape.featureTop`).
+  - *Strata* (`walls.strata_*`): the wall is cut into 7-block layers, each pushed in or out by its own amount that
+    varies along the ravine, which gives vertical faces joined by flat steps of varying width. Layer boundaries drift with
+    the old terrace warp so they do not line up along the ravine.
+  - *Calmed the round shapes:* broad noise 24 to 10 blocks, width wobble 0.22 to 0.12, fine noise 8 to 3 blocks, and the
+    evenly spaced terraces are off (`terrace_step` 0; set 12 to bring them back).
+  - Like bridges, ledges can only add rock where the terrain is solid, so `ledges.max_height` (0.75) must stay below the
+    terrain surface.
+
 ## 7. Status and open issues (2026-10-03)
 
 Owner reviewed the first build in game: the chasm and the city look good. This round (land-only, smaller cavern, lush
@@ -215,6 +232,29 @@ Not verified:
 - **Frequency of extremes:** size is uniform in 0 to 1, so about half of ravines are under half size. Not tuned.
 - The tiny hole can only be as deep as the terrain is high; on low ground it is a short shaft.
 
+### Wall ledge round
+
+Checked after a full `./gradlew build` (40 unit tests) and in dev servers on seed 162 (the 390-long ravine with 2 bridges).
+
+| Check | Result |
+|---|---|
+| Unit tests: ledge is level on top, joins the wall, thins towards the lip, stops at its length and depth, turning it reaches new points, only on its own wall; a bridge is level with its two ledges; no ledge ever reaches the centre line; holes get no ledges | pass |
+| NeoForge and Fabric boot, generate the whole ravine (NeoForge) and its centre (Fabric), no errors | yes |
+| City intact under the new walls (81 pieces on Fabric) | yes |
+| Cross-sections show stepped, notched walls with flat shelves sticking into the gap | seen in rendered slices |
+| Wall elevation (position of each wall by height along the ravine) is built from flat-faced panels with level edges, roughly 20 to 30 blocks wide and 6 tall | seen in a rendered map |
+| About 12% of wall samples step 4 or more blocks between adjacent heights, 5.5% step 8 or more | measured |
+
+Not verified:
+- **Nothing was looked at in game.** The renders are 2D views of generated blocks. Whether it reads as natural, and whether
+  the ledges are wide and flat enough, is the owner's call.
+- **Ledge count and width are not tuned.** On this seed the terrain surface is about y=65, so only about 40 blocks of wall
+  stand above the cavern roof; ledges and strata compete for that space. Taller worlds (Larion) have more room and were not
+  run this round.
+- **Criss-crossing in plan view** was not measured; stacking at different heights is by construction, crossing relies on
+  the 30 degree turn.
+- No baseline measurement of the previous walls, so the step statistics have nothing to be compared to.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
@@ -252,6 +292,18 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
   - Do their paths use the same jigsaw naming (`connect_*`, `entrance_*`)? If not, we may need adapter pieces.
   - Licensing and redistribution: reference their templates by ID, never copy them (same stance as vanilla).
   - Same-mod risk as section 5, risk 5: if another mod replaces their templates, we inherit the change.
+
+### Ledge dressing: micro-biomes and ruins (owner idea)
+
+- **Idea:** the wide, flat ledges are natural places for small custom micro-biomes and for ruins (this is the Phase 5
+  wall-ruins idea in `03-abyss.md`, with ledges as the anchors).
+- **What exists:** each ravine's ledges are deterministic data in `RavineCell.ledges()` (position along the ravine, wall,
+  height fraction, length, depth, thickness, turn), and `RavineShape.featureTop` turns a height fraction into a world Y for
+  the level. A later structure type could read them the way the city structure reads the cell centre today.
+- **What it needs:** a way to find a ledge's actual surface after wall noise (the ledge is nominal; strata and noise move
+  its edge), a decision on which ledges get what, and the custom buildings from the hanging-temples item below.
+- **Open questions:** micro-biomes by biome override (as the cavern does for lush caves) or by placed features only;
+  whether bridge-landing ledges get ruins first, since they are the walkable ones.
 
 ### Hanging temples (built into the mod)
 

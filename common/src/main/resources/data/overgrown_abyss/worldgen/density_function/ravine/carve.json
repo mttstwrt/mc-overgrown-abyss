@@ -21,14 +21,17 @@
   "cavern_radius": 136,
   "cavern_height": 56,
   "walls": {
-    "terrace_step": 12,
+    "terrace_step": 0,
     "terrace_strength": 0.8,
     "terrace_warp": 8,
-    "noise_scale": 0.03,
-    "noise_amplitude": 8,
+    "noise_scale": 0.06,
+    "noise_amplitude": 3,
     "overhang_scale": 0.012,
-    "overhang_amplitude": 24,
-    "width_wobble": 0.22,
+    "overhang_amplitude": 10,
+    "strata_height": 7,
+    "strata_amplitude": 8,
+    "strata_scale": 0.025,
+    "width_wobble": 0.12,
     "edge_falloff": 6
   },
   "curvature": {
@@ -44,6 +47,18 @@
     "thickness": 6,
     "min_height": 0.1,
     "max_height": 0.75
+  },
+  "ledges": {
+    "density": 3.5,
+    "min_size": 0.15,
+    "min_height": 0.08,
+    "max_height": 0.75,
+    "min_length": 14,
+    "max_length": 46,
+    "min_depth": 6,
+    "max_depth": 16,
+    "thickness": 4,
+    "max_yaw": 30
   },
   "environment": {
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",

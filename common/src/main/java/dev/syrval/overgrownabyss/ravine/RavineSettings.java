@@ -30,6 +30,7 @@ public record RavineSettings(
         RavineWalls walls,
         RavineCurvature curvature,
         RavineBridges bridges,
+        RavineLedges ledges,
         RavineEnvironment environment) {
 
     public static final MapCodec<RavineSettings> MAP_CODEC = RecordCodecBuilder.<RavineSettings>mapCodec(i -> i.group(
@@ -46,6 +47,7 @@ public record RavineSettings(
             RavineWalls.CODEC.fieldOf("walls").forGetter(RavineSettings::walls),
             RavineCurvature.CODEC.fieldOf("curvature").forGetter(RavineSettings::curvature),
             RavineBridges.CODEC.fieldOf("bridges").forGetter(RavineSettings::bridges),
+            RavineLedges.CODEC.fieldOf("ledges").forGetter(RavineSettings::ledges),
             RavineEnvironment.CODEC.fieldOf("environment").forGetter(RavineSettings::environment)
     ).apply(i, RavineSettings::new)).validate(RavineSettings::validate);
 

@@ -7,7 +7,7 @@ import java.util.stream.Stream;
  * One ravine. Its straight chord runs through {@code (centreX, centreZ)} along the unit vector {@code (dirX, dirZ)},
  * {@code halfLength} each way (0 makes a round hole), widened to {@code halfWidth} at the top. The centre line then
  * curves away from the chord ({@code bend}), sways sideways with height ({@code lean}), each wall swells and narrows
- * with height ({@code wobble}), and {@code bridges} cross it. All values in blocks.
+ * with height ({@code wobble}), {@code bridges} cross it and {@code ledges} stand out from its walls. All values in blocks.
  */
 public record RavineCell(
         double centreX,
@@ -19,7 +19,8 @@ public record RavineCell(
         Bend bend,
         Lean lean,
         Wobble wobble,
-        List<Bridge> bridges) {
+        List<Bridge> bridges,
+        List<Ledge> ledges) {
 
     public RavineCell {
         if (halfLength < 0 || halfWidth <= 0) {
@@ -29,11 +30,12 @@ public record RavineCell(
             throw new IllegalArgumentException("direction must be a unit vector");
         }
         bridges = List.copyOf(bridges);
+        ledges = List.copyOf(ledges);
     }
 
     /** A straight, plain ravine. */
     public RavineCell(double centreX, double centreZ, double dirX, double dirZ, double halfLength, double halfWidth) {
-        this(centreX, centreZ, dirX, dirZ, halfLength, halfWidth, Bend.NONE, Lean.NONE, Wobble.NONE, List.of());
+        this(centreX, centreZ, dirX, dirZ, halfLength, halfWidth, Bend.NONE, Lean.NONE, Wobble.NONE, List.of(), List.of());
     }
 
     /** A point seen from the ravine: how far along the chord, and how far to the left of it. */
@@ -118,4 +120,12 @@ public record RavineCell(
 
     /** A rock arch across the ravine: where along the chord, how high (fraction of the allowed span), and its size. */
     public record Bridge(double along, double height, double width, double thickness) {}
+
+    /**
+     * A flat shelf on one wall. {@code side} is +1 for the left wall (positive {@code sideways}) or -1 for the right,
+     * {@code height} is a fraction of the allowed span (the same scale as a bridge's, so the two can share a top),
+     * {@code length} runs along the wall, {@code depth} reaches into the shaft and {@code yaw} turns it away from the
+     * wall's direction, in radians.
+     */
+    public record Ledge(double along, int side, double height, double length, double depth, double thickness, double yaw) {}
 }

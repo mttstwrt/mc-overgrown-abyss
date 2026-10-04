@@ -43,7 +43,7 @@ class RavineShapeTest {
 
     @Test
     void terracesHoldWidthWithinAStepAndJumpBetweenSteps() {
-        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 0, 0.03F, 10, 0.012F, 24, 0.22F, 6));
+        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6));
         int stepStart = BOUNDS.floorY() + 24;
         double inside1 = RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 1, 0);
         double inside2 = RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 11, 0);
@@ -54,7 +54,7 @@ class RavineShapeTest {
 
     @Test
     void terraceShiftMovesWhereTheLedgesFall() {
-        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 8, 0.03F, 10, 0.012F, 24, 0.22F, 6));
+        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 8, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6));
         int stepStart = BOUNDS.floorY() + 24;
         // Unshifted, y = stepStart + 11 is the last block of a step; shifted up by 2 it is the first of the next.
         assertTrue(RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 11, 2) > RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 11, 0) + 1);
@@ -69,7 +69,7 @@ class RavineShapeTest {
 
     @Test
     void bendCarriesTheCentreLineAwayFromTheChord() {
-        RavineCell bent = new RavineCell(0, 0, 1, 0, 150, 50, new RavineCell.Bend(60, 0), RavineCell.Lean.NONE, RavineCell.Wobble.NONE, List.of());
+        RavineCell bent = new RavineCell(0, 0, 1, 0, 150, 50, new RavineCell.Bend(60, 0), RavineCell.Lean.NONE, RavineCell.Wobble.NONE, List.of(), List.of());
         // At the end of a 300 long ravine bent by 60 the centre line is 60 to the side: open in the bent one only.
         assertTrue(distance(bent, 150, 200, 60) < -49);
         assertTrue(distance(CELL, 150, 200, 60) > 0);
@@ -80,7 +80,7 @@ class RavineShapeTest {
     @Test
     void leanShiftsTheShaftWithHeightAndIsZeroAtTheFloor() {
         RavineCell.Lean lean = new RavineCell.Lean(0, 1, 30, 0);
-        RavineCell leaning = new RavineCell(0, 0, 1, 0, 0, 12, RavineCell.Bend.NONE, lean, RavineCell.Wobble.NONE, List.of());
+        RavineCell leaning = new RavineCell(0, 0, 1, 0, 0, 12, RavineCell.Bend.NONE, lean, RavineCell.Wobble.NONE, List.of(), List.of());
         assertEquals(0, lean.shift(0), 1e-12);
         // A round hole. At the rim its centre has moved the full 30 in z.
         assertEquals(-12, distance(leaning, 0, BOUNDS.topY(), 30), 1e-9);
@@ -94,7 +94,7 @@ class RavineShapeTest {
     void wallsSwellAndNarrowIndependently() {
         RavineCell.Side swelling = new RavineCell.Side(0.2, 50, 0);
         RavineCell wobbly = new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE,
-                new RavineCell.Wobble(swelling, RavineCell.Side.NONE), List.of());
+                new RavineCell.Wobble(swelling, RavineCell.Side.NONE), List.of(), List.of());
         double y = 200;
         // dirX = 1 puts positive z on the left.
         assertEquals(40 - 50 * (1 + swelling.at(y)), distance(wobbly, 0, y, 40), 1e-9);
@@ -104,15 +104,92 @@ class RavineShapeTest {
     @Test
     void aBridgeIsAnArchThatIsThinInTheMiddleAndThickAtTheWalls() {
         RavineCell bridged = new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, RavineCell.Wobble.NONE,
-                List.of(new RavineCell.Bridge(0, 0.5, 8, 6)));
-        // Between the cavern roof (y 8) and 6 below the rim (74), halfway: 8 + 6 + 0.5 * (74 - 14) = 44.
-        double centreY = 44;
-        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, centreY, 0) < 0);
-        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, centreY + 10, 0) > 0);
-        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 20, centreY, 0) > 0, "only 8 long along the ravine");
-        // Lower surface at 38 near a wall but only 41 in the middle.
-        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, 38, 40) < 0);
-        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, 38, 0) > 0);
+                List.of(new RavineCell.Bridge(0, 0.5, 8, 6)), List.of());
+        // Between 8 above the cavern roof (y 16) and 10 below the rim (70), halfway: the top is level at y 43.
+        double top = RavineShape.featureTop(SETTINGS, BOUNDS, 0.5);
+        assertEquals(43, top, 1e-9);
+        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, top - 1, 0) < 0);
+        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, top + 1, 0) > 0, "level on top");
+        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 20, top - 1, 0) > 0, "only 8 long along the ravine");
+        // 6 thick in the middle, much thicker next to a wall.
+        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, top - 8, 0) > 0);
+        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, bridged, 0, top - 8, 40) < 0);
+    }
+
+    @Test
+    void aLedgeIsLevelOnTopJoinsTheWallAndThinsTowardsItsLip() {
+        RavineSettings smooth = withWalls(new RavineWalls(0, 0, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6));
+        RavineCell ledged = new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, RavineCell.Wobble.NONE, List.of(),
+                List.of(new RavineCell.Ledge(0, 1, 0.5, 20, 10, 4, 0)));
+        double top = RavineShape.featureTop(smooth, BOUNDS, 0.5);
+        // With no terraces the half width at the ledge's height is 50 * (0.35 + 0.65 * (43 + 40) / 120) = 40.
+        double wall = 40;
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 0, top - 0.5, wall - 5) < 0, "inside, on the wall's side");
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 0, top + 1, wall - 5) > 0, "level on top");
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 0, top - 0.5, wall - 12) > 0, "stops at its depth");
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 11, top - 0.5, wall - 5) > 0, "stops at its length");
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 0, top - 0.5, -(wall - 5)) > 0, "only on its own wall");
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 0, top - 0.5, wall + 15) < 0, "reaches back into the rock");
+        // 5.6 thick at the root, 2.7 at the lip.
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 0, top - 4.5, wall - 1) < 0);
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, ledged, 0, top - 4.5, wall - 9) > 0);
+    }
+
+    @Test
+    void turningALedgeLetsItReachPointsAStraightOneMisses() {
+        RavineSettings smooth = withWalls(new RavineWalls(0, 0, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6));
+        RavineCell.Ledge straight = new RavineCell.Ledge(0, 1, 0.5, 20, 10, 4, 0);
+        RavineCell.Ledge turned = new RavineCell.Ledge(0, 1, 0.5, 20, 10, 4, Math.toRadians(30));
+        double top = RavineShape.featureTop(smooth, BOUNDS, 0.5);
+        double[] point = {-12, top - 0.5, 40 - 3};
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, cellWith(straight), point[0], point[1], point[2]) > 0);
+        assertTrue(RavineShape.ledgeDistance(smooth, BOUNDS, cellWith(turned), point[0], point[1], point[2]) < 0);
+    }
+
+    @Test
+    void noLedgeEverReachesTheCentreLineSoTheShaftStaysOpen() {
+        RavineSettings always = RavineCellsTest.settings(42L, 1F);
+        int checked = 0;
+        for (int cx = -15; cx < 15; cx++) {
+            for (int cz = -15; cz < 15; cz++) {
+                RavineCell c = RavineCells.at(17L, always, cx, cz).orElseThrow();
+                for (RavineCell.Ledge ledge : c.ledges()) {
+                    double top = RavineShape.featureTop(always, BOUNDS, ledge.height());
+                    for (double y = top - 6; y <= top + 1; y += 1.5) {
+                        double along = ledge.along();
+                        double u = c.halfLength() == 0 ? 0 : Math.clamp(along / c.halfLength(), -1, 1);
+                        double t = Math.clamp((y - BOUNDS.floorY()) / 120.0, 0, 1);
+                        double shift = c.lean().shift(t);
+                        // The centre line at the ledge's position, in world coordinates.
+                        double sideways = c.bend().offset(u);
+                        double x = c.centreX() + shift * c.lean().dirX() + along * c.dirX() - sideways * c.dirZ();
+                        double z = c.centreZ() + shift * c.lean().dirZ() + along * c.dirZ() + sideways * c.dirX();
+                        assertTrue(RavineShape.ledgeDistance(always, BOUNDS, c, x, y, z) > 0, "a ledge reaches the centre line in cell " + cx + "," + cz);
+                        checked++;
+                    }
+                }
+            }
+        }
+        assertTrue(checked > 1000);
+    }
+
+    @Test
+    void aBridgeIsLevelWithTheLedgesItLandsOn() {
+        RavineCell cell = new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, RavineCell.Wobble.NONE,
+                List.of(new RavineCell.Bridge(30, 0.4, 8, 6)),
+                List.of(new RavineCell.Ledge(30, 1, 0.4, 20, 10, 4, 0), new RavineCell.Ledge(30, -1, 0.4, 20, 10, 4, 0)));
+        double top = RavineShape.featureTop(SETTINGS, BOUNDS, 0.4);
+        for (double side : new double[] {1, -1}) {
+            double z = side * (RavineShape.halfWidthAt(SETTINGS, BOUNDS, cell, top, 0) - 4);
+            assertTrue(RavineShape.ledgeDistance(SETTINGS, BOUNDS, cell, 30, top - 0.5, z) < 0, "ledge at the bridge's height, side " + side);
+            assertTrue(RavineShape.ledgeDistance(SETTINGS, BOUNDS, cell, 30, top + 0.5, z) > 0, "and level with its top");
+        }
+        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, cell, 30, top - 0.5, 0) < 0);
+        assertTrue(RavineShape.bridgeDistance(SETTINGS, BOUNDS, cell, 30, top + 0.5, 0) > 0);
+    }
+
+    private static RavineCell cellWith(RavineCell.Ledge ledge) {
+        return new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, RavineCell.Wobble.NONE, List.of(), List.of(ledge));
     }
 
     @Test
@@ -200,6 +277,13 @@ class RavineShapeTest {
     }
 
     @Test
+    void codecRejectsLedgesWhoseMinimumExceedsTheirMaximum() {
+        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, SETTINGS).getOrThrow().getAsJsonObject();
+        json.getAsJsonObject("ledges").addProperty("min_depth", 40);
+        assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
+    }
+
+    @Test
     void codecRejectsBridgesWhoseLowestHeightIsAboveTheHighest() {
         var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, SETTINGS).getOrThrow().getAsJsonObject();
         json.getAsJsonObject("bridges").addProperty("min_height", 0.9);
@@ -209,7 +293,7 @@ class RavineShapeTest {
     private static RavineSettings withWalls(RavineWalls walls) {
         return new RavineSettings(SETTINGS.salt(), SETTINGS.cellSize(), SETTINGS.chance(), SETTINGS.length(),
                 SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), SETTINGS.bottomWidthFactor(),
-                SETTINGS.cavernRadius(), SETTINGS.cavernHeight(), walls, SETTINGS.curvature(), SETTINGS.bridges(),
+                SETTINGS.cavernRadius(), SETTINGS.cavernHeight(), walls, SETTINGS.curvature(), SETTINGS.bridges(), SETTINGS.ledges(),
                 SETTINGS.environment());
     }
 }
