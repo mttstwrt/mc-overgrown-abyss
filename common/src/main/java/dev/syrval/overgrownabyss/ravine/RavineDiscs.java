@@ -21,11 +21,15 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param minOffset     how far a disc's centre sits inside the wall, as a fraction of its radius, at the least
  * @param maxOffset     and at the most; larger values give a narrower mouth
  * @param floorThickness blocks of solid rock under each room's floor; it also stops the domes of lower rooms cutting up into it
- * @param maxLip        furthest a floor reaches out into the shaft as a ledge, as a fraction of the shaft's width
+ * @param maxLip        furthest a floor reaches out into the shaft as a ledge, as a fraction of the shaft's width; 1 lets a
+ *                      floor reach the opposite wall, so a large disc can cross the chasm and overlap one from the other side
+ * @param rowJitter     how far a floor may drift from its row's height, as a fraction of {@code rowSpacing}; the floors of
+ *                      neighbouring rows are always at least {@code (1 - rowJitter) * rowSpacing} apart
  */
 public record RavineDiscs(
         float spacing, float rowSpacing, float minRadius, float maxRadius, float heightRatio, float minHeight,
-        float ceilingMargin, float minOffset, float maxOffset, float floorThickness, float maxLip) {
+        float ceilingMargin, float minOffset, float maxOffset, float floorThickness, float maxLip,
+        float rowJitter) {
 
     public static final MapCodec<RavineDiscs> MAP_CODEC = RecordCodecBuilder.<RavineDiscs>mapCodec(i -> i.group(
             Codec.floatRange(8, 1024).fieldOf("spacing").forGetter(RavineDiscs::spacing),
@@ -38,8 +42,8 @@ public record RavineDiscs(
             Codec.floatRange(0, 1).fieldOf("min_offset").forGetter(RavineDiscs::minOffset),
             Codec.floatRange(0, 1).fieldOf("max_offset").forGetter(RavineDiscs::maxOffset),
             Codec.floatRange(2, 32).fieldOf("floor_thickness").forGetter(RavineDiscs::floorThickness),
-            // Below half, so the lips of the two walls can never meet and the centre line stays open.
-            Codec.floatRange(0, 0.5F).fieldOf("max_lip").forGetter(RavineDiscs::maxLip)
+            Codec.floatRange(0, 1).fieldOf("max_lip").forGetter(RavineDiscs::maxLip),
+            Codec.floatRange(0, 0.9F).fieldOf("row_jitter").forGetter(RavineDiscs::rowJitter)
     ).apply(i, RavineDiscs::new)).validate(RavineDiscs::validate);
     public static final Codec<RavineDiscs> CODEC = MAP_CODEC.codec();
 

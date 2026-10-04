@@ -22,7 +22,7 @@ class RavineCellsTest {
             TagKey.create(Registries.BIOME, ResourceLocation.parse("overgrown_abyss:ravine_forbidden")),
             Optional.empty());
     static final RavineCurvature CURVATURE = new RavineCurvature(70, 40, 45, 25);
-    static final RavineDiscs DISCS = new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F);
+    static final RavineDiscs DISCS = new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0.8F);
     static final RavineSettings SETTINGS = settings(42L, 0.5F);
 
     static RavineSettings settings(long salt, float chance) {

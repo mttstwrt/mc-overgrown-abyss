@@ -111,7 +111,7 @@ public final class RavineShape {
 
     /**
      * The rock under one room's floor: the room's round footprint, {@code floor_thickness} deep, kept to at most
-     * {@code max_lip} of the shaft's width out from the wall. Where the footprint lies past the wall it is a ledge.
+     * {@code max_lip} of the shaft's width out from the wall (all the way across when that is 1). Where the footprint lies past the wall it is a ledge.
      */
     static double slabDistance(
             RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome, RavineCell.Frame frame, double y) {

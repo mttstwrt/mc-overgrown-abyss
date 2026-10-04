@@ -15,8 +15,11 @@ the mod's file. The log line `Ravine settings:` at world load shows which values
 
 ## Packs
 
-The mod's own defaults are `spacing` 45, `row_spacing` 12, radius 20 to 50, `min_offset` 0, `max_offset` 0.4.
+The mod's own defaults are `spacing` 45, `row_spacing` 20, `row_jitter` 0.4 (neighbouring rows' floors at least 12 apart), `max_lip` 1
+(a floor may reach right across the chasm), radius 20 to 50, `min_offset` 0, `max_offset` 0.4.
 
 - `wide-bays`: spacing 40, radius 22 to 55, offset 0.4 to 0.75. Rooms reach deeper into the rock and merge into one
   large cavity with a scalloped edge.
 - `small-bays`: spacing 55, row spacing 14, radius 18 to 40, offset 0 to 0.3. Fewer, smaller bays; the slot is more visible.
+- `sparse-discs`: spacing 60, row spacing 28, row jitter 0.3. Few discs, each with plenty of room above and below.
+- `dense-discs`: spacing 36, row spacing 15, row jitter 0.4. Many discs, overlapping heavily; floors at least 9 apart.

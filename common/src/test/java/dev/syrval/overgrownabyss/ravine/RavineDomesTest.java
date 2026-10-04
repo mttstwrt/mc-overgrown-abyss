@@ -138,6 +138,46 @@ class RavineDomesTest {
         assertTrue(RavineShape.slabDistance(SETTINGS, BOUNDS, CELL, d, within, d.floor() - 1) < 0, "slab within the lip limit");
     }
 
+    @Test
+    void aLargeDiscCanReachAllTheWayAcrossTheChasm() {
+        RavineCell narrow = new RavineCell(0, 0, 1, 0, 150, 25, RavineCell.Bend.NONE, RavineCell.Lean.NONE, 1L);
+        RavineDomes.Dome big = new RavineDomes.Dome(1, 0, 20, 55, 25, 0.2);
+        double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, narrow, big.floor());
+        assertTrue(big.radius() * (1 - big.offset()) > 2 * half, "the disc is wider than the chasm");
+        RavineCell.Frame nearFarWall = new RavineCell.Frame(big.along(), -half + 1);
+        RavineDiscs full = withLip(1);
+        RavineDiscs capped = withLip(0.4F);
+        assertTrue(RavineShape.slabDistance(RavineShapeTest.withDiscs(full), BOUNDS, narrow, big, nearFarWall, big.floor() - 1) < 0,
+                "with max_lip 1 the floor reaches the far wall");
+        assertTrue(RavineShape.slabDistance(RavineShapeTest.withDiscs(capped), BOUNDS, narrow, big, nearFarWall, big.floor() - 1) > 0,
+                "with a lower max_lip it stops short");
+    }
+
+    @Test
+    void floorsOfNeighbouringRowsStayAtLeastTheMinimumApart() {
+        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0.4F);
+        RavineSettings settings = RavineShapeTest.withDiscs(discs);
+        double minimum = (1 - discs.rowJitter()) * discs.rowSpacing();
+        int compared = 0;
+        for (int side : new int[] {1, -1}) {
+            for (int slot = 0; slot < RavineDomes.slots(settings, CELL); slot++) {
+                for (int row = 0; row + 1 < RavineDomes.rows(settings, BOUNDS); row++) {
+                    var lower = RavineDomes.at(settings, BOUNDS, CELL, side, row, slot);
+                    var upper = RavineDomes.at(settings, BOUNDS, CELL, side, row + 1, slot);
+                    if (lower.isPresent() && upper.isPresent()) {
+                        assertTrue(upper.get().floor() - lower.get().floor() >= minimum - 1e-9);
+                        compared++;
+                    }
+                }
+            }
+        }
+        assertTrue(compared > 10, "compared " + compared);
+    }
+
+    private static RavineDiscs withLip(float maxLip) {
+        return new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, maxLip, 0.8F);
+    }
+
     private static List<RavineDomes.Dome> allRooms() {
         var rooms = new ArrayList<RavineDomes.Dome>();
         for (int side : new int[] {1, -1}) {

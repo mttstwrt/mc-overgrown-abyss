@@ -45,7 +45,7 @@ final class RavineDomes {
     static Optional<Dome> at(RavineSettings settings, RavineBounds bounds, RavineCell cell, int side, int row, int slot) {
         RavineDiscs discs = settings.discs();
         int base = HASH_BASE + 8 * (((side > 0 ? 1 : 0) * MAX_ROWS + row) * MAX_SLOTS + slot);
-        double floor = lowestFloor(settings, bounds) + (row + 0.5 + (RavineCells.unit(cell.hash(), base) - 0.5) * JITTER) * discs.rowSpacing();
+        double floor = lowestFloor(settings, bounds) + (row + 0.5 + (RavineCells.unit(cell.hash(), base) - 0.5) * discs.rowJitter()) * discs.rowSpacing();
         double height = Math.min(
                 Math.max(discs.heightRatio() * radius(discs, cell, base), discs.minHeight()),
                 bounds.topY() - discs.ceilingMargin() - floor);

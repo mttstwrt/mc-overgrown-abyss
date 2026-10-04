@@ -397,6 +397,32 @@ Not verified:
 - Fabric and Larion not run. Top-row lips only appear where the terrain is solid.
 - Next idea from the owner: each disc grows a funnel/column below it that runs down until it meets a disc below or terrain.
 
+### Crossing discs and row spacing
+
+Owner review: big discs got cut off short of the far wall, and discs sat too close vertically.
+
+- **Lip cap:** `max_lip` now goes up to 1 (a floor reaching the opposite wall) and ships at 1. At 0.4 a disc's floor was
+  cut off 40% of the way across the shaft even when the disc was bigger. Domes were never capped, so only floors changed.
+- **Vertical spacing:** new `row_jitter` (fraction of `row_spacing` a floor may drift from its row) replaces the old fixed
+  0.8. Neighbouring rows' floors are always at least `(1 - row_jitter) * row_spacing` apart. Shipped `row_spacing` 20 and
+  `row_jitter` 0.4, so at least 12 apart (was 2.4), which leaves about 8 blocks of clear height under the next slab.
+- **Density packs** in `dev-datapacks/`: `sparse-discs` (spacing 60, rows 28 apart) and `dense-discs` (spacing 36, rows 15
+  apart), next to the existing two.
+
+| Check | Result |
+|---|---|
+| Unit tests: a large disc's floor reaches the far wall at `max_lip` 1 and stops short at 0.4; neighbouring floors keep the minimum gap | pass (`./gradlew build`) |
+| NeoForge dedicated server, seed 20261003, 143 chunks around the ravine at 981,-695, new settings in the log, no errors | yes |
+
+Not verified:
+- **Nothing was looked at in game or rendered.**
+- **The centre line is no longer guaranteed open** at `max_lip` 1 (the unit tests keep their own settings at 0.4). Measured on
+  900 sampled ravines with the shipped numbers: 820 have a floor across the centre column at some height, and about 6% of
+  sampled heights there are closed. The chasm stays open elsewhere along its length, but a round hole (no length) has no
+  other way down. Not checked against the city or descent.
+- **Rows:** vanilla height now holds 3 rows instead of 4; Larion has more.
+- Fabric and Larion not run.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
