@@ -39,8 +39,10 @@
     "min_offset": 0.4,
     "max_offset": 0.75,
     "floor_thickness": 4,
-    "max_lip": 1.0,
-    "row_jitter": 0.4
+    "max_lip": 2.0,
+    "row_jitter": 0.4,
+    "through_chance": 0.15,
+    "through_max_radius": 100
   },
   "environment": {
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",

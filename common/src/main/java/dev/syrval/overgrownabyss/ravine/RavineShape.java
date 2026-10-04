@@ -74,7 +74,7 @@ public final class RavineShape {
         int topRow = Math.min(rows - 1, (int) Math.floor((y + config.floorThickness() - lowest) / config.rowSpacing()));
         int firstRow = Math.max(0, topRow - (int) Math.ceil((config.maxDomeHeight() + config.floorThickness()) / config.rowSpacing()) - 1);
         int centreSlot = spacing == 0 ? 0 : (int) Math.floor((frame.along() + cell.halfLength()) / spacing);
-        int slotSpan = spacing == 0 ? 0 : (int) Math.ceil(config.maxRadius() / spacing) + 1;
+        int slotSpan = spacing == 0 ? 0 : (int) Math.ceil(config.largestRadius() / spacing) + 1;
         int firstSlot = Math.max(0, centreSlot - slotSpan);
         int lastSlot = Math.min(slots - 1, centreSlot + slotSpan);
         double nearestDome = Double.POSITIVE_INFINITY;
@@ -111,7 +111,7 @@ public final class RavineShape {
 
     /**
      * The rock under one room's floor: the room's round footprint, {@code floor_thickness} deep, kept to at most
-     * {@code max_lip} of the shaft's width out from the wall (all the way across when that is 1). Where the footprint lies past the wall it is a ledge.
+     * {@code max_lip} of the shaft's width out from the wall (all the way across when that is 1, and through the far wall at 2). Where the footprint lies past the wall it is a ledge.
      */
     static double slabDistance(
             RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome, RavineCell.Frame frame, double y) {

@@ -423,6 +423,36 @@ Not verified:
 - **Rows:** vanilla height now holds 3 rows instead of 4; Larion has more.
 - Fabric and Larion not run.
 
+### Through discs
+
+Owner: let floors run all the way into the opposing wall, and have 10 to 20% of discs reach all the way through the chasm;
+sealing to be dealt with by fewer large discs or deeper offsets.
+
+- `max_lip` now goes up to 2 and ships at 2 (1 is the far wall, 2 carries on through it), so a floor is limited only by its
+  own footprint.
+- **Why a chance, not bigger discs:** crossing depends on the chasm's width at the disc's height, so no single radius range
+  gives a steady share. Measured with the old draw: 1 to 2% of discs crossed, and even `max_radius` 70 gave only 6 to 7%.
+  New `through_chance` (0.15): that fraction of discs is sized from the width at its floor, `(width + 4) / (1 - min_offset)`,
+  placed at `min_offset`, so it reaches 4 blocks into the far wall. `through_max_radius` (100) is a hard limit: a disc that
+  would need more stays ordinary. `reach` in the cell-fit check includes it.
+- Measured with the shipped numbers on 900 sampled ravines: 16.4% of discs run through on vanilla height (floor -40) and
+  16.6% on Larion height (floor -104). A unit test holds the share between 10% and 20%.
+
+Sealing, same 900 ravines, centre column only, at some height (not the whole chasm):
+
+| Setting | vanilla: ravines with a closed centre / closed share of heights | Larion height |
+|---|---|---|
+| shipped (chance 0.15, offset 0 to 0.4) | 874 of 900 / 6.4% | 900 of 900 / 12.2% |
+| chance 0.10 | 842 / 5.8% (11.7% through) | 900 / 10.9% |
+| chance 0.15, offset 0.3 to 0.6 | 605 / 3.5% (8.0% through) | 854 / 7.0% |
+| no through discs (chance 0) | 707 / 4.1% | 875 / 8.0% |
+
+Most of the sealing comes from the uncapped slabs of ordinary discs, not only the through ones. Deeper offsets cut sealing
+but also cut the through share below 10%, so the through share and the sealing need to be balanced together.
+
+Not verified: nothing was looked at in game or rendered; Fabric and Larion not run; the city and descent not checked
+against sealing.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

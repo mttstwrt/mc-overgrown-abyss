@@ -22,14 +22,18 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param maxOffset     and at the most; larger values give a narrower mouth
  * @param floorThickness blocks of solid rock under each room's floor; it also stops the domes of lower rooms cutting up into it
  * @param maxLip        furthest a floor reaches out into the shaft as a ledge, as a fraction of the shaft's width; 1 lets a
- *                      floor reach the opposite wall, so a large disc can cross the chasm and overlap one from the other side
+ *                      floor reach the opposite wall and 2 lets it carry on through it, so a large disc can cross the chasm and
+ *                      run under a room on the other side
  * @param rowJitter     how far a floor may drift from its row's height, as a fraction of {@code rowSpacing}; the floors of
  *                      neighbouring rows are always at least {@code (1 - rowJitter) * rowSpacing} apart
+ * @param throughChance fraction of discs sized to run all the way through the chasm into the opposite wall, whatever the
+ *                      chasm's width at their height; a disc that would need more than {@code throughMaxRadius} stays ordinary
+ * @param throughMaxRadius largest radius a through disc may have, so very wide chasms are not crossed
  */
 public record RavineDiscs(
         float spacing, float rowSpacing, float minRadius, float maxRadius, float heightRatio, float minHeight,
         float ceilingMargin, float minOffset, float maxOffset, float floorThickness, float maxLip,
-        float rowJitter) {
+        float rowJitter, float throughChance, float throughMaxRadius) {
 
     public static final MapCodec<RavineDiscs> MAP_CODEC = RecordCodecBuilder.<RavineDiscs>mapCodec(i -> i.group(
             Codec.floatRange(8, 1024).fieldOf("spacing").forGetter(RavineDiscs::spacing),
@@ -42,25 +46,39 @@ public record RavineDiscs(
             Codec.floatRange(0, 1).fieldOf("min_offset").forGetter(RavineDiscs::minOffset),
             Codec.floatRange(0, 1).fieldOf("max_offset").forGetter(RavineDiscs::maxOffset),
             Codec.floatRange(2, 32).fieldOf("floor_thickness").forGetter(RavineDiscs::floorThickness),
-            Codec.floatRange(0, 1).fieldOf("max_lip").forGetter(RavineDiscs::maxLip),
-            Codec.floatRange(0, 0.9F).fieldOf("row_jitter").forGetter(RavineDiscs::rowJitter)
+            Codec.floatRange(0, 2).fieldOf("max_lip").forGetter(RavineDiscs::maxLip),
+            Codec.floatRange(0, 0.9F).fieldOf("row_jitter").forGetter(RavineDiscs::rowJitter),
+            Codec.floatRange(0, 1).fieldOf("through_chance").forGetter(RavineDiscs::throughChance),
+            Codec.floatRange(4, 256).fieldOf("through_max_radius").forGetter(RavineDiscs::throughMaxRadius)
     ).apply(i, RavineDiscs::new)).validate(RavineDiscs::validate);
     public static final Codec<RavineDiscs> CODEC = MAP_CODEC.codec();
 
     /** Furthest a disc can reach past the wall it opens from, in blocks; ravine reach must allow for it. */
     public double extraReach() {
-        return maxRadius * (1 + maxOffset);
+        return Math.max(maxRadius * (1 + maxOffset), throughChance > 0 ? throughMaxRadius * (1 + minOffset) : 0);
+    }
+
+    /** The largest radius any disc can have. */
+    public double largestRadius() {
+        return throughChance > 0 ? Math.max(maxRadius, throughMaxRadius) : maxRadius;
     }
 
     /** Tallest a dome can be, which bounds how many rows below a point can still hold it. */
     public double maxDomeHeight() {
-        return Math.max(heightRatio * maxRadius, minHeight);
+        return Math.max(heightRatio * largestRadius(), minHeight);
     }
 
     private static DataResult<RavineDiscs> validate(RavineDiscs d) {
         if (d.minRadius > d.maxRadius) {
             return DataResult.error(() -> "min_radius must not exceed max_radius");
         }
-        return d.minOffset > d.maxOffset ? DataResult.error(() -> "min_offset must not exceed max_offset") : DataResult.success(d);
+        if (d.minOffset > d.maxOffset) {
+            return DataResult.error(() -> "min_offset must not exceed max_offset");
+        }
+        // A through disc's radius is the chasm width divided by (1 - min_offset).
+        if (d.throughChance > 0 && d.minOffset > 0.9F) {
+            return DataResult.error(() -> "min_offset must not exceed 0.9 when through_chance is above 0");
+        }
+        return DataResult.success(d);
     }
 }

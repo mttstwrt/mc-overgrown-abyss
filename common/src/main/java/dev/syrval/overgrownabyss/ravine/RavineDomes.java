@@ -11,6 +11,8 @@ final class RavineDomes {
     static final int MAX_SLOTS = 64;
     private static final int HASH_BASE = 5000;
     private static final double JITTER = 0.8;
+    // A through disc ends this far inside the far wall, not exactly on it.
+    private static final double THROUGH_MARGIN = 4;
 
     private RavineDomes() {}
 
@@ -46,8 +48,19 @@ final class RavineDomes {
         RavineDiscs discs = settings.discs();
         int base = HASH_BASE + 8 * (((side > 0 ? 1 : 0) * MAX_ROWS + row) * MAX_SLOTS + slot);
         double floor = lowestFloor(settings, bounds) + (row + 0.5 + (RavineCells.unit(cell.hash(), base) - 0.5) * discs.rowJitter()) * discs.rowSpacing();
+        double radius = radius(discs, cell, base);
+        double offset = lerp(RavineCells.unit(cell.hash(), base + 2), discs.minOffset(), discs.maxOffset());
+        if (RavineCells.unit(cell.hash(), base + 4) < discs.throughChance()) {
+            // Sized from the chasm's width at this floor, so the same chance gives the same share of through discs in
+            // narrow and wide chasms. The lowest offset is used because it needs the smallest radius.
+            double needed = (2 * RavineShape.halfWidthAt(settings, bounds, cell, floor) + THROUGH_MARGIN) / (1 - discs.minOffset());
+            if (needed <= discs.throughMaxRadius()) {
+                radius = Math.max(radius, needed);
+                offset = discs.minOffset();
+            }
+        }
         double height = Math.min(
-                Math.max(discs.heightRatio() * radius(discs, cell, base), discs.minHeight()),
+                Math.max(discs.heightRatio() * radius, discs.minHeight()),
                 bounds.topY() - discs.ceilingMargin() - floor);
         if (height < discs.minHeight()) {
             return Optional.empty();
@@ -55,8 +68,7 @@ final class RavineDomes {
         // Odd rows are shifted by half a slot so rooms in neighbouring rows overlap instead of stacking.
         double along = -cell.halfLength()
                 + (slot + 0.5 + (RavineCells.unit(cell.hash(), base + 3) - 0.5) * JITTER + (row % 2) * 0.5) * slotSpacing(settings, cell);
-        double offset = lerp(RavineCells.unit(cell.hash(), base + 2), discs.minOffset(), discs.maxOffset());
-        return Optional.of(new Dome(side, along, floor, radius(discs, cell, base), height, offset));
+        return Optional.of(new Dome(side, along, floor, radius, height, offset));
     }
 
     // Raising the draw to a power keeps most rooms modest and a few large.

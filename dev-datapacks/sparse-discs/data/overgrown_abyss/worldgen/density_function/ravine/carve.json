@@ -39,7 +39,7 @@
     "min_offset": 0.0,
     "max_offset": 0.4,
     "floor_thickness": 4,
-    "max_lip": 1.0,
+    "max_lip": 2.0,
     "row_jitter": 0.3
   },
   "environment": {
