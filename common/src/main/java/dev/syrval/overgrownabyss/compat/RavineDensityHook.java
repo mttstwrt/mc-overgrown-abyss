@@ -5,8 +5,11 @@ import dev.syrval.overgrownabyss.ravine.RavineBounds;
 import dev.syrval.overgrownabyss.ravine.RavineCarve;
 import dev.syrval.overgrownabyss.ravine.LandCheck;
 import dev.syrval.overgrownabyss.ravine.RavineCells;
+import dev.syrval.overgrownabyss.ravine.RavineDiscs;
 import dev.syrval.overgrownabyss.ravine.RavineEnvironment;
 import dev.syrval.overgrownabyss.ravine.RavineFootprint;
+import dev.syrval.overgrownabyss.ravine.RavineSettings;
+import dev.syrval.overgrownabyss.ravine.RavineTiers;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -96,6 +99,7 @@ public final class RavineDensityHook {
             RavineEnvironment environment = carve.settings().environment();
             carve.restrictToLand(landCheck(generator.getBiomeSource(), state.sampler(), settings.seaLevel(), environment.forbiddenBiomes()));
             regions.add(new RavineFootprint.Region(carve, cavernBiome(biomes, environment)));
+            logSettings(carve.settings());
             logRavinesNearOrigin(carve);
         }
         ((RavineFootprintHolder) (Object) state).overgrownAbyss$setFootprint(RavineFootprint.of(regions));
@@ -130,14 +134,26 @@ public final class RavineDensityHook {
                 settings.aquifersEnabled(), settings.oreVeinsEnabled(), settings.useLegacyRandomSource());
     }
 
+    // Shows which values the world actually loaded: a datapack's carve.json replaces the mod's, and this is how to tell.
+    private static void logSettings(RavineSettings s) {
+        RavineTiers tiers = s.walls().tiers();
+        RavineDiscs discs = s.walls().discs();
+        OvergrownAbyss.LOGGER.info(
+                "Ravine settings: size_bias {}, tiers {} (max_count {}, max_shift {}, ramp {}), discs {} (spacing {}, radius {}-{}), bridges {}, ledge density {}",
+                s.sizeBias(), tiers.maxCount() == 0 ? "off" : "on", tiers.maxCount(), tiers.maxShift(), tiers.ramp(),
+                discs.spacing() == 0 ? "off" : "on", discs.spacing(), discs.minRadius(), discs.maxRadius(),
+                s.bridges().maxCount(), s.ledges().density());
+    }
+
     // Cells whose hash holds a ravine but whose ground is ocean are skipped, so this lists only what will generate.
     private static void logRavinesNearOrigin(RavineCarve carve) {
         for (int cellX = -1; cellX <= 1; cellX++) {
             for (int cellZ = -1; cellZ <= 1; cellZ++) {
                 RavineCells.at(carve.seed(), carve.settings(), cellX, cellZ).filter(carve::isActive).ifPresent(cell -> OvergrownAbyss.LOGGER.info(
-                        "Ravine centre at x={} z={} (floor y={}, {} long, {} wide, {} bridges)",
+                        "Ravine centre at x={} z={} (floor y={}, {} long, {} wide, {} bridges, {} levels, {} discs)",
                         Math.round(cell.centreX()), Math.round(cell.centreZ()), carve.bounds().floorY(),
-                        Math.round(cell.halfLength() * 2), Math.round(cell.halfWidth() * 2), cell.bridges().size()));
+                        Math.round(cell.halfLength() * 2), Math.round(cell.halfWidth() * 2), cell.bridges().size(),
+                        cell.tiers().levels().size(), cell.discs().size()));
             }
         }
     }

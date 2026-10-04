@@ -15,3 +15,21 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+// Stamps the jar with the commit it was built from, so the mod can log which build is running.
+def gitCommit = providers.exec {
+    commandLine 'git', 'rev-parse', '--short', 'HEAD'
+    ignoreExitValue = true
+}.standardOutput.asText.map { it.trim() }.orElse('unknown')
+def gitDirty = providers.exec {
+    commandLine 'git', 'status', '--porcelain', '--untracked-files=no'
+    ignoreExitValue = true
+}.standardOutput.asText.map { !it.trim().isEmpty() }.orElse(false)
+
+processResources {
+    inputs.property('gitCommit', gitCommit)
+    inputs.property('gitDirty', gitDirty)
+    filesMatching('overgrown_abyss-build.properties') {
+        expand(commit: gitCommit.get(), dirty: gitDirty.get())
+    }
+}

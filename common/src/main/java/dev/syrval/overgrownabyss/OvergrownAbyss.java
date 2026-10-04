@@ -14,6 +14,9 @@ import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.placement.StructurePlacementType;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 import org.slf4j.Logger;
 
 public final class OvergrownAbyss {
@@ -41,7 +44,20 @@ public final class OvergrownAbyss {
         processorTypes.register("processor_list", () -> NestedProcessorListProcessor.TYPE);
         processorTypes.register();
 
-        LOGGER.info("Overgrown Abyss initialised");
+        LOGGER.info("Overgrown Abyss initialised (build {})", buildDescription());
+    }
+
+    // The jar carries the commit it was built from, so a log line shows whether a world ran the latest code.
+    private static String buildDescription() {
+        Properties build = new Properties();
+        try (InputStream stream = OvergrownAbyss.class.getResourceAsStream("/overgrown_abyss-build.properties")) {
+            if (stream != null) {
+                build.load(stream);
+            }
+        } catch (IOException e) {
+            LOGGER.warn("Could not read the build stamp", e);
+        }
+        return build.getProperty("commit", "unknown") + ("true".equals(build.getProperty("dirty")) ? " + uncommitted changes" : "");
     }
 
     public static ResourceLocation id(String path) {
