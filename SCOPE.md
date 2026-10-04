@@ -487,6 +487,49 @@ Lower `through_chance` for less of that.
 Not verified: nothing was rendered or looked at in game by me; Fabric and Larion not run; city and descent not checked.
 `wide-bays` uses a bonus of 0.2 because its max offset is 0.75.
 
+### Discs that stay full, staggered sides
+
+Owner (after seeing it in game): some of the largest discs still poke too far into the chasm; patches of sky should still be
+visible from the bottom. A disc may cut through the middle but should only overshoot it a little, and it must stay a full
+disc, not be cut off. Also: offset the layer heights on the two walls so overhangs form a natural S curve instead of meeting
+in the middle. And the largest disc radius should drop to 48.
+
+- **`max_overshoot` (4):** a disc's reach into the shaft is `radius * (1 - offset)`. If that would pass the middle of the
+  chasm (half its width at the floor) by more than the overshoot, the disc's offset is raised until it does not, so it is
+  set back into the wall. Radius and shape are untouched; nothing is clipped.
+- **`side_stagger` (0.5):** the second wall's floors sit that fraction of `row_spacing` higher than the first's, so a row on
+  one wall lies halfway between two on the other.
+- **`max_radius` 48** (was 50; `wide-bays` was 55). Cell reach now allows two radii behind the wall.
+- **Removed:** `max_lip`, `through_chance` and `through_max_radius`. The slab is the whole disc footprint, no cap, and discs
+  that cross the chasm to the far wall no longer exist (they could not coexist with a limited overshoot). The earlier
+  10 to 20% through share is gone on purpose.
+
+Measured on the 830 sampled ravines of 120 or more length, walking the centre line along its length from the cavern roof to
+the ceiling margin:
+
+| Setting | vanilla height: avg centre line closed / levels fully sealed | Larion height |
+|---|---|---|
+| previous build (through discs, `max_lip` 2) | 9.0% | 12.2% |
+| overshoot 4, stagger 0.5 (shipped) | 1.1% / 0 | 2.0% / 0 |
+| overshoot 4, stagger 0 | 1.3% / 0 | 2.2% / 0 |
+| overshoot 0, stagger 0.5 | 0.8% / 0 | 1.5% / 0 |
+| overshoot 8, stagger 0.5 | 1.1% / 0 | 2.1% / 0 |
+
+The stagger barely moves this number, because it measures the centre line, not the overlap between the two walls' discs; its
+effect is on how overhangs interleave and was not measured.
+
+| Check | Result |
+|---|---|
+| Unit tests (42): no disc reaches more than the overshoot past the middle and its radius is unchanged; a set-back disc is a full round floor in every direction; the second wall's rows sit higher by the stagger; every level of a 100+ long ravine has open centre line; all earlier tests | pass (`./gradlew build`) |
+| NeoForge dedicated server, seed 20261003, 143 chunks around the ravine at 981,-695, new settings in the log, no errors | yes |
+
+Not verified, and open:
+- **Nothing was rendered or looked at in game by me.** Fabric and Larion not run.
+- **Short ravines can still have a level fully walled off.** In 900 sampled ravines, 81 failed the "every level has open
+  centre line" check; all but one were under 100 long (51 of 57 under 25 long, 18 of 42 of 25 to 50, 11 of 57 of 50 to 75),
+  because one disc up to 48 across can cover a short ravine's whole length. The unit test only covers ravines of 100 or more.
+- City and descent not checked against sealing.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

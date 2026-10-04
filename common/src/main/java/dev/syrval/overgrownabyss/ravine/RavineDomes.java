@@ -11,8 +11,6 @@ final class RavineDomes {
     static final int MAX_SLOTS = 64;
     private static final int HASH_BASE = 5000;
     private static final double JITTER = 0.8;
-    // A through disc ends this far inside the far wall, not exactly on it.
-    private static final double THROUGH_MARGIN = 4;
 
     private RavineDomes() {}
 
@@ -47,19 +45,16 @@ final class RavineDomes {
     static Optional<Dome> at(RavineSettings settings, RavineBounds bounds, RavineCell cell, int side, int row, int slot) {
         RavineDiscs discs = settings.discs();
         int base = HASH_BASE + 8 * (((side > 0 ? 1 : 0) * MAX_ROWS + row) * MAX_SLOTS + slot);
-        double floor = lowestFloor(settings, bounds) + (row + 0.5 + (RavineCells.unit(cell.hash(), base) - 0.5) * discs.rowJitter()) * discs.rowSpacing();
+        // Rows on the second wall sit higher by the stagger, so overhangs alternate from side to side.
+        double stagger = side > 0 ? 0 : discs.sideStagger();
+        double floor = lowestFloor(settings, bounds)
+                + (row + 0.5 + stagger + (RavineCells.unit(cell.hash(), base) - 0.5) * discs.rowJitter()) * discs.rowSpacing();
         double radius = radius(discs, cell, base);
         double largeness = discs.maxRadius() > discs.minRadius() ? (radius - discs.minRadius()) / (discs.maxRadius() - discs.minRadius()) : 0;
         double offset = lerp(RavineCells.unit(cell.hash(), base + 2), discs.minOffset(), discs.maxOffset()) + largeness * discs.largeOffsetBonus();
-        if (RavineCells.unit(cell.hash(), base + 4) < discs.throughChance()) {
-            // Sized from the chasm's width at this floor, so the same chance gives the same share of through discs in
-            // narrow and wide chasms. The lowest offset is used because it needs the smallest radius.
-            double needed = (2 * RavineShape.halfWidthAt(settings, bounds, cell, floor) + THROUGH_MARGIN) / (1 - discs.minOffset());
-            if (needed <= discs.throughMaxRadius()) {
-                radius = Math.max(radius, needed);
-                offset = discs.minOffset();
-            }
-        }
+        // A disc reaches radius * (1 - offset) into the shaft, so setting it back keeps the whole disc and limits its reach.
+        double reach = RavineShape.halfWidthAt(settings, bounds, cell, floor) + discs.maxOvershoot();
+        offset = Math.max(offset, 1 - reach / radius);
         double height = Math.min(
                 Math.max(discs.heightRatio() * radius, discs.minHeight()),
                 bounds.topY() - discs.ceilingMargin() - floor);

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class RavineShapeTest {
     static final RavineSettings SETTINGS = RavineCellsTest.SETTINGS;
     /** The same ravine with the ceiling margin so large that no disc room fits: just the shaft and the cavern. */
-    static final RavineSettings PLAIN = withDiscs(new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 128, 0.4F, 0.75F, 4, 0.4F, 0.8F, 0F, 100F, 0F));
+    static final RavineSettings PLAIN = withDiscs(new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 128, 0.4F, 0.75F, 4, 0.8F, 0F, 4F, 0.5F));
     static final RavineBounds BOUNDS = new RavineBounds(-40, 80);
     // Along the x axis, 300 long and 100 wide at the top.
     static final RavineCell CELL = new RavineCell(0, 0, 1, 0, 150, 50);
@@ -71,21 +71,41 @@ class RavineShapeTest {
     }
 
     @Test
-    void theCentreLineStaysOpenFromFloorToRimForEveryRavine() {
+    void everyLevelOfARavineHasOpenAirOnItsCentreLineSomewhereAlongItsLength() {
         RavineSettings always = RavineCellsTest.settings(42L, 1F);
         for (int cx = -15; cx < 15; cx++) {
             for (int cz = -15; cz < 15; cz++) {
                 RavineCell c = RavineCells.at(11L, always, cx, cz).orElseThrow();
+                // A disc can be wider than a short ravine is long, so only ravines of at least 100 are held to this.
+                if (c.halfLength() < 50) {
+                    continue;
+                }
                 for (int y = BOUNDS.floorY(); y <= BOUNDS.topY() + 20; y += 5) {
-                    double t = Math.clamp((y - BOUNDS.floorY()) / 120.0, 0, 1);
-                    double shift = c.lean().shift(t);
-                    double x = c.centreX() + shift * c.lean().dirX();
-                    double z = c.centreZ() + shift * c.lean().dirZ();
-                    assertTrue(RavineShape.signedDistance(always, BOUNDS, c, x, y, z) < 0,
-                            "closed at y=" + y + " in cell " + cx + "," + cz + " halfWidth " + c.halfWidth());
+                    boolean open = false;
+                    for (double along = -c.halfLength(); along <= c.halfLength() && !open; along += 5) {
+                        open = distance(always, c, centreLineX(c, along, y), y, centreLineZ(c, along, y)) < 0;
+                    }
+                    assertTrue(open, "level y=" + y + " is walled off along the whole centre line of cell " + cx + "," + cz);
                 }
             }
         }
+    }
+
+    // The centre line at height y, at a position along the chord: bent sideways, then leaned with height.
+    private static double centreLineX(RavineCell c, double along, double y) {
+        return c.centreX() + along * c.dirX() - c.bend().offset(unitAlong(c, along)) * c.dirZ() + leanShift(c, y) * c.lean().dirX();
+    }
+
+    private static double centreLineZ(RavineCell c, double along, double y) {
+        return c.centreZ() + along * c.dirZ() + c.bend().offset(unitAlong(c, along)) * c.dirX() + leanShift(c, y) * c.lean().dirZ();
+    }
+
+    private static double unitAlong(RavineCell c, double along) {
+        return Math.clamp(along / c.halfLength(), -1, 1);
+    }
+
+    private static double leanShift(RavineCell c, double y) {
+        return c.lean().shift(Math.clamp((y - BOUNDS.floorY()) / (double) (BOUNDS.topY() - BOUNDS.floorY()), 0, 1));
     }
 
     @Test

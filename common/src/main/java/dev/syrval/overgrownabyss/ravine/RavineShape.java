@@ -5,8 +5,8 @@ package dev.syrval.overgrownabyss.ravine;
  * The volume is the ravine shaft from the floor upwards, a domed cavern centred on the cell whose floor is flat, and the
  * disc rooms cut sideways into the shaft's walls (see {@link RavineDomes}). Each room then gets its floor slab put back
  * as rock: it keeps the floor solid where lower rooms' domes would cut up through it, and the part of it that lies in
- * the shaft is a ledge. The shaft follows a centre line that bends in plan view and sways sideways with height, and
- * narrows towards the floor.
+ * the shaft is a ledge. A room's reach into the shaft is limited by setting its centre back, never by cutting it off. The
+ * shaft follows a centre line that bends in plan view and sways sideways with height, and narrows towards the floor.
  *
  * <p>These are distance estimates, exact for a straight shaft and close for gentle curves, which is all the carve
  * needs: it only uses the sign and a few blocks of falloff either side of the wall. Each room's floor is exactly the
@@ -72,9 +72,9 @@ public final class RavineShape {
         // Rooms whose floor is at or below this point can hold it in their dome, and rooms whose floor is up to a slab
         // thickness above it can hold it in their slab. Domes reach at most one dome's height up from their floor.
         int topRow = Math.min(rows - 1, (int) Math.floor((y + config.floorThickness() - lowest) / config.rowSpacing()));
-        int firstRow = Math.max(0, topRow - (int) Math.ceil((config.maxDomeHeight() + config.floorThickness()) / config.rowSpacing()) - 1);
+        int firstRow = Math.max(0, topRow - (int) Math.ceil((config.maxDomeHeight() + config.floorThickness()) / config.rowSpacing()) - 2);
         int centreSlot = spacing == 0 ? 0 : (int) Math.floor((frame.along() + cell.halfLength()) / spacing);
-        int slotSpan = spacing == 0 ? 0 : (int) Math.ceil(config.largestRadius() / spacing) + 1;
+        int slotSpan = spacing == 0 ? 0 : (int) Math.ceil(config.maxRadius() / spacing) + 1;
         int firstSlot = Math.max(0, centreSlot - slotSpan);
         int lastSlot = Math.min(slots - 1, centreSlot + slotSpan);
         double nearestDome = Double.POSITIVE_INFINITY;
@@ -109,23 +109,14 @@ public final class RavineShape {
         return Math.max(roof, dome.floor() - y);
     }
 
-    /**
-     * The rock under one room's floor: the room's round footprint, {@code floor_thickness} deep, kept to at most
-     * {@code max_lip} of the shaft's width out from the wall (all the way across when that is 1, and through the far wall at 2). Where the footprint lies past the wall it is a ledge.
-     */
+    /** The rock under one room's floor: the room's whole round footprint, {@code floor_thickness} deep. */
     static double slabDistance(
             RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome, RavineCell.Frame frame, double y) {
-        RavineDiscs discs = settings.discs();
         double dAlong = frame.along() - dome.along();
         double dSide = frame.sideways() - centreSideways(settings, bounds, cell, dome);
         double footprint = Math.sqrt(dAlong * dAlong + dSide * dSide) - dome.radius();
-        double vertical = Math.max(y - dome.floor(), dome.floor() - discs.floorThickness() - y);
-        double lipLimit = discs.maxLip() * 2 * halfWidthAt(settings, bounds, cell, dome.floor());
-        // Measured from the wall at this point's own place along the ravine, not the room's: on a curve those differ, and
-        // the lip must never pass the centre line.
-        double lateral = frame.sideways() - cell.bend().offset(unitAlong(cell, frame.along()));
-        double intoShaft = halfWidthAt(settings, bounds, cell, dome.floor()) - dome.side() * lateral;
-        return Math.max(Math.max(footprint, vertical), intoShaft - lipLimit);
+        double vertical = Math.max(y - dome.floor(), dome.floor() - settings.discs().floorThickness() - y);
+        return Math.max(footprint, vertical);
     }
 
     /** Where the wall the room opens from sits, sideways of the chord, at the room's floor height. */

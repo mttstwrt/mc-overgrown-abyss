@@ -32,18 +32,17 @@
     "spacing": 36,
     "row_spacing": 15,
     "min_radius": 20,
-    "max_radius": 50,
+    "max_radius": 48,
     "height_ratio": 0.45,
     "min_height": 14,
     "ceiling_margin": 12,
     "min_offset": 0.0,
     "max_offset": 0.4,
     "floor_thickness": 4,
-    "max_lip": 2.0,
     "row_jitter": 0.4,
-    "through_chance": 0.15,
-    "through_max_radius": 100,
-    "large_offset_bonus": 0.45
+    "large_offset_bonus": 0.45,
+    "max_overshoot": 4,
+    "side_stagger": 0.5
   },
   "environment": {
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",

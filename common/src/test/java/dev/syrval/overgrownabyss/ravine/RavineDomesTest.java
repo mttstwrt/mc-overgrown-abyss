@@ -31,7 +31,7 @@ class RavineDomesTest {
                     made++;
                     RavineDomes.Dome d = dome.get();
                     assertTrue(d.radius() >= DISCS.minRadius() - 1e-9 && d.radius() <= DISCS.maxRadius() + 1e-9);
-                    assertTrue(d.offset() >= DISCS.minOffset() - 1e-9 && d.offset() <= DISCS.maxOffset() + 1e-9);
+                    assertTrue(d.offset() >= DISCS.minOffset() - 1e-9 && d.offset() < 1);
                     assertTrue(d.height() >= DISCS.minHeight() - 1e-9);
                     assertTrue(d.floor() >= RavineDomes.lowestFloor(SETTINGS, BOUNDS));
                     assertTrue(d.floor() + d.height() <= BOUNDS.topY() - DISCS.ceilingMargin() + 1e-9, "stays under the ceiling margin");
@@ -117,7 +117,7 @@ class RavineDomesTest {
         int checked = 0;
         for (RavineDomes.Dome d : allRooms()) {
             double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor());
-            double reach = Math.min(DISCS.maxLip() * 2 * half, d.radius() * (1 - d.offset()));
+            double reach = d.radius() * (1 - d.offset());
             double z = d.side() * (half - reach / 2);
             assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, d.along(), d.floor() - thickness / 2, z) > 0, "ledge of " + d);
             checked++;
@@ -126,36 +126,52 @@ class RavineDomesTest {
     }
 
     @Test
-    void aLedgeStopsAtTheMaximumLip() {
-        // Big enough that its footprint reaches well past the lip limit.
-        RavineDomes.Dome d = new RavineDomes.Dome(1, 0, 20, 55, 25, 0.4);
-        double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor());
-        double limit = DISCS.maxLip() * 2 * half;
-        assertTrue(d.radius() * (1 - d.offset()) > limit + 2);
-        RavineCell.Frame past = new RavineCell.Frame(d.along(), half - limit - 1);
-        RavineCell.Frame within = new RavineCell.Frame(d.along(), half - limit + 1);
-        assertTrue(RavineShape.slabDistance(SETTINGS, BOUNDS, CELL, d, past, d.floor() - 1) > 0, "no slab past the lip limit");
-        assertTrue(RavineShape.slabDistance(SETTINGS, BOUNDS, CELL, d, within, d.floor() - 1) < 0, "slab within the lip limit");
+    void noDiscReachesMoreThanTheOvershootPastTheMiddleOfTheChasm() {
+        for (RavineDomes.Dome d : allRooms()) {
+            double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor());
+            assertTrue(d.radius() * (1 - d.offset()) <= half + DISCS.maxOvershoot() + 1e-9, "reach of " + d);
+            assertTrue(d.radius() >= DISCS.minRadius() - 1e-9 && d.radius() <= DISCS.maxRadius() + 1e-9, "radius is never changed to fit");
+        }
     }
 
     @Test
-    void aLargeDiscCanReachAllTheWayAcrossTheChasm() {
-        RavineCell narrow = new RavineCell(0, 0, 1, 0, 150, 25, RavineCell.Bend.NONE, RavineCell.Lean.NONE, 1L);
-        RavineDomes.Dome big = new RavineDomes.Dome(1, 0, 20, 55, 25, 0.2);
-        double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, narrow, big.floor());
-        assertTrue(big.radius() * (1 - big.offset()) > 2 * half, "the disc is wider than the chasm");
-        RavineCell.Frame nearFarWall = new RavineCell.Frame(big.along(), -half + 1);
-        RavineDiscs full = withLip(1);
-        RavineDiscs capped = withLip(0.4F);
-        assertTrue(RavineShape.slabDistance(RavineShapeTest.withDiscs(full), BOUNDS, narrow, big, nearFarWall, big.floor() - 1) < 0,
-                "with max_lip 1 the floor reaches the far wall");
-        assertTrue(RavineShape.slabDistance(RavineShapeTest.withDiscs(capped), BOUNDS, narrow, big, nearFarWall, big.floor() - 1) > 0,
-                "with a lower max_lip it stops short");
+    void aDiscThatWouldReachTooFarIsSetBackAndStaysAFullRound() {
+        RavineCell narrow = new RavineCell(0, 0, 1, 0, 150, 25, RavineCell.Bend.NONE, RavineCell.Lean.NONE, 5L);
+        RavineSettings settings = RavineShapeTest.withDiscs(new RavineDiscs(45, 20, 50, 50, 0.45F, 14, 12, 0F, 0F, 4, 0F, 0F, 4F, 0F));
+        var room = RavineDomes.at(settings, BOUNDS, narrow, 1, 0, 3).orElseThrow();
+        double half = RavineShape.halfWidthAt(settings, BOUNDS, narrow, room.floor());
+        assertEquals(50, room.radius(), 1e-9);
+        assertEquals(half + 4, room.radius() * (1 - room.offset()), 1e-9);
+        // Every direction round the centre is still floor, all the way out to the radius.
+        double centreSide = half + room.offset() * room.radius();
+        for (double angle = 0; angle < 2 * Math.PI; angle += Math.PI / 6) {
+            RavineCell.Frame p = new RavineCell.Frame(
+                    room.along() + 0.98 * room.radius() * Math.cos(angle), centreSide + 0.98 * room.radius() * Math.sin(angle));
+            assertTrue(RavineShape.slabDistance(settings, BOUNDS, narrow, room, p, room.floor() - 1) < 0, "floor at angle " + angle);
+        }
+    }
+
+    @Test
+    void rowsOnTheSecondWallSitHigherByTheStagger() {
+        RavineDiscs discs = new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 0F, 0F, 4F, 0.5F);
+        RavineSettings settings = RavineShapeTest.withDiscs(discs);
+        int compared = 0;
+        for (int row = 0; row < 3; row++) {
+            for (int slot = 0; slot < 5; slot++) {
+                var first = RavineDomes.at(settings, BOUNDS, CELL, 1, row, slot);
+                var second = RavineDomes.at(settings, BOUNDS, CELL, -1, row, slot);
+                if (first.isPresent() && second.isPresent()) {
+                    assertEquals(10, second.get().floor() - first.get().floor(), 1e-9);
+                    compared++;
+                }
+            }
+        }
+        assertTrue(compared > 5, "compared " + compared);
     }
 
     @Test
     void floorsOfNeighbouringRowsStayAtLeastTheMinimumApart() {
-        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0.4F, 0F, 100F, 0F);
+        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0F, 4F, 0.5F);
         RavineSettings settings = RavineShapeTest.withDiscs(discs);
         double minimum = (1 - discs.rowJitter()) * discs.rowSpacing();
         int compared = 0;
@@ -175,65 +191,14 @@ class RavineDomesTest {
     }
 
     @Test
-    void aThroughDiscReachesIntoTheFarWallWhateverTheChasmWidth() {
-        RavineSettings settings = RavineShapeTest.withDiscs(withThrough(1F, 100F));
-        for (RavineCell cell : new RavineCell[] {CELL, new RavineCell(0, 0, 1, 0, 150, 25, RavineCell.Bend.NONE, RavineCell.Lean.NONE, 77L)}) {
-            int checked = 0;
-            for (int side : new int[] {1, -1}) {
-                for (int row = 0; row < RavineDomes.rows(settings, BOUNDS); row++) {
-                    for (int slot = 0; slot < RavineDomes.slots(settings, cell); slot++) {
-                        var room = RavineDomes.at(settings, BOUNDS, cell, side, row, slot);
-                        if (room.isEmpty()) {
-                            continue;
-                        }
-                        RavineDomes.Dome d = room.get();
-                        double width = 2 * RavineShape.halfWidthAt(settings, BOUNDS, cell, d.floor());
-                        assertTrue(d.radius() * (1 - d.offset()) >= width, "reaches the far wall: " + d);
-                        assertTrue(d.radius() <= 100 + 1e-9);
-                        checked++;
-                    }
-                }
-            }
-            assertTrue(checked > 20, "checked " + checked);
-        }
-    }
-
-    @Test
-    void aTenthToAFifthOfDiscsRunThroughTheChasmWithTheShippedChance() {
-        RavineSettings settings = RavineShapeTest.withDiscs(withThrough(0.15F, 100F));
-        int rooms = 0;
-        int through = 0;
-        for (int cx = -8; cx < 8; cx++) {
-            for (int cz = -8; cz < 8; cz++) {
-                RavineCell cell = RavineCells.at(11L, RavineCellsTest.settings(42L, 1F, 0.5F), cx, cz).orElseThrow();
-                for (int side : new int[] {1, -1}) {
-                    for (int row = 0; row < RavineDomes.rows(settings, BOUNDS); row++) {
-                        for (int slot = 0; slot < RavineDomes.slots(settings, cell); slot++) {
-                            var room = RavineDomes.at(settings, BOUNDS, cell, side, row, slot);
-                            if (room.isPresent()) {
-                                rooms++;
-                                RavineDomes.Dome d = room.get();
-                                through += d.radius() * (1 - d.offset()) >= 2 * RavineShape.halfWidthAt(settings, BOUNDS, cell, d.floor()) ? 1 : 0;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        double share = (double) through / rooms;
-        assertTrue(share > 0.1 && share < 0.2, "share " + share + " of " + rooms);
-    }
-
-    @Test
     void largerDiscsSitFurtherBackInTheWall() {
         RavineSettings settings = RavineShapeTest.withDiscs(
-                new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 2F, 0.4F, 0F, 100F, 0.45F));
+                new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 0.4F, 0.45F, 256F, 0.5F));
         double smallOffsets = 0;
         double largeOffsets = 0;
         int small = 0;
         int large = 0;
         for (RavineDomes.Dome d : roomsOf(settings)) {
-            assertTrue(d.offset() <= 0.4 + 0.45 + 1e-9);
             if (d.radius() < 28) {
                 smallOffsets += d.offset();
                 small++;
@@ -246,14 +211,8 @@ class RavineDomesTest {
         assertTrue(largeOffsets / large > smallOffsets / small + 0.2, "large " + largeOffsets / large + " vs small " + smallOffsets / small);
     }
 
-    @Test
-    void settingLargeDiscsBackKeepsEveryOrdinaryDiscsReachUnderTheirBound() {
-        RavineSettings settings = RavineShapeTest.withDiscs(
-                new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 2F, 0.4F, 0F, 100F, 0.45F));
-        // Without the bonus a radius 50 disc with offset 0 would reach 50 into the shaft; with it, no disc reaches past 31.
-        for (RavineDomes.Dome d : roomsOf(settings)) {
-            assertTrue(d.radius() * (1 - d.offset()) <= 31, "reach of " + d);
-        }
+    private static List<RavineDomes.Dome> allRooms() {
+        return roomsOf(SETTINGS);
     }
 
     private static List<RavineDomes.Dome> roomsOf(RavineSettings settings) {
@@ -262,26 +221,6 @@ class RavineDomesTest {
             for (int row = 0; row < RavineDomes.rows(settings, BOUNDS); row++) {
                 for (int slot = 0; slot < RavineDomes.slots(settings, CELL); slot++) {
                     RavineDomes.at(settings, BOUNDS, CELL, side, row, slot).ifPresent(rooms::add);
-                }
-            }
-        }
-        return rooms;
-    }
-
-    private static RavineDiscs withThrough(float chance, float maxRadius) {
-        return new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 2F, 0.4F, chance, maxRadius, 0F);
-    }
-
-    private static RavineDiscs withLip(float maxLip) {
-        return new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, maxLip, 0.8F, 0F, 100F, 0F);
-    }
-
-    private static List<RavineDomes.Dome> allRooms() {
-        var rooms = new ArrayList<RavineDomes.Dome>();
-        for (int side : new int[] {1, -1}) {
-            for (int row = 0; row < RavineDomes.rows(SETTINGS, BOUNDS); row++) {
-                for (int slot = 0; slot < RavineDomes.slots(SETTINGS, CELL); slot++) {
-                    RavineDomes.at(SETTINGS, BOUNDS, CELL, side, row, slot).ifPresent(rooms::add);
                 }
             }
         }

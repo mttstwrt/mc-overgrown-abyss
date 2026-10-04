@@ -138,10 +138,9 @@ public final class RavineDensityHook {
     private static void logSettings(RavineSettings s) {
         RavineDiscs discs = s.discs();
         OvergrownAbyss.LOGGER.info(
-                "Ravine settings: size_bias {}, discs (spacing {}, row spacing {}, radius {}-{}, height ratio {}, floor thickness {}, max lip {}, row jitter {}, through {} up to radius {}, large offset bonus {}), curvature (bend {}, wiggle {}, lean {}, bow {}), edge falloff {}",
+                "Ravine settings: size_bias {}, discs (spacing {}, row spacing {}, radius {}-{}, height ratio {}, floor thickness {}, row jitter {}, large offset bonus {}, max overshoot {}, side stagger {}), curvature (bend {}, wiggle {}, lean {}, bow {}), edge falloff {}",
                 s.sizeBias(), discs.spacing(), discs.rowSpacing(), discs.minRadius(), discs.maxRadius(), discs.heightRatio(),
-                discs.floorThickness(), discs.maxLip(), discs.rowJitter(),
-                discs.throughChance(), discs.throughMaxRadius(), discs.largeOffsetBonus(),
+                discs.floorThickness(), discs.rowJitter(), discs.largeOffsetBonus(), discs.maxOvershoot(), discs.sideStagger(),
                 s.curvature().maxBend(), s.curvature().maxWiggle(), s.curvature().maxLean(), s.curvature().maxBow(), s.edgeFalloff());
     }
 

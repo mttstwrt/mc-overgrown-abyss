@@ -21,24 +21,21 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param minOffset     how far a disc's centre sits inside the wall, as a fraction of its radius, at the least
  * @param maxOffset     and at the most; larger values give a narrower mouth
  * @param floorThickness blocks of solid rock under each room's floor; it also stops the domes of lower rooms cutting up into it
- * @param maxLip        furthest a floor reaches out into the shaft as a ledge, as a fraction of the shaft's width; 1 lets a
- *                      floor reach the opposite wall and 2 lets it carry on through it, so a large disc can cross the chasm and
- *                      run under a room on the other side
  * @param rowJitter     how far a floor may drift from its row's height, as a fraction of {@code rowSpacing}; the floors of
- *                      neighbouring rows are always at least {@code (1 - rowJitter) * rowSpacing} apart
- * @param throughChance fraction of discs sized to run all the way through the chasm into the opposite wall, whatever the
- *                      chasm's width at their height; a disc that would need more than {@code throughMaxRadius} stays ordinary
- * @param throughMaxRadius largest radius a through disc may have, so very wide chasms are not crossed
- * @param largeOffsetBonus how much further back into the wall the largest ordinary disc sits than the smallest, as a fraction
- *                      of its radius; in between it grows with the radius. Large discs set back like this poke less far into
- *                      the shaft, so they do not wall off the middle of it. Through discs ignore it, as setting one back
- *                      makes it need a larger radius and cover more of the shaft
+ *                      neighbouring rows on one wall are always at least {@code (1 - rowJitter) * rowSpacing} apart
+ * @param largeOffsetBonus how much further back into the wall the largest disc sits than the smallest, as a fraction of its
+ *                      radius; in between it grows with the radius
+ * @param maxOvershoot  furthest a disc may reach past the middle of the chasm, in blocks. A disc that would reach further is
+ *                      set back into the wall until it does not, so it stays a full round disc and the middle of the chasm
+ *                      is never walled off from one side
+ * @param sideStagger   how far the rows on the second wall are raised above those on the first, as a fraction of
+ *                      {@code rowSpacing}; 0.5 puts a row on one wall halfway between two rows on the other, so overhangs
+ *                      alternate from side to side instead of meeting in the middle
  */
 public record RavineDiscs(
         float spacing, float rowSpacing, float minRadius, float maxRadius, float heightRatio, float minHeight,
-        float ceilingMargin, float minOffset, float maxOffset, float floorThickness, float maxLip,
-        float rowJitter, float throughChance, float throughMaxRadius,
-        float largeOffsetBonus) {
+        float ceilingMargin, float minOffset, float maxOffset, float floorThickness,
+        float rowJitter, float largeOffsetBonus, float maxOvershoot, float sideStagger) {
 
     public static final MapCodec<RavineDiscs> MAP_CODEC = RecordCodecBuilder.<RavineDiscs>mapCodec(i -> i.group(
             Codec.floatRange(8, 1024).fieldOf("spacing").forGetter(RavineDiscs::spacing),
@@ -51,27 +48,24 @@ public record RavineDiscs(
             Codec.floatRange(0, 1).fieldOf("min_offset").forGetter(RavineDiscs::minOffset),
             Codec.floatRange(0, 1).fieldOf("max_offset").forGetter(RavineDiscs::maxOffset),
             Codec.floatRange(2, 32).fieldOf("floor_thickness").forGetter(RavineDiscs::floorThickness),
-            Codec.floatRange(0, 2).fieldOf("max_lip").forGetter(RavineDiscs::maxLip),
             Codec.floatRange(0, 0.9F).fieldOf("row_jitter").forGetter(RavineDiscs::rowJitter),
-            Codec.floatRange(0, 1).fieldOf("through_chance").forGetter(RavineDiscs::throughChance),
-            Codec.floatRange(4, 256).fieldOf("through_max_radius").forGetter(RavineDiscs::throughMaxRadius),
-            Codec.floatRange(0, 0.9F).fieldOf("large_offset_bonus").forGetter(RavineDiscs::largeOffsetBonus)
+            Codec.floatRange(0, 0.9F).fieldOf("large_offset_bonus").forGetter(RavineDiscs::largeOffsetBonus),
+            Codec.floatRange(0, 256).fieldOf("max_overshoot").forGetter(RavineDiscs::maxOvershoot),
+            Codec.floatRange(0, 1).fieldOf("side_stagger").forGetter(RavineDiscs::sideStagger)
     ).apply(i, RavineDiscs::new)).validate(RavineDiscs::validate);
     public static final Codec<RavineDiscs> CODEC = MAP_CODEC.codec();
 
-    /** Furthest a disc can reach past the wall it opens from, in blocks; ravine reach must allow for it. */
+    /**
+     * Furthest a disc can reach behind the wall it opens from, in blocks; ravine reach must allow for it. A disc's centre
+     * is inside its wall by less than its radius, so it reaches less than two radii back.
+     */
     public double extraReach() {
-        return Math.max(maxRadius * (1 + maxOffset + largeOffsetBonus), throughChance > 0 ? throughMaxRadius * (1 + minOffset) : 0);
-    }
-
-    /** The largest radius any disc can have. */
-    public double largestRadius() {
-        return throughChance > 0 ? Math.max(maxRadius, throughMaxRadius) : maxRadius;
+        return 2 * maxRadius;
     }
 
     /** Tallest a dome can be, which bounds how many rows below a point can still hold it. */
     public double maxDomeHeight() {
-        return Math.max(heightRatio * largestRadius(), minHeight);
+        return Math.max(heightRatio * maxRadius, minHeight);
     }
 
     private static DataResult<RavineDiscs> validate(RavineDiscs d) {
@@ -84,10 +78,6 @@ public record RavineDiscs(
         // An offset of 1 would leave a disc with no reach into the shaft at all.
         if (d.maxOffset + d.largeOffsetBonus > 0.95F) {
             return DataResult.error(() -> "max_offset plus large_offset_bonus must not exceed 0.95");
-        }
-        // A through disc's radius is the chasm width divided by (1 - min_offset).
-        if (d.throughChance > 0 && d.minOffset > 0.9F) {
-            return DataResult.error(() -> "min_offset must not exceed 0.9 when through_chance is above 0");
         }
         return DataResult.success(d);
     }
