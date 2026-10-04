@@ -43,14 +43,16 @@
       "ramp": 4
     },
     "discs": {
-      "spacing": 70,
+      "spacing": 110,
       "min_size": 0.3,
-      "min_radius": 18,
-      "max_radius": 42,
-      "thickness": 6,
+      "min_radius": 24,
+      "max_radius": 70,
+      "height_ratio": 0.45,
+      "min_height": 14,
+      "ceiling_margin": 12,
       "y_jitter": 2.5,
-      "max_reach": 0.45,
-      "inset": 12
+      "min_offset": 0.4,
+      "max_offset": 0.75
     }
   },
   "curvature": {

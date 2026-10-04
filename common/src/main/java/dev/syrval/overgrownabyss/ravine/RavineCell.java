@@ -176,11 +176,12 @@ public record RavineCell(
     }
 
     /**
-     * A round plate on the shelf at the start of level {@code level} (an index into {@link Tiers#levels()}), rooted in
-     * the {@code side} wall of the level below. {@code along} is its position along the chord, {@code yOffset} how far its
-     * top sits from the boundary, {@code radius} and {@code thickness} its size.
+     * A round room cut into the {@code side} wall of level {@code level} (an index into {@link Tiers#levels()}), its floor
+     * level with that level's shelf. {@code along} is its position along the chord, {@code yOffset} how far its floor sits
+     * from the boundary, {@code radius} its floor radius, and {@code offset} how far its centre sits inside the wall, as a
+     * fraction of the radius.
      */
-    public record Disc(int level, double along, int side, double yOffset, double radius, double thickness) {}
+    public record Disc(int level, double along, int side, double yOffset, double radius, double offset) {}
 
     /** A rock arch across the ravine: where along the chord, how high (fraction of the allowed span), and its size. */
     public record Bridge(double along, double height, double width, double thickness) {}

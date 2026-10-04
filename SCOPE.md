@@ -298,29 +298,33 @@ Not verified:
   the cavern, closes it further. Whether that is the right balance is the owner's call.
 - The sight-line measure is vertical lines only, not views from the cavern floor at an angle.
 
-### Disc round (first pass)
+### Disc round (rooms, second pass)
 
-Discs are round rock plates that grow out of the shelves where tier levels meet (`walls.discs` in `carve.json`; omit the
-block to turn them off). Each has a level top and a domed underside, is rooted 12 blocks inside the wall of the level
-below, and reaches into the opening by at most 45% of its width. Several per boundary, placed along the ravine with
-tops varying by up to 2.5 blocks either way, so neighbours overlap at slightly different heights. A disc only goes on
-the side where the upper level reaches further than the lower one (a real shelf), never under a ceiling.
+The first pass made discs as rock plates standing out from the walls; the owner found they did not read as discs. Discs
+are now round rooms cut sideways into the wall from the chasm (`walls.discs` in `carve.json`; omit the block to turn them
+off): a flat floor at a level boundary, a domed roof like the main cavern's, centred 0.4 to 0.75 of its radius inside
+the wall so the mouth is wide. Radii run 24 to 70 (most modest, a few large) so ruins can be built inside; dome height is
+0.45 of the radius but at least 14, and domes stop 12 blocks under the top of the ravine so they stay under the surface.
+Several per boundary, floors within 2.5 blocks of the boundary so neighbours overlap at slightly different heights. A room
+only opens from the side where the upper level reaches further than the lower one, so it always has rock under it.
 
 | Check | Result |
 |---|---|
-| Unit tests (46 total): discs only on shelves, within radius, jitter and count limits, none without levels; a disc is level on top, rooted in the wall, leaves the centre line open and respects the reach cap | pass |
-| NeoForge dedicated server, seed 20261003, ravine at 2620,764 generated, no errors | yes |
-| Cross-sections at six places along it show flat-topped plates with tapering undersides at the two level heights (about y=30 and y=51), alternating sides | seen in rendered slices |
+| Unit tests (47 total): rooms only on shelves and within radius, offset and jitter limits, none without levels; a room has a flat floor, a dome, a round footprint, a wide mouth onto the chasm and stays under the ceiling margin | pass |
+| NeoForge dedicated server, seed 20261003, ravine at 993,-785 (299 long, 4 rooms on level 1) generated, no errors | yes |
+| Cross-sections show wide, flat-floored horizontal rooms stacked in the left wall at the level heights, reaching 100+ blocks out | seen in rendered slices |
 
 Not verified:
-- **Nothing was looked at in game.** In 2D slices the plates read as flat shelves with tapered undersides; whether they
-  read as round discs in 3D, and whether they are big and overlapping enough, is the owner's call.
-- **Fabric and Larion were not run for discs.** Disc size is in blocks, not scaled to ravine width, so very wide or very
-  narrow ravines may want different radii.
-- Disc tops sit at the nominal boundary height; the terrace warp (up to 8 blocks) moves the natural shelf, so a disc can
-  sit a little above or below it where it meets the wall.
-- The existing rectangular ledges are still there alongside the discs. Whether to thin them out is undecided.
-- Fluted faces, support stems and lily-pad ends are not started.
+- **Nothing was looked at in game.** Whether each room reads as an independent circle is unknown: in plan slices they
+  merge into amoeba-like shapes, because wall noise (up to about 20 blocks) distorts a 24-block room heavily and
+  neighbours overlap.
+- **Upper rooms mostly do not exist on vanilla height.** The second level's floor is at about y=50 to 62 and domes must
+  stop at y=68, so rooms there are skipped when they cannot be 14 blocks tall. Larion has more room.
+- **Ravines moved again**: room reach is part of the footprint, so every ravine's position in its cell changed.
+- Fabric and Larion were not run for rooms. The micro-biome for the rooms, ruins inside them, support stems and lily-pad
+  ends are not started.
+- The old rectangular ledges are still generated next to the rooms.
+- `dev-datapacks/stronger-tiers` was updated to the new `discs` fields; an older copy of that pack fails to load.
 
 ## 8. Next steps
 
@@ -408,6 +412,8 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
 - **Testing:** `/place structure minecraft:stronghold` can force one into a ravine; both loaders and chunk generation
   time need checking.
 - **Related, unresolved:** a vanilla ancient city overlapping our cavern. See the Size and curve round above.
+- **Frequency:** the owner has now seen strongholds cut into the chasm three times, possibly because of stronghold
+  overhaul mods, so it is more common than first thought; this raises the priority of the shell-only version.
 
 ### Stems and disc platforms (owner idea)
 

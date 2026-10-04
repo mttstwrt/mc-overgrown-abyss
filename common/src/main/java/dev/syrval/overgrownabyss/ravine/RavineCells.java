@@ -125,8 +125,9 @@ public final class RavineCells {
                         halfLength * (-0.85 + 1.7 * (i + 0.5 + 0.4 * signed(h, index)) / count),
                         sides.get((int) (unit(h, index + 1) * sides.size())),
                         signed(h, index + 2) * config.yJitter(),
-                        lerp(unit(h, index + 3), config.minRadius(), config.maxRadius()),
-                        config.thickness() * lerp(unit(h, index + 4), 0.8, 1.2)));
+                        // Squaring the draw keeps most rooms modest and a few large.
+                        lerp(Math.pow(unit(h, index + 3), 1.5), config.minRadius(), config.maxRadius()),
+                        lerp(unit(h, index + 4), config.minOffset(), config.maxOffset())));
             }
         }
         return discs;

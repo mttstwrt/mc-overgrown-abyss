@@ -4,8 +4,9 @@ package dev.syrval.overgrownabyss.ravine;
  * Signed distance, in blocks, from a point to the open volume of one ravine: negative inside (air), positive outside.
  * The volume is the ravine shaft from the floor upwards, joined to a domed cavern centred on the cell whose floor is
  * flat. The shaft follows a centre line that bends in plan view and sways sideways with height, narrows towards the
- * floor in wandering terraces, and has two walls that swell and narrow independently. Bridges and ledges are separate:
- * they are rock inside the open volume, see {@link #bridgeDistance} and {@link #ledgeDistance}.
+ * floor in wandering terraces, and has two walls that swell and narrow independently. Round disc rooms are cut sideways
+ * into its walls. Bridges and ledges are separate: they are rock inside the open volume, see {@link #bridgeDistance} and
+ * {@link #ledgeDistance}.
  *
  * <p>These are distance estimates, exact for a straight shaft and close for gentle curves, which is all the carve
  * needs: it only uses the sign and a few blocks of falloff either side of the wall.
@@ -16,7 +17,6 @@ public final class RavineShape {
     private static final double LEDGE_SLACK = 12;
     private static final double MAX_LEDGE_REACH = 0.45;
     private static final double DISC_SLACK = 12;
-    private static final double MIN_DISC_REACH = 4;
     private static final double FEATURE_MARGIN_ABOVE_ROOF = 8;
     private static final double FEATURE_MARGIN_BELOW_RIM = 10;
 
@@ -30,7 +30,7 @@ public final class RavineShape {
         }
         double shaft = shaftDistance(settings, bounds, cell, x, y, z, terraceShift);
         double cavern = cavernDistance(settings, bounds, cell.distanceToCentre(x, z), y);
-        return Math.min(shaft, cavern);
+        return Math.min(Math.min(shaft, cavern), discDistance(settings, bounds, cell, x, y, z));
     }
 
     /**
@@ -104,40 +104,35 @@ public final class RavineShape {
     }
 
     /**
-     * Signed distance to the nearest disc, or infinity if none is near: negative inside the rock. A disc is a round plate
-     * with a level top and a domed underside, centred {@code inset} blocks inside the wall of the level below its shelf and
-     * reaching into the opening no further than {@code max_reach} of its width. Add it to the rock with
-     * {@code max(open, -disc)}.
+     * Signed distance to the nearest disc room: negative inside. A room has a flat floor at its boundary's height and a
+     * domed roof like the cavern's, centred {@code offset} of its radius inside the wall of the level above its shelf, so
+     * it opens onto the chasm through a wide mouth. Join it to the open volume with {@code min}.
      */
-    public static double discDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
+    static double discDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
         RavineDiscs config = settings.walls().discs();
         double nearest = Double.POSITIVE_INFINITY;
         RavineCell.Frame frame = null;
         double low = bounds.floorY() + settings.cavernHeight();
         double span = bounds.topY() - low;
         for (RavineCell.Disc disc : cell.discs()) {
-            double top = low + cell.tiers().levels().get(disc.level()).start() * span + disc.yOffset();
-            if (y > top + DISC_SLACK || y < top - disc.thickness() - DISC_SLACK) {
+            RavineCell.Tiers.Level level = cell.tiers().levels().get(disc.level());
+            double floor = low + level.start() * span + disc.yOffset();
+            double height = Math.min(Math.max(config.heightRatio() * disc.radius(), config.minHeight()), bounds.topY() - config.ceilingMargin() - floor);
+            if (height < config.minHeight() || y < floor - DISC_SLACK || y > floor + height + DISC_SLACK) {
                 continue;
             }
-            RavineCell.Tiers.Level lower = cell.tiers().levels().get(disc.level() - 1);
-            double base = halfWidthAt(settings, bounds, cell, top, 0);
+            double base = halfWidthAt(settings, bounds, cell, floor, 0);
             RavineCell.Side wobble = disc.side() > 0 ? cell.wobble().left() : cell.wobble().right();
-            double wall = cell.bend().offset(unitAlong(cell, disc.along())) + lower.shift() * base
-                    + disc.side() * lower.width() * base * (1 + wobble.at(top));
-            double reach = Math.min(disc.radius() - config.inset(), config.maxReach() * 2 * lower.width() * base);
-            if (reach < MIN_DISC_REACH) {
-                continue;
-            }
-            double radius = config.inset() + reach;
+            double wall = cell.bend().offset(unitAlong(cell, disc.along())) + level.shift() * base
+                    + disc.side() * level.width() * base * (1 + wobble.at(floor));
             if (frame == null) {
                 frame = leanedFrame(bounds, cell, x, y, z);
             }
             double dAlong = frame.along() - disc.along();
-            double dSide = frame.sideways() - (wall + disc.side() * config.inset());
-            double r = Math.sqrt(dAlong * dAlong + dSide * dSide);
-            double bottom = top - disc.thickness() * (1 - 0.7 * Math.min(r / radius, 1) * Math.min(r / radius, 1));
-            nearest = Math.min(nearest, Math.max(r - radius, Math.max(y - top, bottom - y)));
+            double dSide = frame.sideways() - (wall + disc.side() * disc.offset() * disc.radius());
+            double t = Math.clamp((y - floor) / height, 0, 1);
+            double roof = t >= 1 ? Double.POSITIVE_INFINITY : Math.sqrt(dAlong * dAlong + dSide * dSide) - disc.radius() * Math.sqrt(1 - t * t);
+            nearest = Math.min(nearest, Math.max(roof, floor - y));
         }
         return nearest;
     }

@@ -56,12 +56,12 @@ public record RavineSettings(
 
     /**
      * Furthest horizontal distance from a ravine centre that the carve can reach: the longest ravine's half length plus
-     * its widest wall, swollen by the width wobble and moved by the tiers, pushed out by the curves and then by wall noise and falloff.
+     * its widest wall, swollen by the width wobble and moved by the tiers, pushed out by the curves and the rooms cut out of the wall, and then by wall noise and falloff.
      */
     public double maxReach() {
         double halfWidth = width.maxInclusive() / 2.0 * (1 + walls.widthWobble()) * walls.tiers().maxExtent();
         double ravine = length.maxInclusive() / 2.0 + halfWidth + curvature.maxDisplacement();
-        return Math.max(ravine, cavernRadius) + walls.maxNoiseDisplacement() + walls.edgeFalloff();
+        return Math.max(ravine + walls.discs().extraReach(), cavernRadius) + walls.maxNoiseDisplacement() + walls.edgeFalloff();
     }
 
     /** Resolves the anchors for one level; empty when the level is too short to hold the ravine. */

@@ -65,7 +65,7 @@ class RavineTiersTest {
         assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, stepped, 0, low, 0, 0) < 0, "lower level keeps the centre line");
     }
 
-    static final RavineDiscs DISCS = new RavineDiscs(70, 0.3F, 18, 42, 6, 2.5F, 0.45F, 12);
+    static final RavineDiscs DISCS = new RavineDiscs(110, 0.3F, 24, 70, 0.45F, 14, 12, 2.5F, 0.4F, 0.75F);
     static final RavineSettings WITH_DISCS = RavineShapeTest.withWalls(new RavineWalls(
             WALLS.terraceStep(), WALLS.terraceStrength(), WALLS.terraceWarp(), WALLS.noiseScale(), WALLS.noiseAmplitude(),
             WALLS.overhangScale(), WALLS.overhangAmplitude(), WALLS.strataHeight(), WALLS.strataAmplitude(), WALLS.strataScale(),
@@ -93,6 +93,7 @@ class RavineTiersTest {
                             "a disc stands on a shelf, never under a ceiling");
                     assertTrue(Math.abs(disc.yOffset()) <= DISCS.yJitter() + 1e-9);
                     assertTrue(disc.radius() >= DISCS.minRadius() - 1e-9 && disc.radius() <= DISCS.maxRadius() + 1e-9);
+                    assertTrue(disc.offset() >= DISCS.minOffset() - 1e-9 && disc.offset() <= DISCS.maxOffset() + 1e-9);
                     assertTrue(Math.abs(disc.along()) <= c.halfLength() + 1e-9);
                 }
                 for (int level = 1; level < levels.size(); level++) {
@@ -105,23 +106,40 @@ class RavineTiersTest {
     }
 
     @Test
-    void aDiscIsALevelPlateRootedInTheWallThatLeavesTheCentreLineOpen() {
-        RavineCell.Disc disc = new RavineCell.Disc(1, 0, 1, 0, 40, 6);
-        RavineCell cell = new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, RavineCell.Wobble.NONE,
+    void aDiscIsARoundDomedRoomCutIntoTheWallOnAFlatFloor() {
+        RavineCell.Disc disc = new RavineCell.Disc(1, 0, 1, 0, 30, 0.6);
+        RavineCell cell = roomCell(disc);
+        double roof = BOUNDS.floorY() + WITH_DISCS.cavernHeight();
+        double floor = roof + 0.5 * (BOUNDS.topY() - roof);
+        double wall = 1.4 * RavineShape.halfWidthAt(WITH_DISCS, BOUNDS, cell, floor, 0);
+        double centre = wall + 0.6 * 30;
+        assertTrue(distance(cell, 0, floor + 2, centre) < 0, "open in the middle of the room");
+        assertTrue(distance(cell, 0, floor - 2, centre) > 0, "solid below the floor");
+        assertTrue(distance(cell, 0, floor + 16, centre) > 0, "solid above the dome");
+        assertTrue(distance(cell, 0, floor + 2, centre + 35) > 0, "solid beyond the radius");
+        assertTrue(distance(cell, 0, floor + 2, centre - 25) < 0, "the mouth opens towards the chasm");
+        assertTrue(distance(cell, 50, floor + 2, centre) > 0, "a round room: solid along the ravine too");
+    }
+
+    @Test
+    void aRoomStaysUnderTheCeilingMargin() {
+        RavineCell cell = roomCell(new RavineCell.Disc(1, 0, 1, 0, 70, 0.6));
+        double roof = BOUNDS.floorY() + WITH_DISCS.cavernHeight();
+        double floor = roof + 0.5 * (BOUNDS.topY() - roof);
+        double centre = 1.4 * RavineShape.halfWidthAt(WITH_DISCS, BOUNDS, cell, floor, 0) + 0.6 * 70;
+        double cap = BOUNDS.topY() - DISCS.ceilingMargin();
+        assertTrue(distance(cell, 0, cap - 1, centre) < 0, "open just under the cap");
+        assertTrue(distance(cell, 0, cap + 1, centre) > 0, "solid above it");
+    }
+
+    private static RavineCell roomCell(RavineCell.Disc disc) {
+        return new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, RavineCell.Wobble.NONE,
                 List.of(), List.of(), new RavineCell.Tiers(List.of(
                         RavineCell.Tiers.Level.NEUTRAL, new RavineCell.Tiers.Level(0.5, 0.8, 0.6))),
                 List.of(disc));
-        double roof = BOUNDS.floorY() + WITH_DISCS.cavernHeight();
-        double top = roof + 0.5 * (BOUNDS.topY() - roof);
-        double wall = RavineShape.halfWidthAt(WITH_DISCS, BOUNDS, cell, top, 0);
-        // Left wall is +z here (the frame's sideways axis), the plate's middle is 12 blocks inside it.
-        double inside = wall + 12;
-        assertTrue(RavineShape.discDistance(WITH_DISCS, BOUNDS, cell, 0, top - 1, inside) < 0, "rock inside the plate");
-        assertTrue(RavineShape.discDistance(WITH_DISCS, BOUNDS, cell, 0, top + 1, inside) > 0, "level top");
-        assertTrue(RavineShape.discDistance(WITH_DISCS, BOUNDS, cell, 0, top - 1, 0) > 0, "centre line stays clear");
-        assertTrue(RavineShape.discDistance(WITH_DISCS, BOUNDS, cell, 0, top - 1, inside + 45) > 0, "nothing beyond the radius");
-        assertTrue(RavineShape.discDistance(WITH_DISCS, BOUNDS, cell, 0, top - 30, inside) > 0, "nothing far below");
-        double tip = wall - 0.45 * 2 * wall + 1;
-        assertTrue(RavineShape.discDistance(WITH_DISCS, BOUNDS, cell, 0, top - 1, tip - 3) > 0, "reach is capped at max_reach of the opening");
+    }
+
+    private static double distance(RavineCell cell, double x, double y, double z) {
+        return RavineShape.signedDistance(WITH_DISCS, BOUNDS, cell, x, y, z, 0);
     }
 }

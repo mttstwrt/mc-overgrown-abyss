@@ -125,12 +125,10 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         double displacement = wallDisplacement(cell, x, y, z, terraceShift);
         open -= displacement;
         double added = Math.min(
-                Math.min(
-                        RavineShape.bridgeDistance(settings, bounds, cell, x, y, z),
-                        RavineShape.ledgeDistance(settings, bounds, cell, x, y, z)),
-                RavineShape.discDistance(settings, bounds, cell, x, y, z));
+                RavineShape.bridgeDistance(settings, bounds, cell, x, y, z),
+                RavineShape.ledgeDistance(settings, bounds, cell, x, y, z));
         if (Double.isFinite(added)) {
-            // Bridges, ledges and discs are rock put back into the open volume; half the wall noise keeps their edges ragged
+            // Bridges and ledges are rock put back into the open volume; half the wall noise keeps their edges ragged
             // without eating them away.
             open = Math.max(open, -(added - displacement * 0.5));
         }
