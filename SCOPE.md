@@ -212,6 +212,8 @@ Not verified:
 
 ### Shape variety round
 
+> Superseded by the dome-walls rework below. The code for this round is at git tag `before-dome-rework`.
+
 Checked after a full `./gradlew build` (33 unit tests) and in dev servers.
 
 | Check | Result |
@@ -233,6 +235,8 @@ Not verified:
 - The tiny hole can only be as deep as the terrain is high; on low ground it is a short shaft.
 
 ### Wall ledge round
+
+> Superseded by the dome-walls rework below. The code for this round is at git tag `before-dome-rework`.
 
 Checked after a full `./gradlew build` (40 unit tests) and in dev servers on seed 162 (the 390-long ravine with 2 bridges).
 
@@ -276,6 +280,8 @@ uniform draw), which gives about 61% of ravines over 250 long and about 9% under
 
 ### Tiered walls experiment
 
+> Superseded by the dome-walls rework below. The code for this round is at git tag `before-dome-rework`.
+
 Goal from the owner's cross-section sketches: more, but not complete, blocking of the view from the bottom, with the
 opening zigzagging as it rises. Tunables are in `walls.tiers` in `carve.json`, so this can be pushed further or backed off
 without code changes.
@@ -303,6 +309,8 @@ Not verified:
 
 ### Disc round (rooms, second pass)
 
+> Superseded by the dome-walls rework below. The code for this round is at git tag `before-dome-rework`.
+
 The first pass made discs as rock plates standing out from the walls; the owner found they did not read as discs. Discs
 are now round rooms cut sideways into the wall from the chasm (`walls.discs` in `carve.json`; omit the block to turn them
 off): a flat floor at a level boundary, a domed roof like the main cavern's, centred 0.4 to 0.75 of its radius inside
@@ -328,6 +336,39 @@ Not verified:
   ends are not started.
 - The old rectangular ledges are still generated next to the rooms.
 - `dev-datapacks/stronger-tiers` was updated to the new `discs` fields; an older copy of that pack fails to load.
+
+### Dome-walls rework
+
+The owner asked to take a step back: keep the S-curve, drop everything else, and build the walls from overlapping round
+disc rooms all the way down, with flat floors. Removed: wall levels (tiers), ledges, bridges, strata, terraces, wall
+width wobble, overhang and fine wall noise, and the terrace warp. Their code and tests are at git tag
+`before-dome-rework`. What is left: the curved, leaning, S-bowed shaft (narrowing towards the floor), the cavern, and the
+disc rooms.
+
+Disc rooms are a pure function of the ravine's hash and a grid position (side, row, slot), so nothing is stored. Rows
+start at the cavern roof and go up every `row_spacing` blocks until a dome can no longer be `min_height` tall under the
+ceiling margin; slots run every `spacing` blocks along the ravine; odd rows are shifted by half a slot and every room is
+jittered, so neighbours overlap. Each room has a flat floor, a domed roof like the cavern's, a radius of 20 to 50 (most
+modest, a few large) and its centre 0 to 0.4 of a radius inside the wall. The carve is now `clamp(open / edge_falloff)`
+with no noise, so each floor is exactly flat (`edge_falloff` is 8, one noise cell high, so the density interpolation does
+not bend it).
+
+| Check | Result |
+|---|---|
+| Unit tests (35 total): room parameters within limits and deterministic, sizes vary, a room has a flat floor, round footprint, domed roof and stays under the ceiling margin, rooms cover most of the wall (over 60% of points just inside it are open), centre line open for every ravine, nothing opens beyond the cell reach | pass |
+| NeoForge dedicated server, seed 20261003, ravine at 983,-712 (372 long) generated, no errors | yes |
+| Plan slices of the generated blocks at y=20 to 50 show clearly circular, overlapping bays along both walls | seen in rendered slices |
+| Settings tried analytically on the same ravine (open area at y=36): offset 0.4 to 0.75 and radius 22 to 55 gives 79,000 blocks (one large merged cavity); offset 0 to 0.4 and radius 20 to 50 gives 63,000; radius 18 to 40, spacing 55 gives 48,000 | measured; the middle one is the default |
+
+Not verified:
+- **Nothing was looked at in game.** The first world I rendered used the deep-offset settings and read as one huge
+  scalloped cavity (about 280 across), so I changed the defaults to the shallower ones afterwards; those defaults were
+  checked only analytically in plan view, not generated.
+- **Headroom:** on vanilla height there are 4 rows between the cavern roof (y=16) and the ceiling margin (y=68); Larion
+  has more. Domes stop at `top` minus `ceiling_margin`, so above that the shaft is a plain slot.
+- Fabric and Larion were not run. Wall roughness is gone, so surfaces are perfectly geometric.
+- Ravine positions changed again (the footprint no longer includes wall noise). Older datapacks no longer load.
+- Biome micro-domes, ruins in the rooms, trees, roots and columns are not started.
 
 ## 8. Next steps
 

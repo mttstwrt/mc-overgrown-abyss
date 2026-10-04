@@ -4,8 +4,6 @@ import com.mojang.serialization.MapCodec;
 import java.util.Optional;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
-import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
-import net.minecraft.world.level.levelgen.synth.SimplexNoise;
 
 /**
  * Density function {@code overgrown_abyss:ravine_carve}: -1 inside the ravine volume, 1 outside, ramping across
@@ -22,34 +20,17 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
     private static final double CAVERN_BIOME_MARGIN = 4;
-    // Ledge heights drift slowly along the ravine.
-    private static final double TERRACE_NOISE_SCALE = 0.008;
-    // Sampling broad noise with a stretched vertical axis makes lumps taller than wide, so they read as overhangs.
-    private static final double OVERHANG_VERTICAL_STRETCH = 1.6;
-    // Successive wall layers sample far apart in the noise so each gets its own, unrelated offset.
-    private static final double STRATA_LAYER_STRIDE = 7.31;
-    // Noise may narrow a wall by at most this fraction of the shaft's half width, so the centre line stays open and
-    // a small hole cannot be pinched shut.
-    private static final double MAX_NARROWING = 0.6;
 
     private final RavineSettings settings;
     private final long seed;
     // Null only for the unbound instance the codec produces.
     private final RavineBounds bounds;
-    private final SimplexNoise wallNoise;
-    private final SimplexNoise overhangNoise;
-    private final SimplexNoise terraceNoise;
-    private final SimplexNoise strataNoise;
     private final LandGate landGate = new LandGate();
 
     private RavineCarve(RavineSettings settings, long seed, RavineBounds bounds) {
         this.settings = settings;
         this.seed = seed;
         this.bounds = bounds;
-        this.wallNoise = new SimplexNoise(new XoroshiroRandomSource(seed, settings.salt()));
-        this.overhangNoise = new SimplexNoise(new XoroshiroRandomSource(seed ^ 0x5DEECE66DL, settings.salt() + 1));
-        this.terraceNoise = new SimplexNoise(new XoroshiroRandomSource(seed ^ 0x9E3779B9L, settings.salt() + 2));
-        this.strataNoise = new SimplexNoise(new XoroshiroRandomSource(seed ^ 0x2545F491L, settings.salt() + 3));
     }
 
     /** The ravine settings behind a datapack reference; fails loudly if the reference is not a ravine carve. */
@@ -116,44 +97,8 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         if (found.isEmpty()) {
             return maxValue();
         }
-        RavineCell cell = found.get();
-        double terraceShift = terraceNoise.getValue(x * TERRACE_NOISE_SCALE, z * TERRACE_NOISE_SCALE) * settings.walls().terraceWarp();
-        double open = RavineShape.signedDistance(settings, bounds, cell, x, y, z, terraceShift);
-        if (open >= wallMargin()) {
-            return maxValue();
-        }
-        double displacement = wallDisplacement(cell, x, y, z, terraceShift);
-        open -= displacement;
-        double added = Math.min(
-                RavineShape.bridgeDistance(settings, bounds, cell, x, y, z),
-                RavineShape.ledgeDistance(settings, bounds, cell, x, y, z));
-        if (Double.isFinite(added)) {
-            // Bridges and ledges are rock put back into the open volume; half the wall noise keeps their edges ragged
-            // without eating them away.
-            open = Math.max(open, -(added - displacement * 0.5));
-        }
-        return Math.clamp(open / settings.walls().edgeFalloff(), minValue(), maxValue());
-    }
-
-    // Positive opens the wall outwards, negative pushes rock into the shaft.
-    private double wallDisplacement(RavineCell cell, int x, int y, int z, double terraceShift) {
-        RavineWalls walls = settings.walls();
-        double fineScale = walls.noiseScale();
-        double broadScale = walls.overhangScale();
-        double fine = wallNoise.getValue(x * fineScale, y * fineScale, z * fineScale) * walls.noiseAmplitude();
-        double broad = overhangNoise.getValue(x * broadScale, y * broadScale * OVERHANG_VERTICAL_STRETCH, z * broadScale)
-                * walls.overhangAmplitude();
-        // Quantising height makes the offset constant within a layer: a vertical face, with a flat step wherever
-        // neighbouring layers differ.
-        double layer = Math.floor((y + terraceShift) / walls.strataHeight());
-        double strataScale = walls.strataScale();
-        double strata = strataNoise.getValue(x * strataScale, layer * STRATA_LAYER_STRIDE, z * strataScale) * walls.strataAmplitude();
-        double halfWidth = RavineShape.halfWidthAt(settings, bounds, cell, y, terraceShift);
-        return Math.max(fine + broad + strata, -MAX_NARROWING * halfWidth);
-    }
-
-    private double wallMargin() {
-        return settings.walls().maxNoiseDisplacement() + settings.walls().edgeFalloff();
+        double open = RavineShape.signedDistance(settings, bounds, found.get(), x, y, z);
+        return Math.clamp(open / settings.edgeFalloff(), minValue(), maxValue());
     }
 
     @Override
