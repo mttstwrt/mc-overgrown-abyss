@@ -148,7 +148,7 @@ class RavineShapeTest {
             assertEquals("minecraft:lush_caves", json.getAsJsonObject("environment").get("cavern_biome").getAsString());
             RavineSettings parsed = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
             assertEquals(2048, parsed.cellSize());
-            assertEquals(0, parsed.length().minInclusive(), "the smallest ravine is a round hole");
+            assertEquals(100, parsed.length().minInclusive(), "no ravine is shorter than 100");
             assertEquals(parsed, RavineSettings.MAP_CODEC.codec()
                     .parse(JsonOps.INSTANCE, RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, parsed).getOrThrow())
                     .getOrThrow());

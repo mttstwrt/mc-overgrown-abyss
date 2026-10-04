@@ -530,6 +530,20 @@ Not verified, and open:
   because one disc up to 48 across can cover a short ravine's whole length. The unit test only covers ravines of 100 or more.
 - City and descent not checked against sealing.
 
+### Minimum length 100
+
+Owner: no ravine shorter than 100 blocks. `length.min_inclusive` is now 100 in the mod's `carve.json` and all dev packs (the
+size draw still runs from the minimum to 400). The codec still accepts 0, which makes a round hole; nothing ships it.
+
+This closes the short-ravine gap noted under "Discs that stay full": on 900 sampled ravines with lengths from 100 to 400
+(shortest sampled 112), no level is fully walled off along the centre line, and the average centre line closed is 1.6% at
+vanilla height and 2.8% at Larion height, up from about 1.1% and 2.0% over the earlier long-ravine sample only. NeoForge
+dedicated server, seed 20261003, three ravines near the origin (379, 147 and 383 long), no errors.
+
+Not verified: nothing rendered or looked at in game; Fabric and Larion not run. On vanilla height each wall gets only 2 rows
+of discs (the server log says "2 rows"; I wrongly said 3 earlier), because the cavern roof sits at y=16 and the ceiling margin
+at y=68. Larion has more.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
