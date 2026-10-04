@@ -181,10 +181,10 @@ Not verified:
 3. Decide whether lush caves features on the city floor suit the look, or whether the city should keep its own ground.
 4. Extract `ravine-core` into a shared source module when Rift starts.
 
-## 9. Future optional mod integrations (owner wishlist)
+## 9. Future additions (owner wishlist)
 
-Nothing here is started. The rules in `../AGENTS.md` apply: these are content mods, so they may only ever be **soft,
-optional integrations**. Overgrown Abyss must load and work without them, and must not declare them as hard
+Nothing here is started. The first two items are third-party mods; the rules in `../AGENTS.md` apply, so they may only
+ever be **soft, optional integrations**. Overgrown Abyss must load and work without them, and must not declare them as hard
 dependencies. Everything below is the owner's description; no mod APIs, data formats or versions have been looked up yet
 (treat as `[recall; verify]` and check against the real jars before building).
 
@@ -211,6 +211,27 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
   - Do their paths use the same jigsaw naming (`connect_*`, `entrance_*`)? If not, we may need adapter pieces.
   - Licensing and redistribution: reference their templates by ID, never copy them (same stance as vanilla).
   - Same-mod risk as section 5, risk 5: if another mod replaces their templates, we inherit the change.
+
+### Hanging temples (built into the mod)
+
+- **Idea:** upside-down temple buildings hanging from overhangs and the cavern roof, like the Western Air Temple in
+  Avatar: The Last Airbender. Unlike the two mods above this is not an integration: it needs buildings we author
+  ourselves, shipped inside Overgrown Abyss, vanilla blocks only.
+- **Fits the existing plan:** this is a variant of Phase 5 (wall ruins in `03-abyss.md`: jigsaw structures anchored on
+  ledges, one shared architectural vocabulary, own loot tables). The difference is that the anchor is a ceiling, not a
+  floor, so pieces are built to hang and grow downwards.
+- **What it needs that does not exist yet:**
+  - New NBT templates, built in game and saved with structure blocks, or generated. The vanilla city only reuses vanilla
+    templates, so this would be the first set of our own pieces, and the jungle palette from the city reskin is the
+    obvious starting vocabulary.
+  - A way to find ceilings. The cavern roof is computable from the shape (`RavineShape`, like the floor is today). Wall
+    overhangs come from terraces plus wall noise, so they are less predictable and may need a surface scan at generation
+    time.
+  - Support for hanging pieces: chains, rope, root or vine supports so they read as hanging rather than floating.
+- **Open questions:**
+  - Cavern roof only, ravine wall overhangs only, or both?
+  - Reachable from the city (bridges or stairs), or visible-only set dressing?
+  - Loot on these, or purely visual?
 
 ### When this is picked up
 
