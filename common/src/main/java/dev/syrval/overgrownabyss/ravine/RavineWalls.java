@@ -24,6 +24,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param widthWobble       largest fraction of the half-width a side swells or narrows by
  * @param edgeFalloff       blocks over which the wall fades from open to solid
  * @param tiers             big stacked levels that zigzag the whole opening, see {@link RavineTiers}
+ * @param discs             round plates growing out of the shelves between levels, see {@link RavineDiscs}
  */
 public record RavineWalls(
         int terraceStep,
@@ -38,7 +39,8 @@ public record RavineWalls(
         float strataScale,
         float widthWobble,
         float edgeFalloff,
-        RavineTiers tiers) {
+        RavineTiers tiers,
+        RavineDiscs discs) {
 
     public static final MapCodec<RavineWalls> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.intRange(0, 256).fieldOf("terrace_step").forGetter(RavineWalls::terraceStep),
@@ -53,7 +55,8 @@ public record RavineWalls(
             Codec.floatRange(0, 1).fieldOf("strata_scale").forGetter(RavineWalls::strataScale),
             Codec.floatRange(0, 0.9F).fieldOf("width_wobble").forGetter(RavineWalls::widthWobble),
             Codec.floatRange(0.5F, 64).fieldOf("edge_falloff").forGetter(RavineWalls::edgeFalloff),
-            RavineTiers.CODEC.fieldOf("tiers").forGetter(RavineWalls::tiers)
+            RavineTiers.CODEC.fieldOf("tiers").forGetter(RavineWalls::tiers),
+            RavineDiscs.CODEC.optionalFieldOf("discs", RavineDiscs.NONE).forGetter(RavineWalls::discs)
     ).apply(i, RavineWalls::new));
     public static final Codec<RavineWalls> CODEC = MAP_CODEC.codec();
 

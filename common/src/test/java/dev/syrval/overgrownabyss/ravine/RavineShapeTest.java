@@ -43,7 +43,7 @@ class RavineShapeTest {
 
     @Test
     void terracesHoldWidthWithinAStepAndJumpBetweenSteps() {
-        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE));
+        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE, RavineDiscs.NONE));
         int stepStart = BOUNDS.floorY() + 24;
         double inside1 = RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 1, 0);
         double inside2 = RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 11, 0);
@@ -54,7 +54,7 @@ class RavineShapeTest {
 
     @Test
     void terraceShiftMovesWhereTheLedgesFall() {
-        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 8, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE));
+        RavineSettings flat = withWalls(new RavineWalls(12, 1F, 8, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE, RavineDiscs.NONE));
         int stepStart = BOUNDS.floorY() + 24;
         // Unshifted, y = stepStart + 11 is the last block of a step; shifted up by 2 it is the first of the next.
         assertTrue(RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 11, 2) > RavineShape.halfWidthAt(flat, BOUNDS, CELL, stepStart + 11, 0) + 1);
@@ -118,7 +118,7 @@ class RavineShapeTest {
 
     @Test
     void aLedgeIsLevelOnTopJoinsTheWallAndThinsTowardsItsLip() {
-        RavineSettings smooth = withWalls(new RavineWalls(0, 0, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE));
+        RavineSettings smooth = withWalls(new RavineWalls(0, 0, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE, RavineDiscs.NONE));
         RavineCell ledged = new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, RavineCell.Wobble.NONE, List.of(),
                 List.of(new RavineCell.Ledge(0, 1, 0.5, 20, 10, 4, 0)));
         double top = RavineShape.featureTop(smooth, BOUNDS, 0.5);
@@ -137,7 +137,7 @@ class RavineShapeTest {
 
     @Test
     void turningALedgeLetsItReachPointsAStraightOneMisses() {
-        RavineSettings smooth = withWalls(new RavineWalls(0, 0, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE));
+        RavineSettings smooth = withWalls(new RavineWalls(0, 0, 0, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE, RavineDiscs.NONE));
         RavineCell.Ledge straight = new RavineCell.Ledge(0, 1, 0.5, 20, 10, 4, 0);
         RavineCell.Ledge turned = new RavineCell.Ledge(0, 1, 0.5, 20, 10, 4, Math.toRadians(30));
         double top = RavineShape.featureTop(smooth, BOUNDS, 0.5);

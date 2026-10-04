@@ -13,6 +13,9 @@ import net.minecraft.world.level.ChunkPos;
 public final class RavineCells {
     private static final int MAX_FREE_LEDGES = 40;
     private static final double S_CURVE_CHANCE = 0.75;
+    private static final int MAX_DISCS_PER_LEVEL = 10;
+    /** Least extra reach, in half widths, that makes a level boundary a shelf worth putting a disc on. */
+    private static final double MIN_SHELF = 0.05;
     private static final double ZIGZAG_CHANCE = 0.8;
     /** Least width, in half widths, that two neighbouring levels share. */
     private static final double MIN_TIER_OVERLAP = 0.5;
@@ -41,6 +44,7 @@ public final class RavineCells {
         double halfLength = lerp(scale, settings.length().minInclusive(), settings.length().maxInclusive()) / 2;
         double halfWidth = lerp(scale, settings.width().minInclusive(), settings.width().maxInclusive()) / 2;
         List<RavineCell.Bridge> bridges = bridges(h, settings, scale, halfLength);
+        RavineCell.Tiers tiers = tiers(h, settings.walls().tiers(), scale);
         return Optional.of(new RavineCell(
                 centreX, centreZ, Math.cos(angle), Math.sin(angle), halfLength, halfWidth,
                 bend(h, settings.curvature(), scale),
@@ -48,7 +52,8 @@ public final class RavineCells {
                 new RavineCell.Wobble(side(h, 10, settings.walls()), side(h, 14, settings.walls())),
                 bridges,
                 ledges(h, settings.ledges(), scale, halfLength, bridges),
-                tiers(h, settings.walls().tiers(), scale)));
+                tiers,
+                discs(h, settings.walls().discs(), tiers, scale, halfLength)));
     }
 
     // Curving a short ravine by the full amount would fold it onto itself, so the bend follows its size.
@@ -89,6 +94,42 @@ public final class RavineCells {
             levels.add(previous);
         }
         return new RavineCell.Tiers(levels);
+    }
+
+    // A disc grows from the shelf a level boundary leaves on the side where the upper opening reaches further than the
+    // lower one; on the other side the boundary is a ceiling, which has nothing to stand on.
+    private static List<RavineCell.Disc> discs(long h, RavineDiscs config, RavineCell.Tiers tiers, double scale, double halfLength) {
+        List<RavineCell.Tiers.Level> levels = tiers.levels();
+        if (config.spacing() == 0 || levels.size() < 2 || scale < config.minSize()) {
+            return List.of();
+        }
+        List<RavineCell.Disc> discs = new ArrayList<>();
+        for (int level = 1; level < levels.size(); level++) {
+            RavineCell.Tiers.Level lower = levels.get(level - 1);
+            RavineCell.Tiers.Level upper = levels.get(level);
+            List<Integer> sides = new ArrayList<>(2);
+            for (int side : new int[] {1, -1}) {
+                if (side * upper.shift() + upper.width() > side * lower.shift() + lower.width() + MIN_SHELF) {
+                    sides.add(side);
+                }
+            }
+            if (sides.isEmpty()) {
+                continue;
+            }
+            int base = 2000 + 64 * level;
+            int count = (int) Math.clamp(Math.round(halfLength * 2 / config.spacing() * lerp(unit(h, base), 0.7, 1.3)), 1, MAX_DISCS_PER_LEVEL);
+            for (int i = 0; i < count; i++) {
+                int index = base + 4 + 5 * i;
+                discs.add(new RavineCell.Disc(
+                        level,
+                        halfLength * (-0.85 + 1.7 * (i + 0.5 + 0.4 * signed(h, index)) / count),
+                        sides.get((int) (unit(h, index + 1) * sides.size())),
+                        signed(h, index + 2) * config.yJitter(),
+                        lerp(unit(h, index + 3), config.minRadius(), config.maxRadius()),
+                        config.thickness() * lerp(unit(h, index + 4), 0.8, 1.2)));
+            }
+        }
+        return discs;
     }
 
     private static RavineCell.Side side(long h, int index, RavineWalls walls) {

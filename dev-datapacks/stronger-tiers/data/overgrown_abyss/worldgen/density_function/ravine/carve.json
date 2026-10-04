@@ -41,6 +41,16 @@
       "min_width": 0.4,
       "max_width": 1.15,
       "ramp": 2
+    },
+    "discs": {
+      "spacing": 70,
+      "min_size": 0.3,
+      "min_radius": 18,
+      "max_radius": 42,
+      "thickness": 6,
+      "y_jitter": 2.5,
+      "max_reach": 0.45,
+      "inset": 12
     }
   },
   "curvature": {

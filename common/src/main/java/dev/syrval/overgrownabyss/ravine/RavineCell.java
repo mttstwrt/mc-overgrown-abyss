@@ -21,7 +21,8 @@ public record RavineCell(
         Wobble wobble,
         List<Bridge> bridges,
         List<Ledge> ledges,
-        Tiers tiers) {
+        Tiers tiers,
+        List<Disc> discs) {
 
     public RavineCell {
         if (halfLength < 0 || halfWidth <= 0) {
@@ -32,6 +33,14 @@ public record RavineCell(
         }
         bridges = List.copyOf(bridges);
         ledges = List.copyOf(ledges);
+        discs = List.copyOf(discs);
+    }
+
+    /** A ravine without discs. */
+    public RavineCell(
+            double centreX, double centreZ, double dirX, double dirZ, double halfLength, double halfWidth,
+            Bend bend, Lean lean, Wobble wobble, List<Bridge> bridges, List<Ledge> ledges, Tiers tiers) {
+        this(centreX, centreZ, dirX, dirZ, halfLength, halfWidth, bend, lean, wobble, bridges, ledges, tiers, List.of());
     }
 
     /** A ravine with every level at the normal width. */
@@ -165,6 +174,13 @@ public record RavineCell(
             public static final Level NEUTRAL = new Level(0, 0, 1);
         }
     }
+
+    /**
+     * A round plate on the shelf at the start of level {@code level} (an index into {@link Tiers#levels()}), rooted in
+     * the {@code side} wall of the level below. {@code along} is its position along the chord, {@code yOffset} how far its
+     * top sits from the boundary, {@code radius} and {@code thickness} its size.
+     */
+    public record Disc(int level, double along, int side, double yOffset, double radius, double thickness) {}
 
     /** A rock arch across the ravine: where along the chord, how high (fraction of the allowed span), and its size. */
     public record Bridge(double along, double height, double width, double thickness) {}

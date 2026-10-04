@@ -298,6 +298,30 @@ Not verified:
   the cavern, closes it further. Whether that is the right balance is the owner's call.
 - The sight-line measure is vertical lines only, not views from the cavern floor at an angle.
 
+### Disc round (first pass)
+
+Discs are round rock plates that grow out of the shelves where tier levels meet (`walls.discs` in `carve.json`; omit the
+block to turn them off). Each has a level top and a domed underside, is rooted 12 blocks inside the wall of the level
+below, and reaches into the opening by at most 45% of its width. Several per boundary, placed along the ravine with
+tops varying by up to 2.5 blocks either way, so neighbours overlap at slightly different heights. A disc only goes on
+the side where the upper level reaches further than the lower one (a real shelf), never under a ceiling.
+
+| Check | Result |
+|---|---|
+| Unit tests (46 total): discs only on shelves, within radius, jitter and count limits, none without levels; a disc is level on top, rooted in the wall, leaves the centre line open and respects the reach cap | pass |
+| NeoForge dedicated server, seed 20261003, ravine at 2620,764 generated, no errors | yes |
+| Cross-sections at six places along it show flat-topped plates with tapering undersides at the two level heights (about y=30 and y=51), alternating sides | seen in rendered slices |
+
+Not verified:
+- **Nothing was looked at in game.** In 2D slices the plates read as flat shelves with tapered undersides; whether they
+  read as round discs in 3D, and whether they are big and overlapping enough, is the owner's call.
+- **Fabric and Larion were not run for discs.** Disc size is in blocks, not scaled to ravine width, so very wide or very
+  narrow ravines may want different radii.
+- Disc tops sit at the nominal boundary height; the terrace warp (up to 8 blocks) moves the natural shelf, so a disc can
+  sit a little above or below it where it meets the wall.
+- The existing rectangular ledges are still there alongside the discs. Whether to thin them out is undecided.
+- Fluted faces, support stems and lily-pad ends are not started.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

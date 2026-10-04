@@ -16,4 +16,5 @@ looking at will not be in the same place in a new world.
 ## Packs
 
 - `stronger-tiers`: `max_count` 4 (was 3), `max_shift` 1.2 (was 0.9), `min_width` 0.4 (was 0.5), `max_width` 1.15
-  (was 1.1), `ramp` 2 (was 4), `min_size` 0.25 (was 0.3). Bolder zigzags and sharper shelves.
+  (was 1.1), `ramp` 2 (was 4), `min_size` 0.25 (was 0.3). Bolder zigzags and sharper shelves. Also sets the `discs` block to the mod's defaults; a pack that leaves `discs` out
+  turns discs off.

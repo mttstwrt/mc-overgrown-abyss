@@ -15,6 +15,8 @@ public final class RavineShape {
     static final double LEDGE_ROOT = 24;
     private static final double LEDGE_SLACK = 12;
     private static final double MAX_LEDGE_REACH = 0.45;
+    private static final double DISC_SLACK = 12;
+    private static final double MIN_DISC_REACH = 4;
     private static final double FEATURE_MARGIN_ABOVE_ROOF = 8;
     private static final double FEATURE_MARGIN_BELOW_RIM = 10;
 
@@ -97,6 +99,45 @@ public final class RavineShape {
             double bottom = top - ledge.thickness() * (0.6 + 0.8 * Math.clamp(1 - fromWall / depth, 0, 1));
             double horizontal = Math.max(Math.abs(alongLedge) - ledge.length() * fit / 2, Math.max(-LEDGE_ROOT - fromWall, fromWall - depth));
             nearest = Math.min(nearest, Math.max(horizontal, Math.max(y - top, bottom - y)));
+        }
+        return nearest;
+    }
+
+    /**
+     * Signed distance to the nearest disc, or infinity if none is near: negative inside the rock. A disc is a round plate
+     * with a level top and a domed underside, centred {@code inset} blocks inside the wall of the level below its shelf and
+     * reaching into the opening no further than {@code max_reach} of its width. Add it to the rock with
+     * {@code max(open, -disc)}.
+     */
+    public static double discDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
+        RavineDiscs config = settings.walls().discs();
+        double nearest = Double.POSITIVE_INFINITY;
+        RavineCell.Frame frame = null;
+        double low = bounds.floorY() + settings.cavernHeight();
+        double span = bounds.topY() - low;
+        for (RavineCell.Disc disc : cell.discs()) {
+            double top = low + cell.tiers().levels().get(disc.level()).start() * span + disc.yOffset();
+            if (y > top + DISC_SLACK || y < top - disc.thickness() - DISC_SLACK) {
+                continue;
+            }
+            RavineCell.Tiers.Level lower = cell.tiers().levels().get(disc.level() - 1);
+            double base = halfWidthAt(settings, bounds, cell, top, 0);
+            RavineCell.Side wobble = disc.side() > 0 ? cell.wobble().left() : cell.wobble().right();
+            double wall = cell.bend().offset(unitAlong(cell, disc.along())) + lower.shift() * base
+                    + disc.side() * lower.width() * base * (1 + wobble.at(top));
+            double reach = Math.min(disc.radius() - config.inset(), config.maxReach() * 2 * lower.width() * base);
+            if (reach < MIN_DISC_REACH) {
+                continue;
+            }
+            double radius = config.inset() + reach;
+            if (frame == null) {
+                frame = leanedFrame(bounds, cell, x, y, z);
+            }
+            double dAlong = frame.along() - disc.along();
+            double dSide = frame.sideways() - (wall + disc.side() * config.inset());
+            double r = Math.sqrt(dAlong * dAlong + dSide * dSide);
+            double bottom = top - disc.thickness() * (1 - 0.7 * Math.min(r / radius, 1) * Math.min(r / radius, 1));
+            nearest = Math.min(nearest, Math.max(r - radius, Math.max(y - top, bottom - y)));
         }
         return nearest;
     }

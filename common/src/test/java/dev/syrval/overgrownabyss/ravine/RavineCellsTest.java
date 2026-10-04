@@ -21,7 +21,7 @@ class RavineCellsTest {
     static final RavineEnvironment ENVIRONMENT = new RavineEnvironment(
             TagKey.create(Registries.BIOME, ResourceLocation.parse("overgrown_abyss:ravine_forbidden")),
             Optional.empty());
-    static final RavineWalls WALLS = new RavineWalls(12, 0.85F, 8, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE);
+    static final RavineWalls WALLS = new RavineWalls(12, 0.85F, 8, 0.03F, 10, 0.012F, 24, 7, 8, 0.025F, 0.22F, 6, RavineTiers.NONE, RavineDiscs.NONE);
     static final RavineCurvature CURVATURE = new RavineCurvature(70, 40, 45, 25);
     static final RavineBridges BRIDGES = new RavineBridges(3, 0.45F, 7, 6, 0.1F, 0.75F);
     static final RavineLedges LEDGES = new RavineLedges(3.5F, 0.15F, 0.08F, 0.75F, 14, 46, 6, 16, 4, 30);
