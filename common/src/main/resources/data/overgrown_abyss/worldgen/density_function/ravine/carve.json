@@ -37,7 +37,9 @@
     "min_height": 14,
     "ceiling_margin": 12,
     "min_offset": 0.0,
-    "max_offset": 0.4
+    "max_offset": 0.4,
+    "floor_thickness": 4,
+    "max_lip": 0.4
   },
   "environment": {
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",

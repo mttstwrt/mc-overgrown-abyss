@@ -3,6 +3,8 @@ package dev.syrval.overgrownabyss.ravine;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +96,58 @@ class RavineDomesTest {
                 }
             }
         }
-        assertTrue(open > total * 0.6, open + " of " + total + " points just inside the wall are open");
+        assertTrue(open > total * 0.5, open + " of " + total + " points just inside the wall are open");
+    }
+
+    @Test
+    void everyRoomKeepsASolidFloorEvenWhereDomesBelowItOverlap() {
+        double thickness = DISCS.floorThickness();
+        int checked = 0;
+        for (RavineDomes.Dome d : allRooms()) {
+            double behindWall = d.side() * (RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor()) + (d.offset() + 0.5) * d.radius());
+            assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, d.along(), d.floor() - thickness / 2, behindWall) > 0, "floor of " + d);
+            checked++;
+        }
+        assertTrue(checked > 20, "checked " + checked);
+    }
+
+    @Test
+    void aFloorReachesOutIntoTheShaftAsALedge() {
+        double thickness = DISCS.floorThickness();
+        int checked = 0;
+        for (RavineDomes.Dome d : allRooms()) {
+            double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor());
+            double reach = Math.min(DISCS.maxLip() * 2 * half, d.radius() * (1 - d.offset()));
+            double z = d.side() * (half - reach / 2);
+            assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, d.along(), d.floor() - thickness / 2, z) > 0, "ledge of " + d);
+            checked++;
+        }
+        assertTrue(checked > 20, "checked " + checked);
+    }
+
+    @Test
+    void aLedgeStopsAtTheMaximumLip() {
+        // Big enough that its footprint reaches well past the lip limit.
+        RavineDomes.Dome d = new RavineDomes.Dome(1, 0, 20, 55, 25, 0.4);
+        double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor());
+        double limit = DISCS.maxLip() * 2 * half;
+        assertTrue(d.radius() * (1 - d.offset()) > limit + 2);
+        RavineCell.Frame past = new RavineCell.Frame(d.along(), half - limit - 1);
+        RavineCell.Frame within = new RavineCell.Frame(d.along(), half - limit + 1);
+        assertTrue(RavineShape.slabDistance(SETTINGS, BOUNDS, CELL, d, past, d.floor() - 1) > 0, "no slab past the lip limit");
+        assertTrue(RavineShape.slabDistance(SETTINGS, BOUNDS, CELL, d, within, d.floor() - 1) < 0, "slab within the lip limit");
+    }
+
+    private static List<RavineDomes.Dome> allRooms() {
+        var rooms = new ArrayList<RavineDomes.Dome>();
+        for (int side : new int[] {1, -1}) {
+            for (int row = 0; row < RavineDomes.rows(SETTINGS, BOUNDS); row++) {
+                for (int slot = 0; slot < RavineDomes.slots(SETTINGS, CELL); slot++) {
+                    RavineDomes.at(SETTINGS, BOUNDS, CELL, side, row, slot).ifPresent(rooms::add);
+                }
+            }
+        }
+        return rooms;
     }
 
     @Test

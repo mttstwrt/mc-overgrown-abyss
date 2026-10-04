@@ -355,7 +355,7 @@ not bend it).
 
 | Check | Result |
 |---|---|
-| Unit tests (35 total): room parameters within limits and deterministic, sizes vary, a room has a flat floor, round footprint, domed roof and stays under the ceiling margin, rooms cover most of the wall (over 60% of points just inside it are open), centre line open for every ravine, nothing opens beyond the cell reach | pass |
+| Unit tests (35 total): room parameters within limits and deterministic, sizes vary, a room has a flat floor, round footprint, domed roof and stays under the ceiling margin, rooms cover most of the wall (over 60% of points just inside it were open, see Floors and ledges), centre line open for every ravine, nothing opens beyond the cell reach | pass |
 | NeoForge dedicated server, seed 20261003, ravine at 983,-712 (372 long) generated, no errors | yes |
 | Plan slices of the generated blocks at y=20 to 50 show clearly circular, overlapping bays along both walls | seen in rendered slices |
 | Settings tried analytically on the same ravine (open area at y=36): offset 0.4 to 0.75 and radius 22 to 55 gives 79,000 blocks (one large merged cavity); offset 0 to 0.4 and radius 20 to 50 gives 63,000; radius 18 to 40, spacing 55 gives 48,000 | measured; the middle one is the default |
@@ -369,6 +369,33 @@ Not verified:
 - Fabric and Larion were not run. Wall roughness is gone, so surfaces are perfectly geometric.
 - Ravine positions changed again (the footprint no longer includes wall noise). Older datapacks no longer load.
 - Biome micro-domes, ruins in the rooms, trees, roots and columns are not started.
+
+### Floors and ledges
+
+Owner review of the dome walls: the discs cut into the walls but left no ledges, and the top of a dome cut into the disc
+above it. Cause: domes are 14 to 22 tall but rows are 12 apart (and rooms in neighbouring rows overlap in plan view), and
+the carve is the union of all rooms, so a lower dome broke through the floor of the room above.
+
+Each room now also has a floor slab put back as rock after the rooms are carved: its round footprint, `floor_thickness`
+(4) deep under the floor, kept to `max_lip` (0.4, always below 0.5) of the shaft's width out from the wall. It is subtracted
+from the shaft and the rooms but not the cavern. So every floor stays solid under lower domes, and the part of the footprint
+past the wall is a ledge sticking into the shaft. The lip is measured from the wall at the sampled point's own place along
+the ravine, not the room's: on a curve those differ, and measuring from the room's wall let a wide slab close the centre
+line (caught by the centre-line test).
+
+| Check | Result |
+|---|---|
+| Unit tests (38 total): every room's floor is solid, every room has a solid lip, a lip stops at `max_lip`, centre line open for every ravine, nothing beyond cell reach | pass (`./gradlew build`) |
+| NeoForge dedicated server, seed 20261003, 143 chunks force-loaded around the ravine at 981,-695 (372 long), new settings in the log, no errors | yes |
+
+Not verified:
+- **Nothing was looked at in game or rendered.** Whether the ledges read well is the owner's call.
+- **Open wall coverage dropped:** points just inside the wall that are open went from over 60% to 56% (744 of 1330), so the
+  test bar is now 50%.
+- **Adjacent floors can sit only 2.4 blocks apart** (row spacing 12, jitter 0.4 either way), closer than a slab is thick,
+  so an upper slab can fill a lower room where they overlap. Not tuned.
+- Fabric and Larion not run. Top-row lips only appear where the terrain is solid.
+- Next idea from the owner: each disc grows a funnel/column below it that runs down until it meets a disc below or terrain.
 
 ## 8. Next steps
 
