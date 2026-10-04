@@ -180,3 +180,41 @@ Not verified:
 2. Wall styles (Phase 2) and `BiomeInjector`.
 3. Decide whether lush caves features on the city floor suit the look, or whether the city should keep its own ground.
 4. Extract `ravine-core` into a shared source module when Rift starts.
+
+## 9. Future optional mod integrations (owner wishlist)
+
+Nothing here is started. The rules in `../AGENTS.md` apply: these are content mods, so they may only ever be **soft,
+optional integrations**. Overgrown Abyss must load and work without them, and must not declare them as hard
+dependencies. Everything below is the owner's description; no mod APIs, data formats or versions have been looked up yet
+(treat as `[recall; verify]` and check against the real jars before building).
+
+### Streams Reflowed
+
+- **Why:** the owner loves the mod. Right now it looks weird with our ravine, but integrated well it could look great.
+- **Likely meeting points to investigate:** how its streams and waterfalls behave where they meet the carved walls and the
+  cavern edge; whether they can feed waterfalls into the ravine on purpose rather than by accident (surface water already
+  pours down the walls, see section 6).
+- **Open questions:** does it work with our density wrap and the Larion terrain; does it need anything on the NeoForge
+  and Fabric builds separately (portability matrix); can it be tuned from a datapack.
+
+### Epic Structures (large jungle temples)
+
+- **Why:** its large jungle temples look great. The idea is to merge their paths and jigsaw pieces with our jungle
+  reskin of the Ancient City, so the city grows temple districts and approach paths instead of only reskinned vanilla
+  pieces.
+- **Likely approach:** add their pieces to our `overgrown_abyss:city/*` template pools only when the mod is present,
+  using the same pool-alias and processor-list setup as the vanilla city. Candidate routes are Lithostitched-style pool
+  injection (already held in reserve in section 3) or a loader-conditional datapack file in each loader module. Our
+  reskin processors would then need to tolerate or retheme their blocks.
+- **Open questions:**
+  - Are their templates jigsaw pieces with connectors we can join to ours, or standalone structures?
+  - Do their paths use the same jigsaw naming (`connect_*`, `entrance_*`)? If not, we may need adapter pieces.
+  - Licensing and redistribution: reference their templates by ID, never copy them (same stance as vanilla).
+  - Same-mod risk as section 5, risk 5: if another mod replaces their templates, we inherit the change.
+
+### When this is picked up
+
+1. Read each mod's real data files and loader support for 1.21.1 first; record versions in `docs/PINS.md` as optional
+   test targets, not dependencies.
+2. Decide per mod whether it is a pure datapack integration (preferred) or needs Java.
+3. Add a check that the build and both loader servers still boot **without** the mod.
