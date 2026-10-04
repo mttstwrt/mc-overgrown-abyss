@@ -21,9 +21,17 @@ class RavineCellsTest {
     static final RavineEnvironment ENVIRONMENT = new RavineEnvironment(
             TagKey.create(Registries.BIOME, ResourceLocation.parse("overgrown_abyss:ravine_forbidden")),
             Optional.empty());
-    static final RavineSettings SETTINGS = new RavineSettings(
-            42L, 2048, 0.5F, new InclusiveRange<>(240, 400), new InclusiveRange<>(70, 110),
-            VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
+    static final RavineWalls WALLS = new RavineWalls(12, 0.85F, 8, 0.03F, 10, 0.012F, 24, 0.22F, 6);
+    static final RavineCurvature CURVATURE = new RavineCurvature(70, 40, 45, 25);
+    static final RavineBridges BRIDGES = new RavineBridges(3, 0.45F, 7, 6, 0.1F, 0.75F);
+    static final RavineSettings SETTINGS = settings(42L, 0.5F);
+
+    static RavineSettings settings(long salt, float chance) {
+        return new RavineSettings(
+                salt, 2048, chance, new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110),
+                VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48,
+                WALLS, CURVATURE, BRIDGES, ENVIRONMENT);
+    }
 
     @Test
     void sameInputsGiveSameCell() {
@@ -32,10 +40,8 @@ class RavineCellsTest {
 
     @Test
     void seedAndSaltChangeTheLayout() {
-        RavineSettings otherSalt = new RavineSettings(
-                43L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
-        RavineSettings always = new RavineSettings(
-                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
+        RavineSettings otherSalt = settings(43L, 1F);
+        RavineSettings always = settings(42L, 1F);
         assertNotEquals(RavineCells.at(1L, always, 0, 0), RavineCells.at(2L, always, 0, 0));
         assertNotEquals(RavineCells.at(1L, always, 0, 0), RavineCells.at(1L, otherSalt, 0, 0));
     }
@@ -65,10 +71,58 @@ class RavineCellsTest {
                 double minZ = (double) z * SETTINGS.cellSize();
                 assertTrue(c.centreX() - reach >= minX && c.centreX() + reach <= minX + SETTINGS.cellSize());
                 assertTrue(c.centreZ() - reach >= minZ && c.centreZ() + reach <= minZ + SETTINGS.cellSize());
-                assertTrue(c.halfLength() * 2 >= 240 && c.halfLength() * 2 <= 400);
-                assertTrue(c.halfWidth() * 2 >= 70 && c.halfWidth() * 2 <= 110);
             }
         }
+    }
+
+    @Test
+    void sizeRunsFromARoundHoleToTheConfiguredLargest() {
+        RavineSettings always = settings(42L, 1F);
+        double shortest = Double.MAX_VALUE;
+        double longest = 0;
+        double narrowest = Double.MAX_VALUE;
+        double widest = 0;
+        for (int x = -30; x < 30; x++) {
+            for (int z = -30; z < 30; z++) {
+                RavineCell c = RavineCells.at(3L, always, x, z).orElseThrow();
+                shortest = Math.min(shortest, c.halfLength() * 2);
+                longest = Math.max(longest, c.halfLength() * 2);
+                narrowest = Math.min(narrowest, c.halfWidth() * 2);
+                widest = Math.max(widest, c.halfWidth() * 2);
+                // One draw sets both, so a long ravine is always a wide one.
+                assertEquals(c.halfLength() * 2 / 400, (c.halfWidth() * 2 - 24) / (110 - 24), 1e-9);
+            }
+        }
+        assertTrue(shortest < 12 && narrowest < 28, "smallest: length " + shortest + " width " + narrowest);
+        assertTrue(longest > 388 && longest <= 400 && widest > 107 && widest <= 110, "largest: length " + longest + " width " + widest);
+    }
+
+    @Test
+    void bridgesAndCurvesStayWithinTheirLimitsAndSmallRavinesStayOpen() {
+        RavineSettings always = settings(42L, 1F);
+        boolean sawBridge = false;
+        boolean sawBend = false;
+        for (int x = -30; x < 30; x++) {
+            for (int z = -30; z < 30; z++) {
+                RavineCell c = RavineCells.at(5L, always, x, z).orElseThrow();
+                double scale = c.halfLength() * 2 / 400;
+                if (scale < BRIDGES.minSize()) {
+                    assertTrue(c.bridges().isEmpty(), "a small ravine must not be bridged");
+                }
+                assertTrue(c.bridges().size() <= BRIDGES.maxCount());
+                for (RavineCell.Bridge bridge : c.bridges()) {
+                    assertTrue(Math.abs(bridge.along()) <= c.halfLength() * 0.7 + 1e-9);
+                    assertTrue(bridge.height() >= BRIDGES.minHeight() && bridge.height() <= BRIDGES.maxHeight());
+                    sawBridge = true;
+                }
+                assertTrue(Math.abs(c.bend().bend()) <= CURVATURE.maxBend() * scale + 1e-9);
+                assertTrue(Math.abs(c.bend().wiggle()) <= CURVATURE.maxWiggle() * scale + 1e-9);
+                assertTrue(c.lean().lean() >= 0 && c.lean().lean() <= CURVATURE.maxLean());
+                assertTrue(Math.abs(c.lean().bow()) <= CURVATURE.maxBow());
+                sawBend |= Math.abs(c.bend().bend()) > 1;
+            }
+        }
+        assertTrue(sawBridge && sawBend);
     }
 
     @Test
@@ -79,8 +133,7 @@ class RavineCellsTest {
 
     @Test
     void centreChunkContainsTheRavineCentreForEveryChunkOfTheCell() {
-        RavineSettings always = new RavineSettings(
-                42L, 2048, 1F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
+        RavineSettings always = settings(42L, 1F);
         RavineCell cell = RavineCells.at(5L, always, -1, 2).orElseThrow();
         ChunkPos expected = new ChunkPos(Math.floorDiv((int) Math.floor(cell.centreX()), 16), Math.floorDiv((int) Math.floor(cell.centreZ()), 16));
         // Cell (-1, 2) spans chunks x -128..-1 and z 256..383.
@@ -93,8 +146,7 @@ class RavineCellsTest {
 
     @Test
     void centreChunkFallsBackToTheCellMiddleWhenThereIsNoRavine() {
-        RavineSettings never = new RavineSettings(
-                42L, 2048, 0F, SETTINGS.length(), SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), 0.35F, 128, 48, 12, 0.85F, 0.03F, 10, 6, ENVIRONMENT);
+        RavineSettings never = settings(42L, 0F);
         assertEquals(new ChunkPos(64, 64), RavineCells.centreChunk(5L, never, 3, 100));
         assertEquals(new ChunkPos(-64, 64), RavineCells.centreChunk(5L, never, -1, 0));
     }

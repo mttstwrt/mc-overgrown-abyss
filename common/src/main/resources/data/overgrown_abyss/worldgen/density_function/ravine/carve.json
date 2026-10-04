@@ -4,11 +4,11 @@
   "cell_size": 2048,
   "chance": 0.5,
   "length": {
-    "min_inclusive": 240,
+    "min_inclusive": 0,
     "max_inclusive": 400
   },
   "width": {
-    "min_inclusive": 70,
+    "min_inclusive": 24,
     "max_inclusive": 110
   },
   "floor": {
@@ -20,11 +20,31 @@
   "bottom_width_factor": 0.35,
   "cavern_radius": 136,
   "cavern_height": 56,
-  "terrace_step": 12,
-  "terrace_strength": 0.85,
-  "wall_noise_scale": 0.03,
-  "wall_noise_amplitude": 10,
-  "edge_falloff": 6,
+  "walls": {
+    "terrace_step": 12,
+    "terrace_strength": 0.8,
+    "terrace_warp": 8,
+    "noise_scale": 0.03,
+    "noise_amplitude": 8,
+    "overhang_scale": 0.012,
+    "overhang_amplitude": 24,
+    "width_wobble": 0.22,
+    "edge_falloff": 6
+  },
+  "curvature": {
+    "max_bend": 70,
+    "max_wiggle": 40,
+    "max_lean": 45,
+    "max_bow": 25
+  },
+  "bridges": {
+    "max_count": 3,
+    "min_size": 0.45,
+    "width": 7,
+    "thickness": 6,
+    "min_height": 0.1,
+    "max_height": 0.75
+  },
   "environment": {
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",
     "cavern_biome": "minecraft:lush_caves"

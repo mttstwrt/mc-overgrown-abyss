@@ -10,9 +10,11 @@ import net.minecraft.world.level.levelgen.VerticalAnchor;
 import net.minecraft.world.level.levelgen.WorldGenerationContext;
 
 /**
- * Datapack tunables for the ravine shape. Lengths and widths are in blocks; {@code width} is the full width at
- * {@code top}, narrowing towards {@code floor} by {@code bottom_width_factor}. The vertical bounds are anchors so the
- * cavern floor follows the world bottom of whatever terrain source is in use (vanilla, Larion, ...).
+ * Datapack tunables for the ravine shape. Lengths and widths are in blocks; each ravine draws one size from 0 to 1 and
+ * takes that fraction of the way from the smallest length and width (a round hole above the cavern when the length is
+ * 0) to the largest. {@code width} is the full width at {@code top}, narrowing towards {@code floor} by
+ * {@code bottom_width_factor}. The vertical bounds are anchors so the cavern floor follows the world bottom of
+ * whatever terrain source is in use (vanilla, Larion, ...).
  */
 public record RavineSettings(
         long salt,
@@ -25,36 +27,36 @@ public record RavineSettings(
         float bottomWidthFactor,
         int cavernRadius,
         int cavernHeight,
-        int terraceStep,
-        float terraceStrength,
-        float wallNoiseScale,
-        float wallNoiseAmplitude,
-        float edgeFalloff,
+        RavineWalls walls,
+        RavineCurvature curvature,
+        RavineBridges bridges,
         RavineEnvironment environment) {
 
     public static final MapCodec<RavineSettings> MAP_CODEC = RecordCodecBuilder.<RavineSettings>mapCodec(i -> i.group(
             Codec.LONG.fieldOf("salt").forGetter(RavineSettings::salt),
             Codec.intRange(64, 1 << 16).fieldOf("cell_size").forGetter(RavineSettings::cellSize),
             Codec.floatRange(0, 1).fieldOf("chance").forGetter(RavineSettings::chance),
-            InclusiveRange.codec(Codec.intRange(1, 4096)).fieldOf("length").forGetter(RavineSettings::length),
+            InclusiveRange.codec(Codec.intRange(0, 4096)).fieldOf("length").forGetter(RavineSettings::length),
             InclusiveRange.codec(Codec.intRange(2, 4096)).fieldOf("width").forGetter(RavineSettings::width),
             VerticalAnchor.CODEC.fieldOf("floor").forGetter(RavineSettings::floor),
             VerticalAnchor.CODEC.fieldOf("top").forGetter(RavineSettings::top),
             Codec.floatRange(0, 1).fieldOf("bottom_width_factor").forGetter(RavineSettings::bottomWidthFactor),
             Codec.intRange(0, 4096).fieldOf("cavern_radius").forGetter(RavineSettings::cavernRadius),
             Codec.intRange(1, 1024).fieldOf("cavern_height").forGetter(RavineSettings::cavernHeight),
-            Codec.intRange(0, 256).fieldOf("terrace_step").forGetter(RavineSettings::terraceStep),
-            Codec.floatRange(0, 1).fieldOf("terrace_strength").forGetter(RavineSettings::terraceStrength),
-            Codec.floatRange(0, 1).fieldOf("wall_noise_scale").forGetter(RavineSettings::wallNoiseScale),
-            Codec.floatRange(0, 256).fieldOf("wall_noise_amplitude").forGetter(RavineSettings::wallNoiseAmplitude),
-            Codec.floatRange(0.5F, 64).fieldOf("edge_falloff").forGetter(RavineSettings::edgeFalloff),
+            RavineWalls.CODEC.fieldOf("walls").forGetter(RavineSettings::walls),
+            RavineCurvature.CODEC.fieldOf("curvature").forGetter(RavineSettings::curvature),
+            RavineBridges.CODEC.fieldOf("bridges").forGetter(RavineSettings::bridges),
             RavineEnvironment.CODEC.fieldOf("environment").forGetter(RavineSettings::environment)
     ).apply(i, RavineSettings::new)).validate(RavineSettings::validate);
 
-    /** Furthest horizontal distance from a ravine centre that the carve can reach. */
+    /**
+     * Furthest horizontal distance from a ravine centre that the carve can reach: the longest ravine's half length plus
+     * its widest wall, swollen by the width wobble, pushed out by the curves and then by wall noise and falloff.
+     */
     public double maxReach() {
-        double ravine = length.maxInclusive() / 2.0 + width.maxInclusive() / 2.0;
-        return Math.max(ravine, cavernRadius) + wallNoiseAmplitude + edgeFalloff;
+        double halfWidth = width.maxInclusive() / 2.0 * (1 + walls.widthWobble());
+        double ravine = length.maxInclusive() / 2.0 + halfWidth + curvature.maxDisplacement();
+        return Math.max(ravine, cavernRadius) + walls.maxNoiseDisplacement() + walls.edgeFalloff();
     }
 
     /** Resolves the anchors for one level; empty when the level is too short to hold the ravine. */

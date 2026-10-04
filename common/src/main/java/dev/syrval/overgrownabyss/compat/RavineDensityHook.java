@@ -135,8 +135,9 @@ public final class RavineDensityHook {
         for (int cellX = -1; cellX <= 1; cellX++) {
             for (int cellZ = -1; cellZ <= 1; cellZ++) {
                 RavineCells.at(carve.seed(), carve.settings(), cellX, cellZ).filter(carve::isActive).ifPresent(cell -> OvergrownAbyss.LOGGER.info(
-                        "Ravine centre at x={} z={} (floor y={})",
-                        Math.round(cell.centreX()), Math.round(cell.centreZ()), carve.bounds().floorY()));
+                        "Ravine centre at x={} z={} (floor y={}, {} long, {} wide, {} bridges)",
+                        Math.round(cell.centreX()), Math.round(cell.centreZ()), carve.bounds().floorY(),
+                        Math.round(cell.halfLength() * 2), Math.round(cell.halfWidth() * 2), cell.bridges().size()));
             }
         }
     }

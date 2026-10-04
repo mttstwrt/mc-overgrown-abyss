@@ -142,6 +142,25 @@ for 1.21.1 on Fabric before Phase 1.
   drained oceans and emptied lava lakes beside and below the ravine. Surface water now pours down as waterfalls.
   Nothing smooths these meetings beyond the carve's 6-block edge falloff.
 
+- **Ravine shape variety (owner review: walls too regular, one texture all the way down).** All in
+  `ravine/carve.json`, which is now nested (`walls`, `curvature`, `bridges`, `environment`) because the settings codec is
+  at its 16-field limit.
+  - *Size:* each ravine draws one size from 0 to 1 and takes that fraction of the way from the smallest to the largest,
+    so long ravines are also wide. Largest is the old maximum (400 long, 110 wide); smallest is a round hole 24 wide
+    directly above the cavern centre (`length.min_inclusive` 0). The cavern and city do not change with size.
+  - *Curves:* in plan view the centre line bends (parabola) and wiggles (sine), both scaled by size; with height the whole
+    shaft leans and bows sideways, zero at the cavern floor so it always meets the cavern.
+  - *Overhangs and texture:* each wall swells and narrows with height at its own rhythm (`width_wobble`), a second broad
+    noise with a stretched vertical axis (`overhang_*`) pushes large lumps and undercuts out of the wall, and terrace
+    ledge heights wander along the ravine (`terrace_warp`) instead of forming contour lines. Noise may narrow a wall by at
+    most 60% of the half-width, so the centre line always stays open.
+  - *Bridges:* up to 3 arches per ravine, only on ravines at least 45% of the way to the largest (`bridges.min_size`), so
+    small holes stay open. They are carved out of the open volume as rock, flat on top and thicker at the walls. Because
+    the carve is combined as `min(original, carve)` it cannot add rock where the terrain itself is open air, so
+    `bridges.max_height` (0.75 of the span from cavern roof to rim) must stay below the terrain surface.
+  - *Cost:* `maxReach` now includes every curve and the wall wobble (about 485 blocks for the shipped numbers), so cells
+    must be at least twice that. The shipped 2048 is fine.
+
 ## 7. Status and open issues (2026-10-03)
 
 Owner reviewed the first build in game: the chasm and the city look good. This round (land-only, smaller cavern, lush
@@ -173,6 +192,28 @@ Not verified:
   `#minecraft:is_river` from the tag.
 - Loot tables are vanilla plus one jungle pool; the vanilla part still has Deep Dark items (echo shards, disc fragments).
 - Sculk patches are removed outright; nothing replaces them yet.
+
+### Shape variety round
+
+Checked after a full `./gradlew build` (33 unit tests) and in dev servers.
+
+| Check | Result |
+|---|---|
+| Unit tests: centre line open from floor to rim for every sampled ravine, nothing opens beyond the reach cells are sized for, size runs from a round hole to the configured largest, bridges and curves stay within limits | pass |
+| NeoForge boot, seed 20261003 and seed 162, no errors | yes |
+| Fabric boot, seed 20261003, city generates under the 10-long, 26-wide hole (82 pieces), no errors | yes |
+| In-world: the 346-long ravine (seed 20261003) is a long curve with varying width and wall shelves | seen in rendered block slices |
+| In-world: the 390-long, 2-bridge ravine (seed 162) has a rock band crossing its full width | seen in rendered block slices |
+| In-world: the hole's predicted, leaning centre line is air at all 10 probed heights from y=-30 to 60; the block straight above the cavern centre is rock | yes (Fabric, `execute if block`) |
+
+Not verified:
+- **Nothing was looked at in game.** The renders are 2D slices of the generated blocks, not screenshots.
+- **Bridge arch shape:** a bridge crossing was detected and a rock slab is visible in a slice, but the arch profile
+  (thin in the middle, thick at the walls) was not confirmed block by block.
+- **Larion:** not run this round, so the new shapes have not been seen on Larion terrain.
+- **Fabric** was only run on the hole seed, not on the bridged seed.
+- **Frequency of extremes:** size is uniform in 0 to 1, so about half of ravines are under half size. Not tuned.
+- The tiny hole can only be as deep as the terrain is high; on low ground it is a short shaft.
 
 ## 8. Next steps
 
