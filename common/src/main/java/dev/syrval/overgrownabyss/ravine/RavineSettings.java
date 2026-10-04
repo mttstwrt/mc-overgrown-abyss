@@ -10,7 +10,8 @@ import net.minecraft.world.level.levelgen.VerticalAnchor;
 import net.minecraft.world.level.levelgen.WorldGenerationContext;
 
 /**
- * Datapack tunables for the ravine shape. Lengths and widths are in blocks; each ravine draws one size from 0 to 1 and
+ * Datapack tunables for the ravine shape. Lengths and widths are in blocks; each ravine draws one size from 0 to 1
+ * (a uniform draw raised to {@code size_bias}, so 1 is even and higher values favour small ravines) and
  * takes that fraction of the way from the smallest length and width (a round hole above the cavern when the length is
  * 0) to the largest. {@code width} is the full width at {@code top}, narrowing towards {@code floor} by
  * {@code bottom_width_factor}. The vertical bounds are anchors so the cavern floor follows the world bottom of
@@ -20,6 +21,7 @@ public record RavineSettings(
         long salt,
         int cellSize,
         float chance,
+        float sizeBias,
         InclusiveRange<Integer> length,
         InclusiveRange<Integer> width,
         VerticalAnchor floor,
@@ -37,6 +39,7 @@ public record RavineSettings(
             Codec.LONG.fieldOf("salt").forGetter(RavineSettings::salt),
             Codec.intRange(64, 1 << 16).fieldOf("cell_size").forGetter(RavineSettings::cellSize),
             Codec.floatRange(0, 1).fieldOf("chance").forGetter(RavineSettings::chance),
+            Codec.floatRange(1, 8).fieldOf("size_bias").forGetter(RavineSettings::sizeBias),
             InclusiveRange.codec(Codec.intRange(0, 4096)).fieldOf("length").forGetter(RavineSettings::length),
             InclusiveRange.codec(Codec.intRange(2, 4096)).fieldOf("width").forGetter(RavineSettings::width),
             VerticalAnchor.CODEC.fieldOf("floor").forGetter(RavineSettings::floor),

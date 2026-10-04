@@ -291,7 +291,7 @@ class RavineShapeTest {
     }
 
     private static RavineSettings withWalls(RavineWalls walls) {
-        return new RavineSettings(SETTINGS.salt(), SETTINGS.cellSize(), SETTINGS.chance(), SETTINGS.length(),
+        return new RavineSettings(SETTINGS.salt(), SETTINGS.cellSize(), SETTINGS.chance(), SETTINGS.sizeBias(), SETTINGS.length(),
                 SETTINGS.width(), SETTINGS.floor(), SETTINGS.top(), SETTINGS.bottomWidthFactor(),
                 SETTINGS.cavernRadius(), SETTINGS.cavernHeight(), walls, SETTINGS.curvature(), SETTINGS.bridges(), SETTINGS.ledges(),
                 SETTINGS.environment());

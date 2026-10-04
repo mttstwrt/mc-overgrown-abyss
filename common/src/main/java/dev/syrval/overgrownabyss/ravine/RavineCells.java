@@ -12,6 +12,7 @@ import net.minecraft.world.level.ChunkPos;
  */
 public final class RavineCells {
     private static final int MAX_FREE_LEDGES = 40;
+    private static final double S_CURVE_CHANCE = 0.75;
     private static final long GOLDEN = 0x9E3779B97F4A7C15L;
 
     private RavineCells() {}
@@ -32,8 +33,8 @@ public final class RavineCells {
         double centreZ = cellZ * size + reach + unit(h, 2) * (size - 2 * reach);
         double angle = unit(h, 3) * Math.PI;
         // One draw sets both dimensions so small ravines are short as well as narrow: a round hole at 0, the
-        // configured maximum at 1.
-        double scale = unit(h, 4);
+        // configured maximum at 1. The size_bias exponent makes the large ones the rare ones.
+        double scale = Math.pow(unit(h, 4), settings.sizeBias());
         double halfLength = lerp(scale, settings.length().minInclusive(), settings.length().maxInclusive()) / 2;
         double halfWidth = lerp(scale, settings.width().minInclusive(), settings.width().maxInclusive()) / 2;
         List<RavineCell.Bridge> bridges = bridges(h, settings, scale, halfLength);
@@ -48,12 +49,18 @@ public final class RavineCells {
 
     // Curving a short ravine by the full amount would fold it onto itself, so the bend follows its size.
     private static RavineCell.Bend bend(long h, RavineCurvature curvature, double scale) {
-        return new RavineCell.Bend(signed(h, 5) * curvature.maxBend() * scale, signed(h, 6) * curvature.maxWiggle() * scale);
+        // The wiggle is the S-shaped term, so it never fades to nothing: a ravine is at least half-wiggled.
+        double wiggle = signed(h, 6);
+        return new RavineCell.Bend(
+                signed(h, 5) * curvature.maxBend() * scale,
+                Math.signum(wiggle) * lerp(Math.abs(wiggle), 0.5, 1) * curvature.maxWiggle() * scale);
     }
 
     private static RavineCell.Lean lean(long h, RavineCurvature curvature) {
         double angle = unit(h, 7) * 2 * Math.PI;
-        return new RavineCell.Lean(Math.cos(angle), Math.sin(angle), unit(h, 8) * curvature.maxLean(), signed(h, 9) * curvature.maxBow());
+        // The bow opposes the lean most of the time, which makes the shaft an S in section instead of a plain slant.
+        double bow = unit(h, 9) * curvature.maxBow() * (unit(h, 13) < S_CURVE_CHANCE ? -1 : 1);
+        return new RavineCell.Lean(Math.cos(angle), Math.sin(angle), unit(h, 8) * curvature.maxLean(), bow);
     }
 
     private static RavineCell.Side side(long h, int index, RavineWalls walls) {

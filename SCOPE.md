@@ -255,6 +255,22 @@ Not verified:
   the 30 degree turn.
 - No baseline measurement of the previous walls, so the step statistics have nothing to be compared to.
 
+### Size and curve round
+
+Checked with `./gradlew :common:test` and one NeoForge dedicated server boot (seed 162).
+
+| Check | Result |
+|---|---|
+| Unit tests: sizes skew small (under 28% of ravines over 250 long, against 37% before), about three quarters of ravines bow against their lean, every ravine keeps at least half its wiggle | pass |
+| NeoForge boot with the new `size_bias` field, no errors; `/locate structure overgrown_abyss:city` still finds a city (1037 blocks away) | yes |
+
+Not verified:
+- **Nothing was looked at in game**, and the new mix was not rendered. Fabric and Larion were not run this round.
+- **Ancient city exclusion was tried and removed.** Vanilla's `exclusion_zone` only tests the other set's potential
+  chunks, and ancient cities are spaced 24 chunks apart, so with `chunk_count` 16 it forbade our city almost everywhere
+  (nearest city 42,137 blocks away instead of 1,037). The cavern biome swap probably already stops a vanilla city starting
+  inside the cavern, but that was not tested, and an overlap at the edges is still possible.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
@@ -325,6 +341,22 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
   - Cavern roof only, ravine wall overhangs only, or both?
   - Reachable from the city (bridges or stairs), or visible-only set dressing?
   - Loot on these, or purely visual?
+
+### Structures that intersect the chasm (owner idea)
+
+- **Idea:** a stronghold (or any buried structure, including ones added by mods) that cuts into the chasm currently hangs
+  in open air. Wrap it so it looks like part of the chasm: a rock shell around the pieces, with ledges or bridges tying
+  it to the wall. A stronghold breaking into the chasm could be a good piece of flavour if it looks right.
+- **Estimate (not prototyped):** about one session for the shell alone; roughly three to four sessions with roots, ledges
+  and bridges, including tuning rounds.
+- **What it needs:**
+  - A second density hook after vanilla's structure terrain term, because our carve can only remove rock.
+  - Reading the structure starts near each chunk at noise time (vanilla's terrain adaptation already does this), limited
+    to structures with a buried or beard adaptation so surface builds are left alone.
+  - A root from the shell to the nearest wall, using the ravine's distance estimate, plus a ledge or bridge.
+- **Testing:** `/place structure minecraft:stronghold` can force one into a ravine; both loaders and chunk generation
+  time need checking.
+- **Related, unresolved:** a vanilla ancient city overlapping our cavern. See the Size and curve round above.
 
 ### When this is picked up
 

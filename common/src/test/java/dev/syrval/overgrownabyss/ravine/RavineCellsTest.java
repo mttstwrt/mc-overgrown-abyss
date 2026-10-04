@@ -29,7 +29,7 @@ class RavineCellsTest {
 
     static RavineSettings settings(long salt, float chance) {
         return new RavineSettings(
-                salt, 2048, chance, new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110),
+                salt, 2048, chance, 2F, new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110),
                 VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48,
                 WALLS, CURVATURE, BRIDGES, LEDGES, ENVIRONMENT);
     }
@@ -124,6 +124,38 @@ class RavineCellsTest {
             }
         }
         assertTrue(sawBridge && sawBend);
+    }
+
+    @Test
+    void sizeBiasMakesLongRavinesRare() {
+        RavineSettings always = settings(42L, 1F);
+        int total = 0;
+        int longCount = 0;
+        for (int x = -50; x < 50; x++) {
+            for (int z = -50; z < 50; z++) {
+                total++;
+                longCount += RavineCells.at(7L, always, x, z).orElseThrow().halfLength() * 2 > 250 ? 1 : 0;
+            }
+        }
+        // A uniform draw would give 37%; the squared draw gives about 21%.
+        assertTrue(longCount < total * 0.28, longCount + " of " + total + " are over 250 long");
+    }
+
+    @Test
+    void mostLeaningRavinesCurveBackAndEveryRavineWiggles() {
+        RavineSettings always = settings(42L, 1F);
+        int s = 0;
+        int total = 0;
+        for (int x = -50; x < 50; x++) {
+            for (int z = -50; z < 50; z++) {
+                RavineCell c = RavineCells.at(8L, always, x, z).orElseThrow();
+                total++;
+                s += c.lean().bow() <= 0 ? 1 : 0;
+                double scale = c.halfLength() * 2 / 400;
+                assertTrue(Math.abs(c.bend().wiggle()) >= CURVATURE.maxWiggle() * scale * 0.5 - 1e-9);
+            }
+        }
+        assertTrue(s > total * 0.68 && s < total * 0.82, s + " of " + total + " bow against the lean");
     }
 
     @Test
