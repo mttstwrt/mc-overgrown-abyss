@@ -567,7 +567,7 @@ Owner: cut the disc density by about 30%, and add the inverted funnel stems from
 
 | Check | Result |
 |---|---|
-| Unit tests (46): never thinner than 2.5 radius at any depth and widest at the ledge; solid in the full signed distance where no room is; ends under the first lower disc that holds its axis; all earlier tests | pass (`./gradlew build`) |
+| Unit tests (45): never thinner than 2.5 radius at any depth and widest at the ledge; solid in the full signed distance where no room is; ends under the first lower disc that holds its axis; all earlier tests | pass (`./gradlew build`) |
 | Centre line (830 ravines): average closed 1.4% vanilla and 2.4% Larion with stems and 30% fewer discs; no level fully sealed | measured |
 | NeoForge dedicated server, seed 20261003, 143 chunks around the ravine at 983,-712: 3 stem points computed from the code are solid blocks, 3 open-air controls beside them are air | yes |
 | Boot, new settings in the log, no errors | yes |
