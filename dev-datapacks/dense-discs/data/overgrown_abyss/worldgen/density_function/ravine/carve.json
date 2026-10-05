@@ -29,7 +29,7 @@
     "max_bow": 25
   },
   "discs": {
-    "spacing": 36,
+    "spacing": 51,
     "row_spacing": 15,
     "min_radius": 20,
     "max_radius": 48,
@@ -42,7 +42,9 @@
     "row_jitter": 0.4,
     "large_offset_bonus": 0.45,
     "max_overshoot": 4,
-    "side_stagger": 0.5
+    "side_stagger": 0.5,
+    "stem_radius": 2.5,
+    "funnel_slope": 2
   },
   "environment": {
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",

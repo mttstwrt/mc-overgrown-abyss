@@ -24,8 +24,11 @@ public final class RavineShape {
         double shaft = shaftDistance(settings, bounds, cell, frame, y);
         double cavern = cavernDistance(settings, bounds, radial, y);
         Rooms rooms = discDistance(settings, bounds, cell, frame, radial, y);
-        // Slabs are subtracted from the shaft and the rooms but not the cavern, so they never close its roof.
-        double walls = Math.max(Math.min(shaft, rooms.dome()), -rooms.slab());
+        // A stem only changes anything inside the shaft or within the carve's falloff of it, so skip the search elsewhere.
+        double stem = shaft >= settings.edgeFalloff() ? Double.POSITIVE_INFINITY : RavineStems.distance(settings, bounds, cell, frame, x, y, z);
+        // Stems are rock put back into the shaft, but rooms are carved after them so a stem never fills a room. Slabs are
+        // put back last. Neither is subtracted from the cavern, so they never close its roof.
+        double walls = Math.max(Math.min(Math.max(shaft, -stem), rooms.dome()), -rooms.slab());
         return Math.min(walls, cavern);
     }
 
@@ -67,21 +70,16 @@ public final class RavineShape {
         if (rows == 0 || y < lowest - config.floorThickness() || y > bounds.topY() || radial > settings.maxReach()) {
             return Rooms.NONE;
         }
-        double spacing = RavineDomes.slotSpacing(settings, cell);
-        int slots = RavineDomes.slots(settings, cell);
         // Rooms whose floor is at or below this point can hold it in their dome, and rooms whose floor is up to a slab
         // thickness above it can hold it in their slab. Domes reach at most one dome's height up from their floor.
         int topRow = Math.min(rows - 1, (int) Math.floor((y + config.floorThickness() - lowest) / config.rowSpacing()));
         int firstRow = Math.max(0, topRow - (int) Math.ceil((config.maxDomeHeight() + config.floorThickness()) / config.rowSpacing()) - 2);
-        int centreSlot = spacing == 0 ? 0 : (int) Math.floor((frame.along() + cell.halfLength()) / spacing);
-        int slotSpan = spacing == 0 ? 0 : (int) Math.ceil(config.maxRadius() / spacing) + 1;
-        int firstSlot = Math.max(0, centreSlot - slotSpan);
-        int lastSlot = Math.min(slots - 1, centreSlot + slotSpan);
+        RavineDomes.SlotRange slots = RavineDomes.slotsNear(settings, cell, frame.along());
         double nearestDome = Double.POSITIVE_INFINITY;
         double nearestSlab = Double.POSITIVE_INFINITY;
         for (int side = 1; side >= -1; side -= 2) {
             for (int row = firstRow; row <= topRow; row++) {
-                for (int slot = firstSlot; slot <= lastSlot; slot++) {
+                for (int slot = slots.first(); slot <= slots.last(); slot++) {
                     var room = RavineDomes.at(settings, bounds, cell, side, row, slot);
                     if (room.isPresent()) {
                         nearestDome = Math.min(nearestDome, domeDistance(settings, bounds, cell, room.get(), frame, y));
@@ -120,11 +118,11 @@ public final class RavineShape {
     }
 
     /** Where the wall the room opens from sits, sideways of the chord, at the room's floor height. */
-    private static double wallSideways(RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome) {
+    static double wallSideways(RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome) {
         return cell.bend().offset(unitAlong(cell, dome.along())) + dome.side() * halfWidthAt(settings, bounds, cell, dome.floor());
     }
 
-    private static double centreSideways(RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome) {
+    static double centreSideways(RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome) {
         return wallSideways(settings, bounds, cell, dome) + dome.side() * dome.offset() * dome.radius();
     }
 
@@ -139,14 +137,23 @@ public final class RavineShape {
     }
 
     // The whole shaft slides sideways with height, so view the point from where the shaft is at that height.
-    private static RavineCell.Frame leanedFrame(RavineBounds bounds, RavineCell cell, double x, double y, double z) {
+    static RavineCell.Frame leanedFrame(RavineBounds bounds, RavineCell cell, double x, double y, double z) {
         double t = Math.clamp((y - bounds.floorY()) / (double) (bounds.topY() - bounds.floorY()), 0, 1);
         double shift = cell.lean().shift(t);
         return cell.frame(x - shift * cell.lean().dirX(), z - shift * cell.lean().dirZ());
     }
 
+    /** The inverse of {@link #leanedFrame}: the world {@code {x, z}} of a position in the leaned frame at height {@code y}. */
+    static double[] worldOf(RavineBounds bounds, RavineCell cell, double along, double sideways, double y) {
+        double t = Math.clamp((y - bounds.floorY()) / (double) (bounds.topY() - bounds.floorY()), 0, 1);
+        double shift = cell.lean().shift(t);
+        return new double[] {
+            cell.centreX() + along * cell.dirX() - sideways * cell.dirZ() + shift * cell.lean().dirX(),
+            cell.centreZ() + along * cell.dirZ() + sideways * cell.dirX() + shift * cell.lean().dirZ()};
+    }
+
     /** Position along the chord as a fraction of the half length in [-1, 1]; a round hole has no length, so 0. */
-    private static double unitAlong(RavineCell cell, double along) {
+    static double unitAlong(RavineCell cell, double along) {
         return cell.halfLength() == 0 ? 0 : Math.clamp(along / cell.halfLength(), -1, 1);
     }
 

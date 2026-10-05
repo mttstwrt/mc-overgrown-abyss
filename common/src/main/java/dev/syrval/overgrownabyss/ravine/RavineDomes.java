@@ -35,6 +35,17 @@ final class RavineDomes {
         return cell.halfLength() * 2 / slots(settings, cell);
     }
 
+    /** The slots whose rooms can reach a point at {@code along}, within one largest radius either way. */
+    record SlotRange(int first, int last) {}
+
+    static SlotRange slotsNear(RavineSettings settings, RavineCell cell, double along) {
+        double spacing = slotSpacing(settings, cell);
+        int slots = slots(settings, cell);
+        int centre = spacing == 0 ? 0 : (int) Math.floor((along + cell.halfLength()) / spacing);
+        int span = spacing == 0 ? 0 : (int) Math.ceil(settings.discs().maxRadius() / spacing) + 1;
+        return new SlotRange(Math.max(0, centre - span), Math.min(slots - 1, centre + span));
+    }
+
     static int rows(RavineSettings settings, RavineBounds bounds) {
         RavineDiscs discs = settings.discs();
         double span = bounds.topY() - discs.ceilingMargin() - discs.minHeight() - lowestFloor(settings, bounds);

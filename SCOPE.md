@@ -544,6 +544,44 @@ Not verified: nothing rendered or looked at in game; Fabric and Larion not run. 
 of discs (the server log says "2 rows"; I wrongly said 3 earlier), because the cavern roof sits at y=16 and the ceiling margin
 at y=68. Larion has more.
 
+### Fewer discs and stems
+
+Owner: cut the disc density by about 30%, and add the inverted funnel stems from the earlier idea, never thinner than a
+5-block circle.
+
+- **Density:** `spacing` 45 to 64. Rooms in the 900 sampled ravines: 19,759 to 13,868 at vanilla height (-29.8%) and 59,280
+  to 41,524 at Larion height (-30.0%). The dev packs' spacings were scaled by the same factor. Row spacing is unchanged, so
+  vanilla height still has 2 rows.
+- **Stems** (`RavineStems`, new `stem_radius` 2.5 and `funnel_slope` 2): each disc gets a stem under the visible part of its
+  ledge, centred on the middle of the stretch that sticks out into the shaft, so it is not hidden inside the wall. The top
+  of the funnel is as wide as fits under the ledge (half the disc's reach, at least the stem radius); it narrows by one
+  block of radius per `funnel_slope` blocks of height down to a column of `stem_radius` (2.5, so 5 blocks across), which
+  then runs straight down. The stem is a vertical column in the world, placed using the shaft's lean at the disc's floor.
+- **Where it stops:** at the underside of the highest lower disc whose footprint holds its axis, or at the cavern or
+  terrain (the cavern is not subtracted from, so a stem is cut off by its dome). A stem never fills a room: rooms are
+  carved after the stems, and the slabs are put back last.
+- **How it is done:** the carve can only remove rock, so the stem is rock put back inside the shaft's air, like the slabs.
+  It is only searched for within the carve's falloff of the shaft, which gives identical values to the full search.
+- **Cost:** the density function takes about 1.2 microseconds per sample with stems against 0.9 without (a first version
+  without the early skip took 2.4); measured on one ravine in a unit-test harness, not in a world generation profile.
+
+| Check | Result |
+|---|---|
+| Unit tests (46): never thinner than 2.5 radius at any depth and widest at the ledge; solid in the full signed distance where no room is; ends under the first lower disc that holds its axis; all earlier tests | pass (`./gradlew build`) |
+| Centre line (830 ravines): average closed 1.4% vanilla and 2.4% Larion with stems and 30% fewer discs; no level fully sealed | measured |
+| NeoForge dedicated server, seed 20261003, 143 chunks around the ravine at 983,-712: 3 stem points computed from the code are solid blocks, 3 open-air controls beside them are air | yes |
+| Boot, new settings in the log, no errors | yes |
+
+Not verified:
+- **Nothing was looked at in game or rendered.** The probe was six blocks in one ravine, at mid-funnel depth, not a column
+  checked from top to bottom; the thinnest part of a stem (2.5 radius) was only tested in the distance function, not as
+  blocks. Stems are sampled in noise cells 4 blocks wide, so thin columns may come out slightly uneven.
+- A stem hangs only in the shaft's air; where terrain was already open (a cave) the carve cannot add rock, so it can be
+  missing there. Top-row stems only appear where the terrain is solid.
+- Fabric and Larion not run; the city and descent not checked.
+- The stem axis is at the middle of the ledge, not the disc's centre; tell me if you want it elsewhere, or lily-pad
+  platforms on stems.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

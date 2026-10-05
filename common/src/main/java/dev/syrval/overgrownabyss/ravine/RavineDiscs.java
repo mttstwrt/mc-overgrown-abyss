@@ -31,11 +31,15 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param sideStagger   how far the rows on the second wall are raised above those on the first, as a fraction of
  *                      {@code rowSpacing}; 0.5 puts a row on one wall halfway between two rows on the other, so overhangs
  *                      alternate from side to side instead of meeting in the middle
+ * @param stemRadius    radius of the stem under each disc's ledge at its thinnest; 2.5 makes it 5 blocks across
+ * @param funnelSlope   blocks of height the funnel under a ledge takes to narrow by one block of radius, so larger values give
+ *                      a longer, gentler funnel
  */
 public record RavineDiscs(
         float spacing, float rowSpacing, float minRadius, float maxRadius, float heightRatio, float minHeight,
         float ceilingMargin, float minOffset, float maxOffset, float floorThickness,
-        float rowJitter, float largeOffsetBonus, float maxOvershoot, float sideStagger) {
+        float rowJitter, float largeOffsetBonus, float maxOvershoot, float sideStagger,
+        float stemRadius, float funnelSlope) {
 
     public static final MapCodec<RavineDiscs> MAP_CODEC = RecordCodecBuilder.<RavineDiscs>mapCodec(i -> i.group(
             Codec.floatRange(8, 1024).fieldOf("spacing").forGetter(RavineDiscs::spacing),
@@ -51,7 +55,9 @@ public record RavineDiscs(
             Codec.floatRange(0, 0.9F).fieldOf("row_jitter").forGetter(RavineDiscs::rowJitter),
             Codec.floatRange(0, 0.9F).fieldOf("large_offset_bonus").forGetter(RavineDiscs::largeOffsetBonus),
             Codec.floatRange(0, 256).fieldOf("max_overshoot").forGetter(RavineDiscs::maxOvershoot),
-            Codec.floatRange(0, 1).fieldOf("side_stagger").forGetter(RavineDiscs::sideStagger)
+            Codec.floatRange(0, 1).fieldOf("side_stagger").forGetter(RavineDiscs::sideStagger),
+            Codec.floatRange(2.5F, 16).fieldOf("stem_radius").forGetter(RavineDiscs::stemRadius),
+            Codec.floatRange(0.5F, 8).fieldOf("funnel_slope").forGetter(RavineDiscs::funnelSlope)
     ).apply(i, RavineDiscs::new)).validate(RavineDiscs::validate);
     public static final Codec<RavineDiscs> CODEC = MAP_CODEC.codec();
 
