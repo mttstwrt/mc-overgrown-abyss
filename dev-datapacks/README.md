@@ -29,3 +29,5 @@ the floor of the disc beneath, or runs to the chasm floor), radius 20 to 48, `mi
 - `dense-discs`: spacing 51, row spacing 15, row jitter 0.4. Many discs, overlapping heavily; floors at least 9 apart.
 
 When the default spacing went from 45 to 64 (30% fewer discs), each pack's spacing was scaled by the same factor.
+- `cone` (experiment, see `SCOPE.md`): one cone-shaped hole instead of a ravine, filled with stacked stone structures. Needs the
+  `cone` block, which the mod's own `carve.json` does not have.

@@ -33,7 +33,7 @@ class RavineCellsTest {
         return new RavineSettings(
                 salt, 2048, chance, sizeBias, new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110),
                 VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 8F,
-                CURVATURE, DISCS, ENVIRONMENT);
+                CURVATURE, DISCS, ENVIRONMENT, Optional.empty());
     }
 
     @Test

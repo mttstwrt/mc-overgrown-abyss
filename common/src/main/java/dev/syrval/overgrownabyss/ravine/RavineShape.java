@@ -16,6 +16,9 @@ public final class RavineShape {
     private RavineShape() {}
 
     public static double signedDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
+        if (settings.cone().isPresent()) {
+            return ConeShape.signedDistance(settings, settings.cone().get(), bounds, cell, x, y, z);
+        }
         if (y < bounds.floorY()) {
             return Double.POSITIVE_INFINITY;
         }
@@ -33,6 +36,13 @@ public final class RavineShape {
         return Math.min(walls, cavern);
     }
 
+    /** Distance to the nearest free-standing structure of a cone: negative inside; infinity for a ravine, which has none. */
+    public static double rockDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
+        return settings.cone().isEmpty()
+                ? Double.POSITIVE_INFINITY
+                : ConeShape.rockDistance(settings, settings.cone().get(), bounds, cell, x, y, z);
+    }
+
     /**
      * Whether a point is inside the cavern dome grown outwards by {@code margin} blocks. The margin reaches the floor,
      * walls and roof surfaces, so features placed on them are placed in the cavern's biome too.
@@ -48,7 +58,7 @@ public final class RavineShape {
 
     /** How many rows of disc rooms fit between the cavern roof and the ceiling margin in this level. */
     public static int discRows(RavineSettings settings, RavineBounds bounds) {
-        return RavineDomes.rows(settings, bounds);
+        return settings.cone().map(cone -> ConeStructures.layers(settings, cone, bounds)).orElseGet(() -> RavineDomes.rows(settings, bounds));
     }
 
     /** Half the shaft's width at height {@code y}. */
@@ -158,7 +168,7 @@ public final class RavineShape {
         return cell.halfLength() == 0 ? 0 : Math.clamp(along / cell.halfLength(), -1, 1);
     }
 
-    private static double cavernDistance(RavineSettings settings, RavineBounds bounds, double radial, double y) {
+    static double cavernDistance(RavineSettings settings, RavineBounds bounds, double radial, double y) {
         double t = (y - bounds.floorY()) / settings.cavernHeight();
         if (t >= 1) {
             return Double.POSITIVE_INFINITY;

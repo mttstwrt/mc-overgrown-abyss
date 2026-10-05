@@ -80,7 +80,11 @@ public final class RavineDensityHook {
             OvergrownAbyss.LOGGER.error("Ravine top is not above its floor in this level's height range; ravines are disabled");
             return factory.apply(settings);
         }
-        DensityFunction finalDensity = DensityFunctions.min(settings.noiseRouter().finalDensity(), seededCarve);
+        DensityFunction carved = DensityFunctions.min(settings.noiseRouter().finalDensity(), seededCarve);
+        // A cone's structures are rock the terrain may not have (a cave, or above the surface), so they are added with max.
+        DensityFunction finalDensity = seededCarve instanceof RavineCarve single && single.settings().cone().isPresent()
+                ? DensityFunctions.max(carved, single.rock())
+                : carved;
         RandomState state = factory.apply(withFinalDensity(settings, finalDensity));
         installLevelBindings(registries, generator, settings, state, seeded);
         return state;
@@ -142,6 +146,7 @@ public final class RavineDensityHook {
                 s.sizeBias(), discs.spacing(), discs.rowSpacing(), discs.minRadius(), discs.maxRadius(), discs.heightRatio(),
                 discs.floorThickness(), discs.rowJitter(), discs.largeOffsetBonus(), discs.maxOvershoot(), discs.sideStagger(), discs.stemRadius(), discs.funnelScale(),
                 s.curvature().maxBend(), s.curvature().maxWiggle(), s.curvature().maxLean(), s.curvature().maxBow(), s.edgeFalloff());
+        s.cone().ifPresent(cone -> OvergrownAbyss.LOGGER.info("Cone settings (the ravine's discs and curvature are unused): {}", cone));
     }
 
     // Cells whose hash holds a ravine but whose ground is ocean are skipped, so this lists only what will generate.
@@ -149,7 +154,7 @@ public final class RavineDensityHook {
         for (int cellX = -1; cellX <= 1; cellX++) {
             for (int cellZ = -1; cellZ <= 1; cellZ++) {
                 RavineCells.at(carve.seed(), carve.settings(), cellX, cellZ).filter(carve::isActive).ifPresent(cell -> OvergrownAbyss.LOGGER.info(
-                        "Ravine centre at x={} z={} (floor y={}, {} long, {} wide, {} rows of discs)",
+                        "Ravine centre at x={} z={} (floor y={}, {} long, {} wide, {} rows of discs or layers of structures)",
                         Math.round(cell.centreX()), Math.round(cell.centreZ()), carve.bounds().floorY(),
                         Math.round(cell.halfLength() * 2), Math.round(cell.halfWidth() * 2),
                         RavineShape.discRows(carve.settings(), carve.bounds())));

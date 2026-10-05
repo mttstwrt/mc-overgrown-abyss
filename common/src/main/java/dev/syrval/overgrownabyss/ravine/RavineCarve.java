@@ -10,13 +10,17 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  * {@code edge_falloff} blocks at the walls. Meant to be combined as {@code min(original, carve)}, so terrain outside
  * the ravine keeps its exact sign and therefore its blocks.
  *
+ * <p>A cone (see {@link ConeSettings}) also has free-standing structures, which are rock where the original terrain may be
+ * air (a cave, or above the surface), so {@code min} cannot make them. {@link #rock()} is a second function of the same type,
+ * 1 inside those structures and -1 elsewhere, and the cone is combined as {@code max(min(original, carve), rock)}.
+ *
  * <p>Vanilla wiring only hands the world seed to noise holders, so the carve is created unseeded by the codec and
  * re-created with the seed and the level's vertical bounds by the density hook ({@link #bind}); until then it is inert
  * and reads as solid everywhere.
  */
 public final class RavineCarve implements DensityFunction.SimpleFunction {
     public static final MapCodec<RavineCarve> MAP_CODEC =
-            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null), RavineCarve::settings);
+            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null, new LandGate(), Output.OPEN), RavineCarve::settings);
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
     private static final double CAVERN_BIOME_MARGIN = 4;
@@ -25,12 +29,18 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     private final long seed;
     // Null only for the unbound instance the codec produces.
     private final RavineBounds bounds;
-    private final LandGate landGate = new LandGate();
+    private final LandGate landGate;
+    private final Output output;
 
-    private RavineCarve(RavineSettings settings, long seed, RavineBounds bounds) {
+    /** Which of a ravine's two functions an instance computes. */
+    private enum Output { OPEN, ROCK }
+
+    private RavineCarve(RavineSettings settings, long seed, RavineBounds bounds, LandGate landGate, Output output) {
         this.settings = settings;
         this.seed = seed;
         this.bounds = bounds;
+        this.landGate = landGate;
+        this.output = output;
     }
 
     /** The ravine settings behind a datapack reference; fails loudly if the reference is not a ravine carve. */
@@ -42,7 +52,12 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     public RavineCarve bind(long seed, RavineBounds bounds) {
-        return new RavineCarve(settings, seed, bounds);
+        return new RavineCarve(settings, seed, bounds, new LandGate(), Output.OPEN);
+    }
+
+    /** The rock this ravine adds back, which only a cone has: 1 inside its structures, -1 elsewhere. Shares this carve's land check. */
+    public RavineCarve rock() {
+        return new RavineCarve(settings, seed, bounds, landGate, Output.ROCK);
     }
 
     public RavineSettings settings() {
@@ -88,17 +103,24 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     @Override
     public double compute(FunctionContext context) {
         if (bounds == null) {
-            return maxValue();
+            return nothing();
         }
         int x = context.blockX();
         int y = context.blockY();
         int z = context.blockZ();
         Optional<RavineCell> found = cellAt(x, z);
         if (found.isEmpty()) {
-            return maxValue();
+            return nothing();
         }
-        double open = RavineShape.signedDistance(settings, bounds, found.get(), x, y, z);
-        return Math.clamp(open / settings.edgeFalloff(), minValue(), maxValue());
+        double distance = output == Output.ROCK
+                ? RavineShape.rockDistance(settings, bounds, found.get(), x, y, z)
+                : RavineShape.signedDistance(settings, bounds, found.get(), x, y, z);
+        return Math.clamp((output == Output.ROCK ? -distance : distance) / settings.edgeFalloff(), minValue(), maxValue());
+    }
+
+    // The value where the function has no say: solid for the carve, no added rock for the rock function.
+    private double nothing() {
+        return output == Output.ROCK ? minValue() : maxValue();
     }
 
     @Override

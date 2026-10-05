@@ -179,6 +179,6 @@ class RavineShapeTest {
     static RavineSettings withDiscs(RavineDiscs discs) {
         RavineSettings s = RavineCellsTest.SETTINGS;
         return new RavineSettings(s.salt(), s.cellSize(), s.chance(), s.sizeBias(), s.length(), s.width(), s.floor(), s.top(),
-                s.bottomWidthFactor(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(), s.curvature(), discs, s.environment());
+                s.bottomWidthFactor(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(), s.curvature(), discs, s.environment(), s.cone());
     }
 }

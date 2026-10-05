@@ -670,6 +670,45 @@ column is in the rock.
 Not verified: nothing was looked at in game (the renders are 2D slices of the density function, not generated blocks); the
 block probe of stems was not repeated for this change; Fabric and Larion not run.
 
+### Cone experiment (branch `cone-experiment`)
+
+Owner's idea: instead of a long ravine, a single hole like the Abyss in Made in Abyss, a large cone that ends at the radius of the
+city dome, filled with large flat-topped stone structures like the discs on stems, which can stack on each other. A clear line of
+sight straight down the middle is guaranteed. The ravine version is kept at git tag `ravine-discs-and-stems`.
+
+How it is built (an optional `cone` block in `carve.json`, so cells, land check, cavern, city placement and the density hook are
+reused; without the block nothing changes):
+
+- **Cone:** `radius(y) = top_radius + (cavern_radius - top_radius) * (1 - t)^flare`, `t` the height from floor (0) to top (1), so it is as
+  wide as the cavern at the floor and narrows upward (shipped test pack: top radius 45, flare 1.6). The cavern dome is kept, so the
+  bottom of the cone is the dome's roof, which is the slightly curved floor in the sketch. Round holes are what a ravine of length 0 is,
+  so the cone pack sets `length` to 0.
+- **Structures** (`ConeStructures`): free-standing caps with stems, in layers from `base_clearance` above the cavern roof up to `ceiling_margin`
+  below the top, `layer_spacing` apart, with slots round each layer's ring (`spacing` blocks of ring per structure). A cap is a flat-topped
+  disc (`cap_thickness` thick, radius `min_radius` to `max_radius`, at most 0.55 of the room between the clear cylinder and the wall) on a stem
+  as wide as the cap that narrows along the same hyperbola as the ravine stems, to `stem_fraction` of its radius (at least 5 blocks across). The cap
+  may sit a little inside the wall. With chance `stack_chance` a structure is straight above the one in the layer below, so its stem lands on that
+  cap (stems end flush under the cap they land on, otherwise on the cavern's dome).
+- **Clear line:** no structure's footprint is ever inside the cylinder of `clear_radius` (8) around the axis, and the rock function is forced
+  to zero inside it, so the line is guaranteed (a test samples every cell).
+- **Adding rock:** the ravine's slabs and stems are put back with `min(original, carve)`, which cannot add rock where the terrain is air.
+  The first world probe showed a cap with a hole where a natural cave was (`min` cannot fill it), and nothing can stand above the surface.
+  So a cone has a second output, `RavineCarve.rock()` (same density function type, 1 inside structures and -1 elsewhere), and the final density
+  is `max(min(original, carve), rock)`. The rock is counted only inside the cone and outside the cavern.
+
+| Check | Result |
+|---|---|
+| Unit tests (53): a clear line of sight through the middle of 144 cones at every height; the cone is as wide as the cavern at the floor, narrows to the top radius and never widens upward; nothing opens beyond the reach; caps are solid out to a flat top; a stacked structure's stem lands on the cap below; the cone block's codec and validation; all earlier ravine tests | pass (`./gradlew build`) |
+| NeoForge dedicated server, seed 20261003, a new world with the `cone` pack, 240 chunks around the cone at 950,-457: 36 of 36 cap probe points solid, 12 of 12 cap tops open, 3 of 3 stem points solid, 5 of 5 points on the axis open | yes |
+| Before the rock function: 28 of 33 cap points solid; the 5 misses were one cap crossed by a natural cave | measured, fixed |
+| Density function cost (carve plus rock) | about 0.56 microseconds per sample |
+| Rendered cross-sections of the density function (not generated blocks) | stemmed caps stacking down to the dome with an open centre |
+
+Not verified: nothing was looked at in game; Fabric and Larion not run; whether the ancient city still generates intact under the cone was not checked
+(the dome and city placement are unchanged); the structure counts, sizes and layering were not tuned (vanilla height has only 2 layers); caps are
+flat-bottomed, not rounded as in the sketch; a 6-thick cap lost parts to the noise cells' 8-block height, so caps are 12 thick in the pack, and the
+ravine's 4-thick floor slabs may have the same weakness (not checked).
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
