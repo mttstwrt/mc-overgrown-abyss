@@ -191,24 +191,30 @@ class RavineDomesTest {
     }
 
     @Test
-    void largerDiscsSitFurtherBackInTheWall() {
+    void largerDiscsSitFurtherBackAndReachLessWhileSmallerOnesReachFurthestIn() {
+        // The shipped offsets, with the overshoot limit switched off so only the setback decides the reach.
         RavineSettings settings = RavineShapeTest.withDiscs(
-                new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 0.4F, 0.45F, 256F, 0.5F, 2.5F, 6F));
+                new RavineDiscs(45, 20, 20, 48, 0.45F, 14, 12, 0F, 0.1F, 4, 0.4F, 0.8F, 256F, 0.5F, 2.5F, 6F));
         double smallOffsets = 0;
         double largeOffsets = 0;
+        double smallReach = 0;
+        double largeReach = 0;
         int small = 0;
         int large = 0;
         for (RavineDomes.Dome d : roomsOf(settings)) {
             if (d.radius() < 28) {
                 smallOffsets += d.offset();
+                smallReach += d.radius() * (1 - d.offset());
                 small++;
             } else if (d.radius() > 40) {
                 largeOffsets += d.offset();
+                largeReach += d.radius() * (1 - d.offset());
                 large++;
             }
         }
         assertTrue(small > 10 && large > 5, small + " small, " + large + " large");
-        assertTrue(largeOffsets / large > smallOffsets / small + 0.2, "large " + largeOffsets / large + " vs small " + smallOffsets / small);
+        assertTrue(largeOffsets / large > smallOffsets / small + 0.4, "large " + largeOffsets / large + " vs small " + smallOffsets / small);
+        assertTrue(largeReach / large < smallReach / small - 5, "large reach " + largeReach / large + " vs small " + smallReach / small);
     }
 
     private static List<RavineDomes.Dome> allRooms() {

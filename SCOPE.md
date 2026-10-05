@@ -608,6 +608,36 @@ Not verified: nothing was looked at in game or rendered; the checks are single-b
 not run; where terrain is already open the carve cannot add the rock. Because the stems sit at the disc centres, inside the
 wall, they change the shaft only slightly (about 1 to 3% of its volume); a larger `funnel_scale` makes the flare bolder.
 
+### Setback by size
+
+Owner: keep larger discs further set back, while smaller ones may sit closer to the middle.
+
+A disc reaches `radius * (1 - offset)` into the shaft. With the old numbers (`max_offset` 0.4, `large_offset_bonus` 0.45) the
+reach was almost the same for every size (mean 17 to 19 blocks from the smallest to the largest quarter), because a bigger
+disc reaches further for the same offset. Now `max_offset` is 0.1 and `large_offset_bonus` 0.8 (their sum stays under 0.95):
+
+| Disc radius | mean offset | mean reach into the shaft (Larion height, 30x30 cells) |
+|---|---|---|
+| 20 to 27 | 0.14 | 19.7 blocks |
+| 27 to 34 | 0.35 | 19.7 |
+| 34 to 41 | 0.55 | 16.8 |
+| 41 to 48 | 0.75 | 11.0 |
+
+I first tried a square-root curve for the setback so reach would fall steadily from the smallest disc; it also pulled the small
+discs back (mean reach 15 to 16) and was dropped. A reach that falls from the very smallest size needs a setback that grows
+faster than a straight line, which sets small discs back too, so the small and mid-sized discs keep a plateau instead.
+The overshoot limit (4 blocks past the middle) is unchanged. Closed share of the centre line: about 1.3% (down from 1.9%),
+no ravine over 20% closed. `wide-bays` and `small-bays` keep their own offsets; `sparse-discs` and `dense-discs` follow the
+new defaults.
+
+| Check | Result |
+|---|---|
+| Unit test: the largest discs have a mean offset over 0.4 higher and a mean reach over 5 blocks lower than the smallest; all earlier tests | pass (`./gradlew build`) |
+| NeoForge dedicated server, seed 20261003, 143 chunks, new settings in the log, no errors | yes |
+
+Not verified: nothing rendered or looked at in game; Fabric and Larion not run. With big discs set deeper the stems' flared
+tops show less in the shaft than before.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

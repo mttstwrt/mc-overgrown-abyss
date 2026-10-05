@@ -17,9 +17,9 @@ the mod's file. The log line `Ravine settings:` at world load shows which values
 
 The mod's own defaults are `spacing` 64, `row_spacing` 20, `row_jitter` 0.4 (neighbouring rows' floors at least 12 apart),
 `side_stagger` 0.5 (the second wall's rows sit half a row higher), `max_overshoot` 4 (a disc reaches at most 4 blocks past
-the middle of the chasm; it is set back into the wall to fit, never cut off), `large_offset_bonus` 0.45 (large discs sit
+the middle of the chasm; it is set back into the wall to fit, never cut off), `large_offset_bonus` 0.8 (large discs sit
 further back in the wall), `stem_radius` 2.5 and `funnel_scale` 6 (the stem under each disc is as wide as the disc at
-its slab and narrows along a hyperbola, never below 5 blocks across, down to the chasm floor), radius 20 to 48, `min_offset` 0, `max_offset` 0.4.
+its slab and narrows along a hyperbola, never below 5 blocks across, down to the chasm floor), radius 20 to 48, `min_offset` 0, `max_offset` 0.1.
 
 - `wide-bays`: spacing 57, radius 22 to 48, offset 0.4 to 0.75. Rooms reach deeper into the rock and merge into one
   large cavity with a scalloped edge.
