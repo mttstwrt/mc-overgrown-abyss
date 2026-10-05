@@ -15,19 +15,19 @@
   "edge_falloff": 8,
   "discs": {
     "min_radius": 20,
-    "max_radius": 64,
+    "max_radius": 48,
     "height_ratio": 0.45,
     "min_height": 14,
     "floor_thickness": 4,
-    "stem_fraction": 0.05,
-    "min_stem_radius": 1,
-    "max_stem_radius": 3,
+    "stem_fraction": 0.2,
+    "min_stem_radius": 2.5,
+    "max_stem_radius": 32,
     "funnel_scale": 1.5,
     "root_spread": 3,
     "root_scale": 4,
-    "min_bowl_depth": 1,
-    "max_bowl_depth": 4,
-    "bowl_variation": 0.75
+    "min_bowl_depth": 0,
+    "max_bowl_depth": 0,
+    "bowl_variation": 0
   },
   "disc_palettes": [
     {
@@ -203,19 +203,32 @@
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",
     "cavern_biome": "minecraft:lush_caves"
   },
-  "cone": {
-    "top_radius": 45,
-    "flare": 1.6,
-    "clear_radius": 8,
-    "layer_spacing": 20,
-    "layer_jitter": 0.3,
-    "spacing": 56,
-    "stack_chance": 0.4,
-    "ceiling_margin": 16,
-    "base_clearance": -16,
-    "hang_chance": 0.35,
-    "outer_radius": 200,
-    "rider_chance": 0.6,
-    "rider_scale": 0.6
+  "ravine": {
+    "length": {
+      "min_inclusive": 100,
+      "max_inclusive": 400
+    },
+    "width": {
+      "min_inclusive": 24,
+      "max_inclusive": 110
+    },
+    "bottom_width_factor": 0.35,
+    "curvature": {
+      "max_bend": 70,
+      "max_wiggle": 40,
+      "max_lean": 45,
+      "max_bow": 25
+    },
+    "placement": {
+      "spacing": 64,
+      "row_spacing": 20,
+      "ceiling_margin": 12,
+      "min_offset": 0.0,
+      "max_offset": 0.1,
+      "row_jitter": 0.4,
+      "large_offset_bonus": 0.8,
+      "max_overshoot": 4,
+      "side_stagger": 0.5
+    }
   }
 }

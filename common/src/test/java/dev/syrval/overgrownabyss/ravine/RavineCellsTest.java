@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -22,7 +23,9 @@ class RavineCellsTest {
             TagKey.create(Registries.BIOME, ResourceLocation.parse("overgrown_abyss:ravine_forbidden")),
             Optional.empty());
     static final RavineCurvature CURVATURE = new RavineCurvature(70, 40, 45, 25);
-    static final RavineDiscs DISCS = new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.8F, 0F, 4F, 0.5F, 2.5F, 1.5F);
+    static final DiscShape SHAPE = new DiscShape(22, 55, 0.45F, 14, 4, 0.2F, 2.5F, 32F, 1.5F, 3F, 4F, 0F, 0F, 0F);
+    static final RavinePlacement PLACEMENT = new RavinePlacement(40, 12, 12, 0.4F, 0.75F, 0.8F, 0F, 4F, 0.5F);
+    static final RavineGeometry GEOMETRY = new RavineGeometry(new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110), 0.35F, CURVATURE, PLACEMENT);
     static final RavineSettings SETTINGS = settings(42L, 0.5F);
 
     static RavineSettings settings(long salt, float chance) {
@@ -31,9 +34,8 @@ class RavineCellsTest {
 
     static RavineSettings settings(long salt, float chance, float sizeBias) {
         return new RavineSettings(
-                salt, 2048, chance, sizeBias, new InclusiveRange<>(0, 400), new InclusiveRange<>(24, 110),
-                VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 0.35F, 128, 48, 8F,
-                CURVATURE, DISCS, ENVIRONMENT, Optional.empty());
+                salt, 2048, chance, sizeBias, VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 128, 48, 8F,
+                SHAPE, List.of(), ENVIRONMENT, Optional.of(GEOMETRY), Optional.empty());
     }
 
     @Test

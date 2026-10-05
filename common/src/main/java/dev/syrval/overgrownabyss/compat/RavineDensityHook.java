@@ -5,7 +5,8 @@ import dev.syrval.overgrownabyss.ravine.RavineBounds;
 import dev.syrval.overgrownabyss.ravine.RavineCarve;
 import dev.syrval.overgrownabyss.ravine.LandCheck;
 import dev.syrval.overgrownabyss.ravine.RavineCells;
-import dev.syrval.overgrownabyss.ravine.RavineDiscs;
+import dev.syrval.overgrownabyss.ravine.DiscShape;
+import dev.syrval.overgrownabyss.ravine.RavinePlacement;
 import dev.syrval.overgrownabyss.ravine.RavineEnvironment;
 import dev.syrval.overgrownabyss.ravine.RavineFootprint;
 import dev.syrval.overgrownabyss.ravine.RavineSettings;
@@ -81,10 +82,8 @@ public final class RavineDensityHook {
             return factory.apply(settings);
         }
         DensityFunction carved = DensityFunctions.min(settings.noiseRouter().finalDensity(), seededCarve);
-        // A cone's structures are rock the terrain may not have (a cave, or above the surface), so they are added with max.
-        DensityFunction finalDensity = seededCarve instanceof RavineCarve single && single.settings().cone().isPresent()
-                ? DensityFunctions.max(carved, single.rock())
-                : carved;
+        // The discs' platforms and stems are rock the terrain may not have (a cave, or above the surface), so they are added with max.
+        DensityFunction finalDensity = seededCarve instanceof RavineCarve single ? DensityFunctions.max(carved, single.rock()) : carved;
         RandomState state = factory.apply(withFinalDensity(settings, finalDensity));
         installLevelBindings(registries, generator, settings, state, seeded);
         return state;
@@ -140,13 +139,21 @@ public final class RavineDensityHook {
 
     // Shows which values the world actually loaded: a datapack's carve.json replaces the mod's, and this is how to tell.
     private static void logSettings(RavineSettings s) {
-        RavineDiscs discs = s.discs();
+        DiscShape discs = s.discs();
         OvergrownAbyss.LOGGER.info(
-                "Ravine settings: size_bias {}, discs (spacing {}, row spacing {}, radius {}-{}, height ratio {}, floor thickness {}, row jitter {}, large offset bonus {}, max overshoot {}, side stagger {}, stem radius {}, funnel scale {}), curvature (bend {}, wiggle {}, lean {}, bow {}), edge falloff {}",
-                s.sizeBias(), discs.spacing(), discs.rowSpacing(), discs.minRadius(), discs.maxRadius(), discs.heightRatio(),
-                discs.floorThickness(), discs.rowJitter(), discs.largeOffsetBonus(), discs.maxOvershoot(), discs.sideStagger(), discs.stemRadius(), discs.funnelScale(),
-                s.curvature().maxBend(), s.curvature().maxWiggle(), s.curvature().maxLean(), s.curvature().maxBow(), s.edgeFalloff());
-        s.cone().ifPresent(cone -> OvergrownAbyss.LOGGER.info("Cone settings (the ravine's discs and curvature are unused): {}", cone));
+                "Ravine settings: size_bias {}, edge falloff {}, discs (radius {}-{}, height ratio {}, floor thickness {}, stem fraction {}, stem radius {}-{}, funnel scale {}, root spread {}, root scale {}, bowl depth {}-{})",
+                s.sizeBias(), s.edgeFalloff(), discs.minRadius(), discs.maxRadius(), discs.heightRatio(), discs.floorThickness(),
+                discs.stemFraction(), discs.minStemRadius(), discs.maxStemRadius(), discs.funnelScale(), discs.rootSpread(), discs.rootScale(),
+                discs.minBowlDepth(), discs.maxBowlDepth());
+        OvergrownAbyss.LOGGER.info("Disc palettes: {}{}", s.discPalettes().size(), s.discPalettes().isEmpty() ? " (every disc is the terrain's own rock)" : "");
+        s.ravine().ifPresent(ravine -> {
+            RavinePlacement p = ravine.placement();
+            OvergrownAbyss.LOGGER.info(
+                    "Ravine: spacing {}, row spacing {}, row jitter {}, large offset bonus {}, max overshoot {}, side stagger {}, curvature (bend {}, wiggle {}, lean {}, bow {})",
+                    p.spacing(), p.rowSpacing(), p.rowJitter(), p.largeOffsetBonus(), p.maxOvershoot(), p.sideStagger(),
+                    ravine.curvature().maxBend(), ravine.curvature().maxWiggle(), ravine.curvature().maxLean(), ravine.curvature().maxBow());
+        });
+        s.cone().ifPresent(cone -> OvergrownAbyss.LOGGER.info("Cone: {}", cone));
     }
 
     // Cells whose hash holds a ravine but whose ground is ocean are skipped, so this lists only what will generate.

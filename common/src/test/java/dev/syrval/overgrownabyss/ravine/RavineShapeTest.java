@@ -7,18 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class RavineShapeTest {
     static final RavineSettings SETTINGS = RavineCellsTest.SETTINGS;
     /** The same ravine with the ceiling margin so large that no disc room fits: just the shaft and the cavern. */
-    static final RavineSettings PLAIN = withDiscs(new RavineDiscs(40, 12, 22, 55, 0.45F, 14, 128, 0.4F, 0.75F, 4, 0.8F, 0F, 4F, 0.5F, 2.5F, 1.5F));
+    static final RavineSettings PLAIN = discs(40, 12, 22, 55, 0.45F, 14, 128, 0.4F, 0.75F, 4, 0.8F, 0F, 4F, 0.5F);
     static final RavineBounds BOUNDS = new RavineBounds(-40, 80);
     // Along the x axis, 300 long and 100 wide at the top.
     static final RavineCell CELL = new RavineCell(0, 0, 1, 0, 150, 50);
 
     private static double distance(RavineSettings settings, RavineCell cell, double x, double y, double z) {
-        return RavineShape.signedDistance(settings, BOUNDS, cell, x, y, z);
+        return Carved.distance(settings, BOUNDS, cell, x, y, z);
     }
 
     @Test
@@ -83,7 +84,7 @@ class RavineShapeTest {
                 for (int y = BOUNDS.floorY(); y <= BOUNDS.topY() + 20; y += 5) {
                     boolean open = false;
                     for (double along = -c.halfLength(); along <= c.halfLength() && !open; along += 5) {
-                        open = distance(always, c, centreLineX(c, along, y), y, centreLineZ(c, along, y)) < 0;
+                        open = !Carved.solid(always, BOUNDS, c, centreLineX(c, along, y), y, centreLineZ(c, along, y));
                     }
                     assertTrue(open, "level y=" + y + " is walled off along the whole centre line of cell " + cx + "," + cz);
                 }
@@ -119,7 +120,7 @@ class RavineShapeTest {
                     for (int degrees = 0; degrees < 360; degrees += 15) {
                         double x = c.centreX() + reach * Math.cos(Math.toRadians(degrees));
                         double z = c.centreZ() + reach * Math.sin(Math.toRadians(degrees));
-                        assertFalse(RavineShape.signedDistance(always, BOUNDS, c, x, y, z) < 0,
+                        assertFalse(Carved.distance(always, BOUNDS, c, x, y, z) < 0,
                                 "open beyond the reach in cell " + cx + "," + cz);
                     }
                 }
@@ -148,9 +149,11 @@ class RavineShapeTest {
             assertEquals("minecraft:lush_caves", json.getAsJsonObject("environment").get("cavern_biome").getAsString());
             RavineSettings parsed = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
             assertEquals(2048, parsed.cellSize());
-            assertEquals(100, parsed.length().minInclusive(), "no ravine is shorter than 100");
-            assertEquals(parsed, RavineSettings.MAP_CODEC.codec()
-                    .parse(JsonOps.INSTANCE, RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, parsed).getOrThrow())
+            assertTrue(parsed.cone().isPresent() && parsed.ravine().isEmpty(), "the mod's own hole is the cone");
+            // Its palettes hold block-state providers, which have no equality of their own, so the round trip is compared as JSON.
+            var written = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, parsed).getOrThrow();
+            assertEquals(written, RavineSettings.MAP_CODEC.codec()
+                    .encodeStart(JsonOps.INSTANCE, RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, written).getOrThrow())
                     .getOrThrow());
         }
     }
@@ -176,9 +179,16 @@ class RavineShapeTest {
         assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
     }
 
-    static RavineSettings withDiscs(RavineDiscs discs) {
+    /** The test ravine with these discs: the shape's radii, height, thickness, then the placement; the stem is the usual. */
+    static RavineSettings discs(
+            float spacing, float rowSpacing, float minRadius, float maxRadius, float heightRatio, float minHeight, float ceilingMargin,
+            float minOffset, float maxOffset, float floorThickness, float rowJitter, float largeOffsetBonus, float maxOvershoot, float sideStagger) {
         RavineSettings s = RavineCellsTest.SETTINGS;
-        return new RavineSettings(s.salt(), s.cellSize(), s.chance(), s.sizeBias(), s.length(), s.width(), s.floor(), s.top(),
-                s.bottomWidthFactor(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(), s.curvature(), discs, s.environment(), s.cone());
+        RavineGeometry g = RavineCellsTest.GEOMETRY;
+        RavinePlacement placement = new RavinePlacement(
+                spacing, rowSpacing, ceilingMargin, minOffset, maxOffset, rowJitter, largeOffsetBonus, maxOvershoot, sideStagger);
+        return new RavineSettings(s.salt(), s.cellSize(), s.chance(), s.sizeBias(), s.floor(), s.top(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(),
+                new DiscShape(minRadius, maxRadius, heightRatio, minHeight, floorThickness, 0.2F, 2.5F, 32F, 1.5F, 3F, 4F, 0F, 0F, 0F), s.discPalettes(), s.environment(),
+                Optional.of(new RavineGeometry(g.length(), g.width(), g.bottomWidthFactor(), g.curvature(), placement)), Optional.empty());
     }
 }

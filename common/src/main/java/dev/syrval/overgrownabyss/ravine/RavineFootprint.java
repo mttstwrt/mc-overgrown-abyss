@@ -6,7 +6,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
-/** What a level's ravines do to the world around them, as seen by noise fill, biome assignment and structures. */
+/** What a level's ravines do to the world around them, as seen by noise fill, biome assignment, disc materials and structures. */
 public interface RavineFootprint {
     RavineFootprint NONE = new RavineFootprint() {
         @Override
@@ -23,6 +23,9 @@ public interface RavineFootprint {
         public Optional<Holder<Biome>> cavernBiome(int x, int y, int z) {
             return Optional.empty();
         }
+
+        @Override
+        public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {}
     };
 
     /** Whether the column is touched by an active ravine, including wall noise and falloff. */
@@ -33,6 +36,12 @@ public interface RavineFootprint {
 
     /** The biome the cavern takes at this point, if it is inside a cavern that has one configured. */
     Optional<Holder<Biome>> cavernBiome(int x, int y, int z);
+
+    /**
+     * Calls {@code sink} with every block that takes a disc's material in the chunk whose lowest corner is {@code (minX, minZ)},
+     * between {@code minY} and {@code maxY} (exclusive).
+     */
+    void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink);
 
     /** One bound carve and the biome (if any) resolved for its cavern. */
     record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome) {}
@@ -72,6 +81,13 @@ public interface RavineFootprint {
                     }
                 }
                 return Optional.empty();
+            }
+
+            @Override
+            public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachDiscBlock(minX, minZ, minY, maxY, sink);
+                }
             }
         };
     }

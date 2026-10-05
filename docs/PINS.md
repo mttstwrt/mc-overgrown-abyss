@@ -38,11 +38,13 @@ Re-check these on every Minecraft bump:
 | `common/.../compat/RavineDensityHook.java` | `NoiseRouter` and `NoiseGeneratorSettings` record components |
 | `common/.../compat/FootprintAquifer.java` | `Aquifer` interface |
 | `common/.../mixin/NoiseBasedChunkGeneratorMixin.java` | Private `NoiseBasedChunkGenerator.doCreateBiomes` and its call to `ChunkAccess.fillBiomesFromNoise(BiomeResolver, Climate.Sampler)` |
+| `common/.../mixin/NoiseBasedChunkGeneratorMixin.java` (disc materials) | `NoiseBasedChunkGenerator.applyCarvers` (7 parameters in 1.21.1, called once per chunk with `GenerationStep.Carving.AIR`), and the chunk status order: a chunk's features require its neighbours' carvers (`ChunkPyramid`), which is why painting at the end of carving never covers a feature's blocks |
+| `common/.../compat/DiscPainter.java` | `ChunkAccess.setBlockState(BlockPos, BlockState, boolean)` updating worldgen heightmaps during carving (`ProtoChunk`), `getMinBuildHeight`/`getMaxBuildHeight`, `WorldgenRandom.setDecorationSeed`, `BlockStateProvider.getState(RandomSource, BlockPos)` |
 | `common/.../compat/CavernBiomeResolver.java`, `RavineDensityHook.java` (land check) | `BiomeResolver`, `BiomeSource.getNoiseBiome`, `RandomState.sampler()`, quart coordinates |
 | `common/.../compat/RavineCentrePlacement.java` | `RandomSpreadStructurePlacement` (`placementCodec`, `getPotentialStructureChunk`, `spacing`) and `StructurePlacement.ExclusionZone` (deprecated). Extends the random-spread class only because `/locate` special-cases it |
 | `common/.../compat/RavineCityStructure.java` | `Structure.findGenerationPoint`, `JigsawPlacement.addPieces` signature (11 parameters in 1.21.1), `PoolAliasBinding`, `JigsawStructure` default constants. `JigsawStructure` is final, so this wraps `addPieces` instead of extending it |
 | `common/.../compat/SwapBlocksProcessor.java`, `NestedProcessorListProcessor.java` | `StructureProcessor.processBlock` signature, `StructureBlockInfo` record, `StructureProcessorType.LIST_CODEC` |
-| `data/overgrown_abyss/worldgen/density_function/**` | Density-function JSON format; `InclusiveRange` field names (`min_inclusive`, `max_inclusive`) |
+| `data/overgrown_abyss/worldgen/density_function/**` | Density-function JSON format; `InclusiveRange` field names (`min_inclusive`, `max_inclusive`); in `disc_palettes`, vanilla's block-state provider format (`simple_state_provider`, `weighted_state_provider`, `noise_threshold_provider`, ...) and block-state format (`Name`, `Properties`) |
 | `data/overgrown_abyss/tags/worldgen/noise_settings/**`, `tags/worldgen/biome/**` | Tag folder layout |
 | `data/overgrown_abyss/worldgen/structure/**`, `structure_set/**` | Jigsaw settings fields, `pool_aliases` format, placement codec fields |
 | `data/overgrown_abyss/worldgen/template_pool/city/**` | Pool element format; template locations are vanilla `minecraft:ancient_city/**` IDs |

@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -8,9 +9,11 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+/** Where a ravine puts its discs, and how the carved ravine looks around them. */
 class RavineDomesTest {
     static final RavineSettings SETTINGS = RavineCellsTest.SETTINGS;
-    static final RavineDiscs DISCS = RavineCellsTest.DISCS;
+    static final DiscShape SHAPE = SETTINGS.discs();
+    static final RavinePlacement PLACEMENT = SETTINGS.placement();
     static final RavineBounds BOUNDS = RavineShapeTest.BOUNDS;
     // Straight, 300 long, 100 wide at the top, with a hash so its rooms are not all identical.
     static final RavineCell CELL = new RavineCell(0, 0, 1, 0, 150, 50, RavineCell.Bend.NONE, RavineCell.Lean.NONE, 123456789L);
@@ -30,12 +33,12 @@ class RavineDomesTest {
                     }
                     made++;
                     RavineDomes.Dome d = dome.get();
-                    assertTrue(d.radius() >= DISCS.minRadius() - 1e-9 && d.radius() <= DISCS.maxRadius() + 1e-9);
-                    assertTrue(d.offset() >= DISCS.minOffset() - 1e-9 && d.offset() < 1);
-                    assertTrue(d.height() >= DISCS.minHeight() - 1e-9);
+                    assertTrue(d.radius() >= SHAPE.minRadius() - 1e-9 && d.radius() <= SHAPE.maxRadius() + 1e-9);
+                    assertTrue(d.offset() >= PLACEMENT.minOffset() - 1e-9 && d.offset() < 1);
+                    assertTrue(d.height() >= SHAPE.minHeight() - 1e-9);
                     assertTrue(d.floor() >= RavineDomes.lowestFloor(SETTINGS, BOUNDS));
-                    assertTrue(d.floor() + d.height() <= BOUNDS.topY() - DISCS.ceilingMargin() + 1e-9, "stays under the ceiling margin");
-                    assertTrue(Math.abs(d.along()) <= CELL.halfLength() + DISCS.spacing());
+                    assertTrue(d.floor() + d.height() <= BOUNDS.topY() - PLACEMENT.ceilingMargin() + 1e-9, "stays under the ceiling margin");
+                    assertTrue(Math.abs(d.along()) <= CELL.halfLength() + PLACEMENT.spacing());
                 }
             }
         }
@@ -46,45 +49,37 @@ class RavineDomesTest {
     void roomsVaryInSize() {
         double smallest = Double.MAX_VALUE;
         double largest = 0;
-        for (int slot = 0; slot < RavineDomes.slots(SETTINGS, CELL); slot++) {
-            for (int row = 0; row < RavineDomes.rows(SETTINGS, BOUNDS); row++) {
-                var dome = RavineDomes.at(SETTINGS, BOUNDS, CELL, 1, row, slot);
-                if (dome.isPresent()) {
-                    smallest = Math.min(smallest, dome.get().radius());
-                    largest = Math.max(largest, dome.get().radius());
-                }
-            }
+        for (RavineDomes.Dome d : allRooms()) {
+            smallest = Math.min(smallest, d.radius());
+            largest = Math.max(largest, d.radius());
         }
         assertTrue(largest - smallest > 20, "radii " + smallest + " to " + largest);
     }
 
     @Test
-    void aRoomHasAFlatFloorARoundFootprintAndADomedRoof() {
+    void aRavinesDiscIsTheSameDiscAsAConesAndHasAVerticalAxis() {
+        RavineDiscLayout layout = new RavineDiscLayout(SETTINGS, BOUNDS, CELL);
+        Disc disc = layout.at(1, 0, 3).orElseThrow();
         RavineDomes.Dome dome = RavineDomes.at(SETTINGS, BOUNDS, CELL, 1, 0, 3).orElseThrow();
-        double centreSide = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, dome.floor()) + dome.offset() * dome.radius();
-        RavineCell.Frame middle = new RavineCell.Frame(dome.along(), centreSide);
-        double h = dome.height();
-        assertEquals(-0.5, RavineShape.domeDistance(SETTINGS, BOUNDS, CELL, dome, middle, dome.floor() + 0.5), 1e-9);
-        assertTrue(RavineShape.domeDistance(SETTINGS, BOUNDS, CELL, dome, middle, dome.floor() - 0.5) > 0, "solid under the floor");
-        // The floor is the same plane everywhere inside the footprint.
-        for (double r : new double[] {0, 0.4, 0.8}) {
-            RavineCell.Frame p = new RavineCell.Frame(dome.along() + r * dome.radius(), centreSide);
-            assertTrue(RavineShape.domeDistance(SETTINGS, BOUNDS, CELL, dome, p, dome.floor() + 0.01) < 0);
-            assertTrue(RavineShape.domeDistance(SETTINGS, BOUNDS, CELL, dome, p, dome.floor() - 0.01) > 0);
+        assertEquals(dome.floor(), disc.floor(), 1e-9);
+        assertEquals(dome.radius(), disc.radius(), 1e-9);
+        assertEquals(dome.height(), disc.height(), 1e-9);
+        // In this straight ravine the world position is the position along and across the chord, to within the half block
+        // a placed disc's centre is moved by.
+        assertEquals(dome.along(), disc.x(), 0.5);
+        assertEquals(RavineShape.centreSideways(SETTINGS, BOUNDS, CELL, dome), disc.z(), 0.5);
+        // The dome does not lean with height: at every height it is symmetric about the same vertical axis.
+        for (double up : new double[] {1, disc.height() * 0.4, disc.height() * 0.8}) {
+            double side = disc.radius() * 0.5;
+            assertEquals(disc.domeDistance(disc.x() + side, disc.floor() + up, disc.z()), disc.domeDistance(disc.x() - side, disc.floor() + up, disc.z()), 1e-9);
         }
-        RavineCell.Frame outside = new RavineCell.Frame(dome.along() + dome.radius() + 1, centreSide);
-        assertTrue(RavineShape.domeDistance(SETTINGS, BOUNDS, CELL, dome, outside, dome.floor() + 1) > 0, "round: solid beyond the radius");
-        assertTrue(RavineShape.domeDistance(SETTINGS, BOUNDS, CELL, dome, middle, dome.floor() + h + 1) > 0, "solid above the dome");
-        double nearRoof = dome.floor() + h * 0.9;
-        RavineCell.Frame edge = new RavineCell.Frame(dome.along() + dome.radius() * 0.8, centreSide);
-        assertTrue(RavineShape.domeDistance(SETTINGS, BOUNDS, CELL, dome, edge, nearRoof) > 0, "the roof curves in towards the rim");
     }
 
     @Test
     void roomsCoverMostOfTheWallFromTheCavernRoofToTheCeilingMargin() {
         double wallInset = 6;
         double lowest = RavineDomes.lowestFloor(SETTINGS, BOUNDS) + 3;
-        double highest = BOUNDS.topY() - DISCS.ceilingMargin() - 3;
+        double highest = BOUNDS.topY() - PLACEMENT.ceilingMargin() - 3;
         int open = 0;
         int total = 0;
         for (int side : new int[] {1, -1}) {
@@ -92,7 +87,7 @@ class RavineDomesTest {
                 for (double y = lowest; y <= highest; y += 3) {
                     double z = side * (RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, y) + wallInset);
                     total++;
-                    open += RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, along, y, z) < 0 ? 1 : 0;
+                    open += Carved.solid(SETTINGS, BOUNDS, CELL, along, y, z) ? 0 : 1;
                 }
             }
         }
@@ -100,61 +95,91 @@ class RavineDomesTest {
     }
 
     @Test
-    void everyRoomKeepsASolidFloorEvenWhereDomesBelowItOverlap() {
-        double thickness = DISCS.floorThickness();
+    void everyDiscKeepsASolidPlatformEvenWhereDomesBelowItOverlap() {
+        double thickness = SHAPE.floorThickness();
         int checked = 0;
         for (RavineDomes.Dome d : allRooms()) {
             double behindWall = d.side() * (RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor()) + (d.offset() + 0.5) * d.radius());
-            assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, d.along(), d.floor() - thickness / 2, behindWall) > 0, "floor of " + d);
+            assertTrue(Carved.solid(SETTINGS, BOUNDS, CELL, d.along(), d.floor() - thickness / 2, behindWall), "platform of " + d);
             checked++;
         }
         assertTrue(checked > 20, "checked " + checked);
     }
 
     @Test
-    void aFloorReachesOutIntoTheShaftAsALedge() {
-        double thickness = DISCS.floorThickness();
+    void aPlatformReachesOutIntoTheShaftAsALedge() {
+        double thickness = SHAPE.floorThickness();
         int checked = 0;
         for (RavineDomes.Dome d : allRooms()) {
             double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor());
             double reach = d.radius() * (1 - d.offset());
             double z = d.side() * (half - reach / 2);
-            assertTrue(RavineShape.signedDistance(SETTINGS, BOUNDS, CELL, d.along(), d.floor() - thickness / 2, z) > 0, "ledge of " + d);
+            assertTrue(Carved.solid(SETTINGS, BOUNDS, CELL, d.along(), d.floor() - thickness / 2, z), "ledge of " + d);
             checked++;
         }
         assertTrue(checked > 20, "checked " + checked);
+    }
+
+    @Test
+    void aDiscsDomeStaysClearApartFromStemsAndPlatformsOfOtherDiscs() {
+        RavineDiscLayout layout = new RavineDiscLayout(SETTINGS, BOUNDS, CELL);
+        List<Disc> discs = new ArrayList<>();
+        for (int side : new int[] {1, -1}) {
+            for (int row = 0; row < RavineDomes.rows(SETTINGS, BOUNDS); row++) {
+                for (int slot = 0; slot < RavineDomes.slots(SETTINGS, CELL); slot++) {
+                    layout.at(side, row, slot).ifPresent(discs::add);
+                }
+            }
+        }
+        int checked = 0;
+        for (Disc d : discs) {
+            double y = d.floor() + 2;
+            for (double share : new double[] {0, 0.3, 0.6}) {
+                double x = d.x() + share * d.radius();
+                // Open air from the dome, unless the rock of another disc (or the cavern's dome) is put back there.
+                boolean otherRock = false;
+                for (Disc other : discs) {
+                    otherRock |= other != d && (other.platformDistance(SHAPE, x, y, d.z()) < 0 || other.stemDistance(SHAPE, x, y, d.z()) < 0);
+                }
+                if (otherRock) {
+                    continue;
+                }
+                assertFalse(Carved.solid(SETTINGS, BOUNDS, CELL, x, y, d.z()), "dome of " + d + " at share " + share);
+                checked++;
+            }
+        }
+        assertTrue(checked > 30, "checked " + checked);
     }
 
     @Test
     void noDiscReachesMoreThanTheOvershootPastTheMiddleOfTheChasm() {
         for (RavineDomes.Dome d : allRooms()) {
             double half = RavineShape.halfWidthAt(SETTINGS, BOUNDS, CELL, d.floor());
-            assertTrue(d.radius() * (1 - d.offset()) <= half + DISCS.maxOvershoot() + 1e-9, "reach of " + d);
-            assertTrue(d.radius() >= DISCS.minRadius() - 1e-9 && d.radius() <= DISCS.maxRadius() + 1e-9, "radius is never changed to fit");
+            assertTrue(d.radius() * (1 - d.offset()) <= half + PLACEMENT.maxOvershoot() + 1e-9, "reach of " + d);
+            assertTrue(d.radius() >= SHAPE.minRadius() - 1e-9 && d.radius() <= SHAPE.maxRadius() + 1e-9, "radius is never changed to fit");
         }
     }
 
     @Test
     void aDiscThatWouldReachTooFarIsSetBackAndStaysAFullRound() {
         RavineCell narrow = new RavineCell(0, 0, 1, 0, 150, 25, RavineCell.Bend.NONE, RavineCell.Lean.NONE, 5L);
-        RavineSettings settings = RavineShapeTest.withDiscs(new RavineDiscs(45, 20, 50, 50, 0.45F, 14, 12, 0F, 0F, 4, 0F, 0F, 4F, 0F, 2.5F, 1.5F));
+        RavineSettings settings = RavineShapeTest.discs(45, 20, 50, 50, 0.45F, 14, 12, 0F, 0F, 4, 0F, 0F, 4F, 0F);
         var room = RavineDomes.at(settings, BOUNDS, narrow, 1, 0, 3).orElseThrow();
         double half = RavineShape.halfWidthAt(settings, BOUNDS, narrow, room.floor());
         assertEquals(50, room.radius(), 1e-9);
         assertEquals(half + 4, room.radius() * (1 - room.offset()), 1e-9);
-        // Every direction round the centre is still floor, all the way out to the radius.
-        double centreSide = half + room.offset() * room.radius();
+        // Every direction round the centre is still platform, all the way out to the radius.
+        Disc disc = new RavineDiscLayout(settings, BOUNDS, narrow).at(1, 0, 3).orElseThrow();
         for (double angle = 0; angle < 2 * Math.PI; angle += Math.PI / 6) {
-            RavineCell.Frame p = new RavineCell.Frame(
-                    room.along() + 0.98 * room.radius() * Math.cos(angle), centreSide + 0.98 * room.radius() * Math.sin(angle));
-            assertTrue(RavineShape.slabDistance(settings, BOUNDS, narrow, room, p, room.floor() - 1) < 0, "floor at angle " + angle);
+            double x = disc.x() + 0.98 * disc.radius() * Math.cos(angle);
+            double z = disc.z() + 0.98 * disc.radius() * Math.sin(angle);
+            assertTrue(disc.platformDistance(settings.discs(), x, disc.floor() - 1, z) < 0, "platform at angle " + angle);
         }
     }
 
     @Test
     void rowsOnTheSecondWallSitHigherByTheStagger() {
-        RavineDiscs discs = new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 0F, 0F, 4F, 0.5F, 2.5F, 1.5F);
-        RavineSettings settings = RavineShapeTest.withDiscs(discs);
+        RavineSettings settings = RavineShapeTest.discs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 0F, 0F, 4F, 0.5F);
         int compared = 0;
         for (int row = 0; row < 3; row++) {
             for (int slot = 0; slot < 5; slot++) {
@@ -171,9 +196,8 @@ class RavineDomesTest {
 
     @Test
     void floorsOfNeighbouringRowsStayAtLeastTheMinimumApart() {
-        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0F, 4F, 0.5F, 2.5F, 1.5F);
-        RavineSettings settings = RavineShapeTest.withDiscs(discs);
-        double minimum = (1 - discs.rowJitter()) * discs.rowSpacing();
+        RavineSettings settings = RavineShapeTest.discs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0F, 4F, 0.5F);
+        double minimum = (1 - settings.placement().rowJitter()) * settings.placement().rowSpacing();
         int compared = 0;
         for (int side : new int[] {1, -1}) {
             for (int slot = 0; slot < RavineDomes.slots(settings, CELL); slot++) {
@@ -193,8 +217,7 @@ class RavineDomesTest {
     @Test
     void largerDiscsSitFurtherBackAndReachLessWhileSmallerOnesReachFurthestIn() {
         // The shipped offsets, with the overshoot limit switched off so only the setback decides the reach.
-        RavineSettings settings = RavineShapeTest.withDiscs(
-                new RavineDiscs(45, 20, 20, 48, 0.45F, 14, 12, 0F, 0.1F, 4, 0.4F, 0.8F, 256F, 0.5F, 2.5F, 1.5F));
+        RavineSettings settings = RavineShapeTest.discs(45, 20, 20, 48, 0.45F, 14, 12, 0F, 0.1F, 4, 0.4F, 0.8F, 256F, 0.5F);
         double smallOffsets = 0;
         double largeOffsets = 0;
         double smallReach = 0;

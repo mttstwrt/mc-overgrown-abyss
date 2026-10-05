@@ -709,6 +709,171 @@ Not verified: nothing was looked at in game; Fabric and Larion not run; whether 
 flat-bottomed, not rounded as in the sketch; a 6-thick cap lost parts to the noise cells' 8-block height, so caps are 12 thick in the pack, and the
 ravine's 4-thick floor slabs may have the same weakness (not checked).
 
+### Disc materials and hanging discs (branch `cone-experiment`)
+
+Owner: wants full control over what a disc is made of (in principle also for a disc above ground), and stems that can go up as
+well as down, so discs can hang. Later each disc is to get its own micro-biome dome, with control over vegetation colour, foliage,
+ground material and structures, and rarity by where the disc sits. That is the next round; notes for it are at the end of this section.
+
+Decided with the owner: keep the terrain's rock under a palette pass for now; a hanging disc has a root from the ceiling, wide at
+the ceiling and thin at the platform; only the cone hangs discs; a palette sets blocks by part, in depth layers, with mixes and
+patches; coded patterns (honeycomb cells, geode shells) wait for the micro-biome round.
+
+This builds on the uncommitted rework that gave the ravine and the cone the same discs (`Disc`, `DiscShape`, `DiscLayout`, `Discs`;
+`ConeStructures`, `RavineDiscs` and `RavineStems` are gone). That rework has no section of its own here.
+
+- **Correction to earlier notes: the carve is evaluated per block, not per noise cell.** In 1.21.1 `NoiseChunk` wraps the final density
+  in `cacheAllInCell`, which fills every block of a cell, and our carve and rock sit outside vanilla's `interpolated` marker. So the
+  notes above that blame 4-wide or 8-high noise cells (uneven thin stems; the 6-thick cap that "lost parts", which is why the cone pack's
+  caps went to 12) have the wrong cause. The real cause of the damaged cap was not found; cave carvers are a guess. The remark in
+  `RavineSettings` that `edge_falloff` should be at least a noise cell high is probably outdated for the same reason; not tested.
+- **Each disc's stem is worked out once.** Where a stem ends depends on the discs below it. That was searched on every sample near
+  a stem; now a layout resolves it when it is built and each `Disc` carries its `Support`: `Standing(bottom)` or `Hanging(anchor, top)`.
+  `DiscLayout` is now just `discs()`. No change to the shape.
+- **Fixed on the way:** the world-load log line counted a cone's layers by building a cone layout without a cell, which throws as soon
+  as a cone has one layer. Layers are now counted from the settings alone.
+- **Hanging discs (cone only).** New `cone.hang_chance`: that share of discs is drawn to hang, and one hangs only if it has a ceiling:
+  the underside of the lowest platform above that holds its axis (the root ends flush there), or else the cone's wall above its
+  axis, or its own dome's apex if the axis is already inside the wall. A ceiling closer than `min_height` is no room to hang in, a wall
+  anchor within `ceiling_margin` of the top is not trusted to have rock behind it, and a disc nearer the middle than `top_radius` has
+  only sky over it; all of those stand on a stem as before. A hanging disc has no stem.
+- **Root shape:** `discs.root_spread` (3) and `discs.root_scale` (4). The root is `root_spread` stem radii wide at its anchor (never wider
+  than the disc), half that `root_scale` blocks away, never thinner than a stem. Against the sloping wall it narrows again above the
+  anchor and ends one root radius above it, so there is no flat cut in open air. It is rock added by the same rock function as stems, so
+  the "only where the carve opened the ground" and clear-cylinder rules apply to it unchanged.
+- **Palettes:** optional `disc_palettes` in `carve.json` (`DiscPalette`). Each has a `weight`, `top` and `underside` layers counted in from
+  the platform's faces, a `body`, and a `stem` with `surface` layers and a `core`; a root counts as stem. Each block is a vanilla
+  block-state provider. A part left out keeps the terrain's rock, and with no palettes nothing is painted (the mod's own `carve.json`
+  has none). A disc takes a palette by weight from its cell's hash and its index in the layout; the next round replaces that draw.
+- **The paint pass** (`DiscPainter`, hooked at the end of `NoiseBasedChunkGenerator.applyCarvers` in the existing mixin class): each
+  chunk overwrites the blocks of its discs.
+  - Platforms are painted over their whole round footprint, including the part inside the wall under the dome, so a room's whole floor
+    takes the palette and natural cave holes in it are filled.
+  - Stems and roots are painted only where the terrain made them.
+  - Stems go first and platforms second; where two platforms overlap, the later one in the layout's order wins.
+  - Why there: carving runs for every chunk whatever its biome, it is the last step that only touches its own chunk, and every
+    neighbour's features wait for it. So nothing a feature placed is ever painted over, the result does not depend on the order
+    chunks generate in, and surface rules and carvers cannot undo it. Block writes at that stage update the worldgen heightmaps.
+- **Limits:** a palette block that needs a block entity is placed without one. Vanilla's later steps still treat the result as terrain:
+  ore and stone blobs replace palette blocks that are in their replaceable tags (seen: an andesite blob in a stone stem), and the
+  surrounding biome decorates disc tops (seen: snow layers on platforms under the open cone, leaves over a mossy platform in the ravine).
+  Stamping a biome over each dome, next round, is what keeps the surrounding biome's features out.
+- **Seen in the probes, for the owner to judge in game:** two platforms at nearly the same height can overlap, and with different
+  palettes the later one visibly cuts into the earlier (found in the cone: a concrete platform two blocks above a mossy one).
+
+| Check | Result |
+|---|---|
+| Unit tests (79): a layout's discs carry where their stems end; root profile and its limits; a disc drawn to hang hangs only with a ceiling and never under open sky; none hang at chance 0; a root is solid from platform to anchor and the disc has no stem; the line of sight stays clear with every disc drawn to hang; a point's part and depth; layer choice, a part left out, weights; palette JSON round trip; the blocks of a chunk (whole platform footprint including inside the wall, stems only where the terrain has them, roots, same blocks in the same order twice, nothing without palettes or before a level is bound); every pack in `dev-datapacks/` loads with the current settings; all earlier tests | pass (`./gradlew build`, both loader jars built) |
+| NeoForge dedicated server, seed 20261003, new world with the `cone` pack, 29 chunks around the cone at 956,-504: 148 points computed from the code and checked with `execute if block` (platform top, second layer and underside; stem surface and core; roots; under hanging discs; domes; the axis) | 145 hold. The 3 misses are later vanilla generation: 1 stone stem block turned to andesite, 2 snow layers on a platform top. No errors in the log |
+| The same on a Fabric dedicated server (seed set to 20261003 for the run) | identical: 145 of 148, same 3 points, no errors |
+| NeoForge dedicated server with `painted-ravine`, 25 chunks around the ravine at 983,-712, 106 points | 105 hold; the miss is leaves in a dome over a mossy platform. No errors |
+| NeoForge dedicated server with the mod's own `carve.json` (no palettes) | boots, logs `Disc palettes: 0`, 9 chunks around the ravine at 983,-712 generate, no errors |
+| Paint pass cost, unit-test harness, 841 chunks around each of 4 cones | mean 13 to 22 microseconds per chunk; the worst chunk 1.3 to 4.1 ms |
+
+Not verified: nothing was looked at in game, so how the materials, the roots and the overlapping platforms look is open; Larion was
+not run; generation time was not measured in a server, only the paint pass alone in the harness; the Fabric run used the cone pack only.
+After `stop` each dev server saved and stopped but its JVM stayed up on idle thread pools that are not this mod's (it creates none), so the
+test script ended the process; whether that predates this change was not checked.
+
+**For the next round (micro-biomes), checked against the 1.21.1 jar:**
+
+- Grass and leaf tint come from the biome stored in the chunk, so colour control needs a real biome stamped over each dome, the way
+  the cavern's is (`CavernBiomeResolver`). A datapack biome JSON is enough. Not tested: a custom biome's colours on an unmodded client.
+- A stamped biome keeps the surrounding biome's features out (vanilla features check the biome where they land) and sets mob spawns.
+- Its own feature list will not run: `ChunkGenerator.applyBiomeDecoration` keeps only biomes the level's biome source can produce.
+  Foliage therefore has to be placed by our own pass, driven by a per-disc theme.
+- Structures test the biome source, not the stamped biome, so disc ruins need our own placement reading the disc layout, as the city
+  reads the cell centre. A structure's pieces only generate within 8 chunks of its start chunk, so it is one structure per disc.
+- Biome cells are 4x4x4 with fuzzy edges, so a tint border is soft by a few blocks while the material border is exact. Overlapping
+  domes need a rule for which biome wins.
+- Nothing in the paint pass assumes a disc is inside the hole except the stem rule, so a disc above ground needs a layout that puts
+  one there and a rule for where its stem ends; a stem cannot look for the ground, because it crosses chunk borders.
+
+### Cone as the default; larger, lower discs; thin stems; bowls
+
+Owner, after trying both test packs in game ("looking really cool"): use the cone as the main default and leave the ravine for
+later; now that discs are painted blocks, let them be a bit larger again and sit lower in the cone; make stems thinner, in
+proportion to the disc, from 2 by 2 for the thinnest to about 6 by 6; give each disc a slight bowl shape, 1 to 4 blocks.
+
+- **The mod's own `carve.json` is now the cone**, with the mossy palette and `hang_chance` 0.35. `dev-datapacks/cone` is the same plus
+  the concrete test palette. The ravine lives on in the ravine packs (`painted-ravine` is what the mod shipped before), which keep
+  the discs they had: thick stems, flat tops. The ravine's code is untouched apart from the disc code it shares; it was not looked at.
+- **Larger:** `discs.max_radius` 56 to 64. The limit that actually bound was a constant in the code, 0.55 of the room between the
+  clear cylinder and the wall at the disc's height; it is now `cone.max_share`, 0.65.
+- **Lower:** `cone.base_clearance` may be negative and is -16, which starts the lowest layer 16 blocks under the cavern roof. A cone
+  whose lowest platforms would reach the cavern floor is rejected at load. The cone's rock function now counts the cavern's airspace
+  as open, so a low platform that reaches past the cone into the cavern keeps that part even without a palette.
+- **What that gives at vanilla height** (7 cones on seed 20261003): 3 layers and 15 discs per cone (2 and 9 before), 6 of them below the
+  cavern roof, radii 20 to 56 (about 40 at most before), 1 to 6 hanging. The lowest platform's underside is 34 to 35 blocks above the
+  cavern floor; the city's tallest piece is 31.
+- **Stems:** `stem_radius` is renamed `min_stem_radius` and there is a `max_stem_radius`. A stem is `stem_fraction` (0.05) of its disc's
+  radius, kept between 1 and 3, so 2 to 6 blocks across. The flare under the platform is unchanged.
+- **Discs are centred halfway between block coordinates** (`Disc.placed`). Blocks are sampled at whole coordinates, so without this a
+  stem of radius 1 came out as anything from 1 to 4 blocks depending on where its axis fell; now it is always 2 by 2, and every
+  stem is as wide one way as the other. A disc moves by at most half a block each way; the cone keeps a block of slack for it at
+  the clear cylinder and in the reach that cells are sized for.
+- **Bowls:** `discs.min_bowl_depth` 1 and `max_bowl_depth` 4. `floor` is now the middle of a platform's top, and the top rises to the
+  rim by the bowl's depth along a parabola: the least for the smallest discs, the most for the largest. The underside stays flat,
+  so a platform is thicker at its rim and nothing opens between it and the stem's flare. The dome's air starts at the bowl, and a
+  palette's top layers follow it.
+- **Seen in the probes, for the owner to judge in game:** the low discs lie in the cavern's lush caves biome, so lush caves features
+  decorate them: clay and water pools, dripleaf, azalea, moss carpet and grass on the mossy tops.
+- **Not looked into:** stems still run down through the cavern to its floor, and there are now more of them over the city. City pieces
+  generate after the stems and may cut them.
+
+| Check | Result |
+|---|---|
+| Unit tests (90): stems from 2 to 6 across in proportion to the disc; a placed disc's thinnest stem is 2 by 2 and its thickest 6 across both ways, wherever it was put; the bowl's top, flat underside, dome and material depths; bowl depth by size; discs below the cavern roof but clear of its floor, and another layer; no disc over its share of the room, some over the old share, radii past 48; a low platform is rock in the cavern's airspace beyond the cone; the line of sight with the shipped numbers; a cone reaching the cavern floor is rejected; a bowled platform is painted up to its rim; the mod's own file is the cone and gives every part a material; every testing pack loads; all earlier tests | pass (`./gradlew build`, both loader jars built) |
+| NeoForge dedicated server, seed 20261003, new world with the `cone` pack, 74 chunks around the cone at 957,-511: 738 points computed from the code (bowl tops in the middle and at the rim and the air over them, second layer, underside, every block in and around each stem's thin part, roots, under hanging discs, the axis) | 686 hold. The misses are later vanilla generation: clay and water of lush caves pools in platform tops, grass, azalea, moss carpet, dripleaf and snow over them, 2 stone root blocks turned to andesite and diorite. Stems: 115 of 116 inside points hold. No errors in the log |
+| Fabric dedicated server with no datapack, so the mod's own file (seed set to 20261003 for the run), same cone and points | 682 hold, the same kinds of miss. The log shows `Disc palettes: 1`. No errors |
+| Paint pass cost, unit-test harness, 841 chunks around each of 7 cones | mean 27 to 50 microseconds per chunk (more blocks than before: 0.3 to 0.46 million per cone); the worst chunk 1 to 6.5 ms |
+
+Not verified: nothing was looked at in game; Larion not run; the ravine packs were only loaded by a unit test, not generated; whether the
+city still generates intact under the lower discs and their stems.
+
+### Curved undersides, varied bowls, discs outside the cone
+
+Owner: do not keep the underside flat, have it curve with the bowl; let the bowls vary so some stay flatter; and do not limit the
+biggest discs by the size of the cone: they should be able to carve outside the cone and spawn more discs on top, outside where the
+cone would normally be.
+
+- **The underside follows the bowl.** A platform is `floor_thickness` deep everywhere, curved top and underside alike. The stem's
+  flare counts its depth from the underside straight above each point, so it follows the curve and no slit of air is left between
+  the two. Because the underside is no longer one plane, a stem that lands on a platform now ends halfway down through it, and a
+  root hanging from a platform runs half a thickness up into it; nothing shows under or over the platform either way.
+- **Bowls vary.** New `discs.bowl_variation` (0.75): each disc draws its own depth, between the full depth for its size and that
+  depth less the variation's share, so a quarter of it here. 0 gives every disc the full depth. A ravine's discs do not vary yet
+  (their packs have flat discs).
+- **Disc size is no longer held to the cone.** `cone.max_share` is gone. A disc is as large as it is drawn (up to `max_radius`);
+  one too large for the cone at its height sits with its inner edge at the clear cylinder and cuts its dome into the rock around
+  the cone. Small discs are placed as before.
+- **Riders: more discs on top, outside the cone.** A disc has places for riders on a circle halfway out, one per `cone.spacing`
+  blocks of it, so larger discs have more. A place holds a rider with `cone.rider_chance` (0.6; 0 turns riders off). A rider is at
+  most `cone.rider_scale` (0.6) of its host's radius, stands inside its host's dome between half and four fifths of the way up it
+  with at least 5 blocks of air under it, has its stem on the host's platform, and has its centre outside the cone at its height.
+  Its own dome then opens the rock above and beyond its host's. Riders carry riders of their own; a cone has at most 512 discs.
+- **`cone.outer_radius` (200)** is the one hard limit: nothing of any disc lies further from the axis. It now sets the reach that
+  cells are sized for, in place of the cavern radius plus the largest disc.
+- **What that gives at vanilla height** (7 cones on seed 20261003): 18 to 34 discs per cone, 15 in the ring and 3 to 19 riders; 3 to
+  10 hang; radii up to 64; 9 to 27 discs reach more than 20 blocks past the cone's wall; the furthest edge is 134 to 171 blocks from
+  the axis; bowls 0.3 to 3.5 deep.
+- **To look at in game: large domes right under the surface.** Size is no longer smaller near the top, so a top-layer disc can be
+  up to 128 across with its dome's top at y=64 (`top` 80 less `ceiling_margin` 16). On the cone probed, the largest top-layer dome
+  (radius 47, top at y=59) has air at 7 of 15 points sampled 2 and 5 blocks over its roof, so it is open or nearly open to the
+  surface there. `ceiling_margin` is the knob. Over all domes 49 of 259 such points are air; for the lower ones that is natural
+  caves next to the dome, which I did not separate from surface openings.
+
+| Check | Result |
+|---|---|
+| Unit tests (96): the bowl's two faces, an even thickness and no air between underside and flare; a stem ends inside the curved platform it lands on and never shows under it; the ceiling of a root is the curved underside over its axis; bowl depths across the variation; discs as large as drawn, inner edge outside the clear cylinder, nothing past the outer radius, domes opening rock well outside the cone; riders outside the cone, in a larger disc's dome, within bounds, standing riders landed on a platform, the ring unchanged by them; nothing opens beyond the reach; the line of sight with riders; an outer radius too small for a disc is rejected; all earlier tests | pass (`./gradlew build`, both loader jars built) |
+| NeoForge dedicated server, seed 20261003, new world with the `cone` pack, 121 chunks around the cone at 956,-499: 1435 points (tops, the blocks over them, undersides and the blocks under them, in the middle and at the rim, for ring discs and riders; stems; roots; domes outside the cone; the axis) | 1372 hold. Riders: tops 45 of 45, undersides 45 of 45, rim tops 45 of 45. Domes outside the cone: 25 of 26 open. The misses are later vanilla generation as before (lush caves water, clay and plants, stone blobs), plus 1 lava and 1 cave air. No errors in the log |
+| Fabric dedicated server with no datapack (seed set to 20261003 for the run), same cone and points | 1373 hold, the same kinds of miss (26 of them water in mossy tops). No errors |
+| Costs, unit-test harness, 7 cones: paint pass over 841 chunks; terrain function (carve and rock) over a slab of points | paint mean 51 to 124 microseconds per chunk, worst chunk 1.8 to 4.3 ms, 0.35 to 0.65 million blocks per cone; terrain function 0.22 to 0.39 microseconds per sample |
+
+Not verified: nothing was looked at in game; Larion not run, where a taller cone has more layers and so more discs and riders; the
+ravine packs were only loaded by a unit test; whether the city is intact under the lower discs and stems; how riders read from
+inside a host's dome.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

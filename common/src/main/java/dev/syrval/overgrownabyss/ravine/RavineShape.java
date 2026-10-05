@@ -3,44 +3,71 @@ package dev.syrval.overgrownabyss.ravine;
 /**
  * Signed distance, in blocks, from a point to the open volume of one ravine: negative inside (air), positive outside.
  * The volume is the ravine shaft from the floor upwards, a domed cavern centred on the cell whose floor is flat, and the
- * disc rooms cut sideways into the shaft's walls (see {@link RavineDomes}). Each room then gets its floor slab put back
- * as rock: it keeps the floor solid where lower rooms' domes would cut up through it, and the part of it that lies in
- * the shaft is a ledge. The disc stems (see {@link RavineStems}) are put back with them. A room's reach into the shaft is limited by setting its centre back, never by cutting it off. The
- * shaft follows a centre line that bends in plan view and sways sideways with height, and narrows towards the floor.
+ * domes of the discs cut sideways into the shaft's walls (see {@link RavineDiscLayout}). The discs' platforms and stems are
+ * rock put back afterwards ({@link #rockDistance}), so a stem is never cut off by the dome of a disc it passes through, and the
+ * part of a platform that lies in the shaft is a ledge. A disc's reach into the shaft is limited by setting its centre back,
+ * never by cutting it off. The shaft follows a centre line that bends in plan view and sways sideways with height, and narrows
+ * towards the floor. A cone is the same with a different hole (see {@link ConeShape}); the discs are the same.
  *
  * <p>These are distance estimates, exact for a straight shaft and close for gentle curves, which is all the carve
- * needs: it only uses the sign and a few blocks of falloff either side of the wall. Each room's floor is exactly the
+ * needs: it only uses the sign and a few blocks of falloff either side of the wall. Each platform's top is exactly the
  * plane {@code y = floor}, so floors come out flat.
  */
 public final class RavineShape {
     private RavineShape() {}
 
+    /** The carve at a point. This builds the cell's discs for the call; use the overload with a layout to sample many points. */
     public static double signedDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
+        return signedDistance(settings, bounds, cell, DiscLayouts.of(settings, bounds, cell), x, y, z);
+    }
+
+    public static double signedDistance(
+            RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, double x, double y, double z) {
         if (settings.cone().isPresent()) {
-            return ConeShape.signedDistance(settings, settings.cone().get(), bounds, cell, x, y, z);
+            return ConeShape.signedDistance(settings, settings.cone().get(), bounds, cell, layout, x, y, z);
         }
         if (y < bounds.floorY()) {
             return Double.POSITIVE_INFINITY;
         }
-        RavineCell.Frame frame = leanedFrame(bounds, cell, x, y, z);
         double radial = cell.distanceToCentre(x, z);
-        double shaft = shaftDistance(settings, bounds, cell, frame, y);
-        double cavern = cavernDistance(settings, bounds, radial, y);
-        Rooms rooms = discDistance(settings, bounds, cell, frame, radial, y);
-        // Rooms are carved first. Stems and slabs are rock put back afterwards, so a stem is never cut off by the dome of a
-        // room it passes through. Neither is subtracted from the cavern, so they never close its roof.
-        double open = Math.min(shaft, rooms.dome());
-        // A stem only changes anything in open air or within the carve's falloff of it, so skip the search elsewhere.
-        double stem = open >= settings.edgeFalloff() ? Double.POSITIVE_INFINITY : RavineStems.distance(settings, bounds, cell, frame, x, y, z);
-        double walls = Math.max(Math.max(open, -rooms.slab()), -stem);
-        return Math.min(walls, cavern);
+        double open = openDistance(settings, bounds, cell, layout, radial, x, y, z);
+        return Math.min(open, cavernDistance(settings, bounds, radial, y));
     }
 
-    /** Distance to the nearest free-standing structure of a cone: negative inside; infinity for a ravine, which has none. */
+    /** The rock at a point. This builds the cell's discs for the call; use the overload with a layout to sample many points. */
     public static double rockDistance(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z) {
-        return settings.cone().isEmpty()
-                ? Double.POSITIVE_INFINITY
-                : ConeShape.rockDistance(settings, settings.cone().get(), bounds, cell, x, y, z);
+        return rockDistance(settings, bounds, cell, DiscLayouts.of(settings, bounds, cell), x, y, z);
+    }
+
+    /**
+     * Distance to the nearest platform or stem, counted only where the carve opened the ground and outside the cavern, whose
+     * dome has a rock roof here: negative inside, infinity where there is none. The rock is added back after the carve, as
+     * {@code max(min(original, carve), rock)}, so it does not depend on there being terrain to restore.
+     */
+    public static double rockDistance(
+            RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, double x, double y, double z) {
+        if (settings.cone().isPresent()) {
+            return ConeShape.rockDistance(settings, settings.cone().get(), bounds, cell, layout, x, y, z);
+        }
+        if (y < bounds.floorY()) {
+            return Double.POSITIVE_INFINITY;
+        }
+        double radial = cell.distanceToCentre(x, z);
+        double inside = Math.max(openDistance(settings, bounds, cell, layout, radial, x, y, z), -cavernDistance(settings, bounds, radial, y));
+        // A disc only changes anything in open air or within the carve's falloff of it, so skip the search elsewhere.
+        if (inside >= settings.edgeFalloff()) {
+            return Double.POSITIVE_INFINITY;
+        }
+        return Math.max(Discs.rockDistance(layout, settings.discs(), x, y, z), inside);
+    }
+
+    // The shaft and the discs' domes.
+    private static double openDistance(
+            RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, double radial, double x, double y, double z) {
+        RavineCell.Frame frame = leanedFrame(bounds, cell, x, y, z);
+        double shaft = shaftDistance(settings, bounds, cell, frame, y);
+        double domes = radial > settings.maxReach() || y > bounds.topY() ? Double.POSITIVE_INFINITY : Discs.domeDistance(layout, x, y, z);
+        return Math.min(shaft, domes);
     }
 
     /**
@@ -56,9 +83,9 @@ public final class RavineShape {
         return cell.distanceToCentre(x, z) <= settings.cavernRadius() * Math.sqrt(1 - t * t) + margin;
     }
 
-    /** How many rows of disc rooms fit between the cavern roof and the ceiling margin in this level. */
+    /** How many rows of discs (or layers, in a cone) fit between the cavern roof and the ceiling margin in this level. */
     public static int discRows(RavineSettings settings, RavineBounds bounds) {
-        return settings.cone().map(cone -> ConeStructures.layers(settings, cone, bounds)).orElseGet(() -> RavineDomes.rows(settings, bounds));
+        return settings.cone().map(cone -> ConeDiscLayout.layers(settings, cone, bounds)).orElseGet(() -> RavineDomes.rows(settings, bounds));
     }
 
     /** Half the shaft's width at height {@code y}. */
@@ -66,66 +93,6 @@ public final class RavineShape {
         double t = Math.clamp((y - bounds.floorY()) / (bounds.topY() - bounds.floorY()), 0, 1);
         double bottom = settings.bottomWidthFactor();
         return cell.halfWidth() * (bottom + (1 - bottom) * t);
-    }
-
-    /** Distances to the nearest room dome and the nearest floor slab near a point; infinity when none is close. */
-    private record Rooms(double dome, double slab) {
-        static final Rooms NONE = new Rooms(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
-    }
-
-    private static Rooms discDistance(
-            RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineCell.Frame frame, double radial, double y) {
-        RavineDiscs config = settings.discs();
-        double lowest = RavineDomes.lowestFloor(settings, bounds);
-        int rows = RavineDomes.rows(settings, bounds);
-        if (rows == 0 || y < lowest - config.floorThickness() || y > bounds.topY() || radial > settings.maxReach()) {
-            return Rooms.NONE;
-        }
-        // Rooms whose floor is at or below this point can hold it in their dome, and rooms whose floor is up to a slab
-        // thickness above it can hold it in their slab. Domes reach at most one dome's height up from their floor.
-        int topRow = Math.min(rows - 1, (int) Math.floor((y + config.floorThickness() - lowest) / config.rowSpacing()));
-        int firstRow = Math.max(0, topRow - (int) Math.ceil((config.maxDomeHeight() + config.floorThickness()) / config.rowSpacing()) - 2);
-        RavineDomes.SlotRange slots = RavineDomes.slotsNear(settings, cell, frame.along());
-        double nearestDome = Double.POSITIVE_INFINITY;
-        double nearestSlab = Double.POSITIVE_INFINITY;
-        for (int side = 1; side >= -1; side -= 2) {
-            for (int row = firstRow; row <= topRow; row++) {
-                for (int slot = slots.first(); slot <= slots.last(); slot++) {
-                    var room = RavineDomes.at(settings, bounds, cell, side, row, slot);
-                    if (room.isPresent()) {
-                        nearestDome = Math.min(nearestDome, domeDistance(settings, bounds, cell, room.get(), frame, y));
-                        nearestSlab = Math.min(nearestSlab, slabDistance(settings, bounds, cell, room.get(), frame, y));
-                    }
-                }
-            }
-        }
-        return new Rooms(nearestDome, nearestSlab);
-    }
-
-    /**
-     * One room: a flat floor at {@code dome.floor()} and a roof of the same shape as the cavern's, centred
-     * {@code offset} of its radius inside the wall, so it opens onto the shaft through a wide mouth.
-     */
-    static double domeDistance(
-            RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome, RavineCell.Frame frame, double y) {
-        if (y >= dome.floor() + dome.height()) {
-            return Double.POSITIVE_INFINITY;
-        }
-        double dAlong = frame.along() - dome.along();
-        double dSide = frame.sideways() - centreSideways(settings, bounds, cell, dome);
-        double t = Math.clamp((y - dome.floor()) / dome.height(), 0, 1);
-        double roof = Math.sqrt(dAlong * dAlong + dSide * dSide) - dome.radius() * Math.sqrt(1 - t * t);
-        return Math.max(roof, dome.floor() - y);
-    }
-
-    /** The rock under one room's floor: the room's whole round footprint, {@code floor_thickness} deep. */
-    static double slabDistance(
-            RavineSettings settings, RavineBounds bounds, RavineCell cell, RavineDomes.Dome dome, RavineCell.Frame frame, double y) {
-        double dAlong = frame.along() - dome.along();
-        double dSide = frame.sideways() - centreSideways(settings, bounds, cell, dome);
-        double footprint = Math.sqrt(dAlong * dAlong + dSide * dSide) - dome.radius();
-        double vertical = Math.max(y - dome.floor(), dome.floor() - settings.discs().floorThickness() - y);
-        return Math.max(footprint, vertical);
     }
 
     /** Where the wall the room opens from sits, sideways of the chord, at the room's floor height. */

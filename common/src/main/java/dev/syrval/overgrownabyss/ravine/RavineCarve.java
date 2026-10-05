@@ -2,6 +2,7 @@ package dev.syrval.overgrownabyss.ravine;
 
 import com.mojang.serialization.MapCodec;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
@@ -20,7 +21,7 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  */
 public final class RavineCarve implements DensityFunction.SimpleFunction {
     public static final MapCodec<RavineCarve> MAP_CODEC =
-            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null, new LandGate(), Output.OPEN), RavineCarve::settings);
+            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null, new LandGate(), new ConcurrentHashMap<>(), Output.OPEN), RavineCarve::settings);
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
     private static final double CAVERN_BIOME_MARGIN = 4;
@@ -30,16 +31,20 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     // Null only for the unbound instance the codec produces.
     private final RavineBounds bounds;
     private final LandGate landGate;
+    // The discs of each cell, built once: they never change, and each sample would otherwise rebuild them from hashes.
+    private final ConcurrentHashMap<RavineCell, DiscLayout> layouts;
     private final Output output;
 
     /** Which of a ravine's two functions an instance computes. */
     private enum Output { OPEN, ROCK }
 
-    private RavineCarve(RavineSettings settings, long seed, RavineBounds bounds, LandGate landGate, Output output) {
+    private RavineCarve(
+            RavineSettings settings, long seed, RavineBounds bounds, LandGate landGate, ConcurrentHashMap<RavineCell, DiscLayout> layouts, Output output) {
         this.settings = settings;
         this.seed = seed;
         this.bounds = bounds;
         this.landGate = landGate;
+        this.layouts = layouts;
         this.output = output;
     }
 
@@ -52,12 +57,12 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     public RavineCarve bind(long seed, RavineBounds bounds) {
-        return new RavineCarve(settings, seed, bounds, new LandGate(), Output.OPEN);
+        return new RavineCarve(settings, seed, bounds, new LandGate(), new ConcurrentHashMap<>(), Output.OPEN);
     }
 
     /** The rock this ravine adds back, which only a cone has: 1 inside its structures, -1 elsewhere. Shares this carve's land check. */
     public RavineCarve rock() {
-        return new RavineCarve(settings, seed, bounds, landGate, Output.ROCK);
+        return new RavineCarve(settings, seed, bounds, landGate, layouts, Output.ROCK);
     }
 
     public RavineSettings settings() {
@@ -100,6 +105,19 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
                 .isPresent();
     }
 
+    /**
+     * Calls {@code sink} with every block that takes a disc's material in the chunk whose lowest corner is {@code (minX, minZ)},
+     * between {@code minY} and {@code maxY} (exclusive). See {@link DiscBlocks}.
+     */
+    public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
+        if (bounds == null || settings.discPalettes().isEmpty()) {
+            return;
+        }
+        // A cell is a whole number of chunks, so the chunk's corner is in the same cell as the rest of it.
+        cellAt(minX, minZ).ifPresent(cell -> DiscBlocks.forEach(
+                settings, bounds, cell, layouts.computeIfAbsent(cell, c -> DiscLayouts.of(settings, bounds, c)), minX, minZ, minY, maxY, sink));
+    }
+
     @Override
     public double compute(FunctionContext context) {
         if (bounds == null) {
@@ -112,9 +130,10 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         if (found.isEmpty()) {
             return nothing();
         }
+        DiscLayout layout = layouts.computeIfAbsent(found.get(), cell -> DiscLayouts.of(settings, bounds, cell));
         double distance = output == Output.ROCK
-                ? RavineShape.rockDistance(settings, bounds, found.get(), x, y, z)
-                : RavineShape.signedDistance(settings, bounds, found.get(), x, y, z);
+                ? RavineShape.rockDistance(settings, bounds, found.get(), layout, x, y, z)
+                : RavineShape.signedDistance(settings, bounds, found.get(), layout, x, y, z);
         return Math.clamp((output == Output.ROCK ? -distance : distance) / settings.edgeFalloff(), minValue(), maxValue());
     }
 
