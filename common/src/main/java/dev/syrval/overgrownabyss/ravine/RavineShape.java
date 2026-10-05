@@ -143,15 +143,6 @@ public final class RavineShape {
         return cell.frame(x - shift * cell.lean().dirX(), z - shift * cell.lean().dirZ());
     }
 
-    /** The inverse of {@link #leanedFrame}: the world {@code {x, z}} of a position in the leaned frame at height {@code y}. */
-    static double[] worldOf(RavineBounds bounds, RavineCell cell, double along, double sideways, double y) {
-        double t = Math.clamp((y - bounds.floorY()) / (double) (bounds.topY() - bounds.floorY()), 0, 1);
-        double shift = cell.lean().shift(t);
-        return new double[] {
-            cell.centreX() + along * cell.dirX() - sideways * cell.dirZ() + shift * cell.lean().dirX(),
-            cell.centreZ() + along * cell.dirZ() + sideways * cell.dirX() + shift * cell.lean().dirZ()};
-    }
-
     /** Position along the chord as a fraction of the half length in [-1, 1]; a round hole has no length, so 0. */
     static double unitAlong(RavineCell cell, double along) {
         return cell.halfLength() == 0 ? 0 : Math.clamp(along / cell.halfLength(), -1, 1);

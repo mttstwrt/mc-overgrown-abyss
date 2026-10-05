@@ -552,7 +552,7 @@ Owner: cut the disc density by about 30%, and add the inverted funnel stems from
 - **Density:** `spacing` 45 to 64. Rooms in the 900 sampled ravines: 19,759 to 13,868 at vanilla height (-29.8%) and 59,280
   to 41,524 at Larion height (-30.0%). The dev packs' spacings were scaled by the same factor. Row spacing is unchanged, so
   vanilla height still has 2 rows.
-- **Stems** (`RavineStems`, new `stem_radius` 2.5 and `funnel_slope` 2): each disc gets a stem under the visible part of its
+- **Stems** (superseded by "Stems at the disc centre" below; this is the first version): each disc gets a stem under the visible part of its
   ledge, centred on the middle of the stretch that sticks out into the shaft, so it is not hidden inside the wall. The top
   of the funnel is as wide as fits under the ledge (half the disc's reach, at least the stem radius); it narrows by one
   block of radius per `funnel_slope` blocks of height down to a column of `stem_radius` (2.5, so 5 blocks across), which
@@ -581,6 +581,32 @@ Not verified:
 - Fabric and Larion not run; the city and descent not checked.
 - The stem axis is at the middle of the ledge, not the disc's centre; tell me if you want it elsewhere, or lily-pad
   platforms on stems.
+
+### Stems at the disc centre
+
+Owner: the stem belongs at the centre of the disc it supports, may run all the way down to the chasm floor, and should follow
+a curve like -1/x, never thinner than a 5-block circle.
+
+- **Axis:** the disc's own centre (not the middle of the ledge). Discs are centred inside the wall, so the thin column is
+  mostly in the rock; what shows in the shaft is the flared top of the stem under a ledge.
+- **Profile:** `radius = max(stem_radius, disc radius * funnel_scale / (depth + funnel_scale))`, with depth measured down from
+  the underside of the slab. It starts as wide as the disc, halves `funnel_scale` (6) blocks below, narrows ever more slowly,
+  and is capped at `stem_radius` 2.5 (5 across). `funnel_slope` is replaced by `funnel_scale`.
+- **Reach:** the stem is not stopped by lower discs any more; it runs down to the chasm floor, cut only by rooms (a stem never
+  fills a room) and the cavern (not subtracted from, so the city's cavern is untouched). The "stops at the first lower disc"
+  search and the world-position helper it needed are gone.
+
+| Check | Result |
+|---|---|
+| Unit tests (45): the profile starts at the disc's radius, halves at one scale, never widens, narrows fast then slowly and never goes below 2.5; every stem is at least 2.5 radius at the chasm floor even under lower discs; a flared stem is solid rock in the shaft under a ledge; all earlier tests | pass (`./gradlew build`) |
+| Stems take up 1.3% of the shaft's cross-section samples at vanilla height and 2.6% at Larion height (scale 6; 0.7% / 1.4% at scale 3, 2.4% / 5.0% at scale 12) | measured |
+| Centre line: average closed 1.0% vanilla and 1.9% Larion, no ravine over 20% closed, no level fully sealed | measured |
+| Density function cost: about 1.2 microseconds per sample, the same as before | measured in a unit-test harness |
+| NeoForge dedicated server, seed 20261003: 5 stem points found inside the shaft by the code are solid blocks, 3 open-air controls are air; boots with no errors | yes |
+
+Not verified: nothing was looked at in game or rendered; the checks are single-block probes in one ravine; Fabric and Larion
+not run; where terrain is already open the carve cannot add the rock. Because the stems sit at the disc centres, inside the
+wall, they change the shaft only slightly (about 1 to 3% of its volume); a larger `funnel_scale` makes the flare bolder.
 
 ## 8. Next steps
 
