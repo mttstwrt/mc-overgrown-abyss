@@ -5,7 +5,7 @@ package dev.syrval.overgrownabyss.ravine;
  * The volume is the ravine shaft from the floor upwards, a domed cavern centred on the cell whose floor is flat, and the
  * disc rooms cut sideways into the shaft's walls (see {@link RavineDomes}). Each room then gets its floor slab put back
  * as rock: it keeps the floor solid where lower rooms' domes would cut up through it, and the part of it that lies in
- * the shaft is a ledge. A room's reach into the shaft is limited by setting its centre back, never by cutting it off. The
+ * the shaft is a ledge. The disc stems (see {@link RavineStems}) are put back with them. A room's reach into the shaft is limited by setting its centre back, never by cutting it off. The
  * shaft follows a centre line that bends in plan view and sways sideways with height, and narrows towards the floor.
  *
  * <p>These are distance estimates, exact for a straight shaft and close for gentle curves, which is all the carve
@@ -24,11 +24,12 @@ public final class RavineShape {
         double shaft = shaftDistance(settings, bounds, cell, frame, y);
         double cavern = cavernDistance(settings, bounds, radial, y);
         Rooms rooms = discDistance(settings, bounds, cell, frame, radial, y);
-        // A stem only changes anything inside the shaft or within the carve's falloff of it, so skip the search elsewhere.
-        double stem = shaft >= settings.edgeFalloff() ? Double.POSITIVE_INFINITY : RavineStems.distance(settings, bounds, cell, frame, x, y, z);
-        // Stems are rock put back into the shaft, but rooms are carved after them so a stem never fills a room. Slabs are
-        // put back last. Neither is subtracted from the cavern, so they never close its roof.
-        double walls = Math.max(Math.min(Math.max(shaft, -stem), rooms.dome()), -rooms.slab());
+        // Rooms are carved first. Stems and slabs are rock put back afterwards, so a stem is never cut off by the dome of a
+        // room it passes through. Neither is subtracted from the cavern, so they never close its roof.
+        double open = Math.min(shaft, rooms.dome());
+        // A stem only changes anything in open air or within the carve's falloff of it, so skip the search elsewhere.
+        double stem = open >= settings.edgeFalloff() ? Double.POSITIVE_INFINITY : RavineStems.distance(settings, bounds, cell, frame, x, y, z);
+        double walls = Math.max(Math.max(open, -rooms.slab()), -stem);
         return Math.min(walls, cavern);
     }
 
@@ -141,6 +142,15 @@ public final class RavineShape {
         double t = Math.clamp((y - bounds.floorY()) / (double) (bounds.topY() - bounds.floorY()), 0, 1);
         double shift = cell.lean().shift(t);
         return cell.frame(x - shift * cell.lean().dirX(), z - shift * cell.lean().dirZ());
+    }
+
+    /** The inverse of {@link #leanedFrame}: the world {@code {x, z}} of a position in the leaned frame at height {@code y}. */
+    static double[] worldOf(RavineBounds bounds, RavineCell cell, double along, double sideways, double y) {
+        double t = Math.clamp((y - bounds.floorY()) / (double) (bounds.topY() - bounds.floorY()), 0, 1);
+        double shift = cell.lean().shift(t);
+        return new double[] {
+            cell.centreX() + along * cell.dirX() - sideways * cell.dirZ() + shift * cell.lean().dirX(),
+            cell.centreZ() + along * cell.dirZ() + sideways * cell.dirX() + shift * cell.lean().dirZ()};
     }
 
     /** Position along the chord as a fraction of the half length in [-1, 1]; a round hole has no length, so 0. */

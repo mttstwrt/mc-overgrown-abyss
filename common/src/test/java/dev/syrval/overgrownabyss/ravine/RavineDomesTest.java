@@ -96,7 +96,7 @@ class RavineDomesTest {
                 }
             }
         }
-        assertTrue(open > total * 0.5, open + " of " + total + " points just inside the wall are open");
+        assertTrue(open > total * 0.4, open + " of " + total + " points just inside the wall are open");
     }
 
     @Test
@@ -137,7 +137,7 @@ class RavineDomesTest {
     @Test
     void aDiscThatWouldReachTooFarIsSetBackAndStaysAFullRound() {
         RavineCell narrow = new RavineCell(0, 0, 1, 0, 150, 25, RavineCell.Bend.NONE, RavineCell.Lean.NONE, 5L);
-        RavineSettings settings = RavineShapeTest.withDiscs(new RavineDiscs(45, 20, 50, 50, 0.45F, 14, 12, 0F, 0F, 4, 0F, 0F, 4F, 0F, 2.5F, 6F));
+        RavineSettings settings = RavineShapeTest.withDiscs(new RavineDiscs(45, 20, 50, 50, 0.45F, 14, 12, 0F, 0F, 4, 0F, 0F, 4F, 0F, 2.5F, 1.5F));
         var room = RavineDomes.at(settings, BOUNDS, narrow, 1, 0, 3).orElseThrow();
         double half = RavineShape.halfWidthAt(settings, BOUNDS, narrow, room.floor());
         assertEquals(50, room.radius(), 1e-9);
@@ -153,7 +153,7 @@ class RavineDomesTest {
 
     @Test
     void rowsOnTheSecondWallSitHigherByTheStagger() {
-        RavineDiscs discs = new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 0F, 0F, 4F, 0.5F, 2.5F, 6F);
+        RavineDiscs discs = new RavineDiscs(45, 20, 20, 50, 0.45F, 14, 12, 0F, 0.4F, 4, 0F, 0F, 4F, 0.5F, 2.5F, 1.5F);
         RavineSettings settings = RavineShapeTest.withDiscs(discs);
         int compared = 0;
         for (int row = 0; row < 3; row++) {
@@ -171,7 +171,7 @@ class RavineDomesTest {
 
     @Test
     void floorsOfNeighbouringRowsStayAtLeastTheMinimumApart() {
-        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0F, 4F, 0.5F, 2.5F, 6F);
+        RavineDiscs discs = new RavineDiscs(40, 20, 22, 55, 0.45F, 14, 12, 0.4F, 0.75F, 4, 0.4F, 0F, 4F, 0.5F, 2.5F, 1.5F);
         RavineSettings settings = RavineShapeTest.withDiscs(discs);
         double minimum = (1 - discs.rowJitter()) * discs.rowSpacing();
         int compared = 0;
@@ -194,7 +194,7 @@ class RavineDomesTest {
     void largerDiscsSitFurtherBackAndReachLessWhileSmallerOnesReachFurthestIn() {
         // The shipped offsets, with the overshoot limit switched off so only the setback decides the reach.
         RavineSettings settings = RavineShapeTest.withDiscs(
-                new RavineDiscs(45, 20, 20, 48, 0.45F, 14, 12, 0F, 0.1F, 4, 0.4F, 0.8F, 256F, 0.5F, 2.5F, 6F));
+                new RavineDiscs(45, 20, 20, 48, 0.45F, 14, 12, 0F, 0.1F, 4, 0.4F, 0.8F, 256F, 0.5F, 2.5F, 1.5F));
         double smallOffsets = 0;
         double largeOffsets = 0;
         double smallReach = 0;

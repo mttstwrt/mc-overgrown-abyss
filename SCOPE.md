@@ -638,6 +638,38 @@ new defaults.
 Not verified: nothing rendered or looked at in game; Fabric and Larion not run. With big discs set deeper the stems' flared
 tops show less in the shaft than before.
 
+### Stems win over domes
+
+Owner (with a sketch): the stems were being cut off by the domes of rooms underneath. The sketch shows T-shaped stems standing
+in the rooms below, a thin cap with a curved fillet narrowing to a column that lands on the floor beneath.
+
+- **Order of the carve:** rooms first, then the slabs and the stems are put back as rock (`max(max(shaft or dome, -slab), -stem)`).
+  Before, rooms were carved after the stems, so a dome erased a stem where they met. The cavern is still not subtracted
+  from, so the city's cavern is untouched.
+- **Where a stem ends:** on the floor slab of the highest lower disc whose footprint holds its axis (it ends flush under that
+  slab, so it merges into the floor), or at the chasm floor if there is none. This brings back the "lands on the disc
+  below" stop, which I had removed one change earlier; the sketch shows stems ending on the floor below.
+- **Flare:** `funnel_scale` 6 to 1.5. At 6 a stem is a wide cone, which would fill the rooms now that it is no longer cut by
+  them; at 1.5 it is a short fillet (radius under 7 by 10 blocks down) that then runs as a thin column.
+- The "skip the stem search" shortcut now skips only where both the shaft and the rooms are further than the carve's falloff.
+
+Measured with the shipped numbers on 900 ravines: centre line closed 0.6% (vanilla height) and 1.2% (Larion), no level sealed,
+about 1.2 microseconds per density sample (unchanged). The share of points just inside the wall that are open fell from about
+56% to 46%, because stems and slabs now take rock out of the rooms; the unit test's bar for that is now 40%.
+
+Rendered cross-sections of the generated shape (white air, black rock) show a stem passing through a lower room and ending on
+its floor slab, and curved fillets under slabs. They do not look like the sketch: our rooms are flatter (dome height 0.45 of the
+radius) and each stem sits at its disc's centre, which is inside the wall, so mostly only the fillet shows and the thin
+column is in the rock.
+
+| Check | Result |
+|---|---|
+| Unit tests (47): the profile is a short hyperbolic fillet capped at 2.5; a stem with nothing under it runs to the chasm floor; a stem is solid rock inside the dome of the room it passes through; it ends at the slab of the disc it lands on; a flared stem is solid under a ledge; earlier tests | pass (`./gradlew build`) |
+| NeoForge dedicated server, seed 20261003: boots, 143 chunks generated, no errors | yes |
+
+Not verified: nothing was looked at in game (the renders are 2D slices of the density function, not generated blocks); the
+block probe of stems was not repeated for this change; Fabric and Larion not run.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
