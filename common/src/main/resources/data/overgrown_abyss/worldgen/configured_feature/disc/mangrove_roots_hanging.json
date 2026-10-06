@@ -1,7 +1,7 @@
 {
   "type": "minecraft:random_patch",
   "config": {
-    "tries": 14,
+    "tries": 6,
     "xz_spread": 2,
     "y_spread": 1,
     "feature": {
@@ -17,9 +17,25 @@
           "layers": [
             {
               "height": {
-                "type": "minecraft:uniform",
-                "min_inclusive": 1,
-                "max_inclusive": 6
+                "type": "minecraft:weighted_list",
+                "distribution": [
+                  {
+                    "data": {
+                      "type": "minecraft:uniform",
+                      "min_inclusive": 1,
+                      "max_inclusive": 3
+                    },
+                    "weight": 6
+                  },
+                  {
+                    "data": {
+                      "type": "minecraft:uniform",
+                      "min_inclusive": 3,
+                      "max_inclusive": 9
+                    },
+                    "weight": 2
+                  }
+                ]
               },
               "provider": {
                 "type": "minecraft:simple_state_provider",

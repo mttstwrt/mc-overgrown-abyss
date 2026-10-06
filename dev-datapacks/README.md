@@ -63,9 +63,16 @@ The mod's own hole is now the cone: a single round hole, `base_radius` 150 at th
   none is put where the ground beside it is lower, which leaves a one-block dam wherever the bowl steps down. A theme with water
   needs a palette for the ground that holds it (`depth` + 1 blocks of `top`, or a `body`).
 - `growth`: configured features of the theme's own, each placed on average once per `every` blocks of where it grows: `on` is
-  `top` (dry ground, the default), `water` (the bed of a pond or stream, where a mangrove starts) or `underside`. They are placed
-  in the order listed, so vines listed after trees find the trees there, and before what the theme inherits, as vanilla grows a
-  biome's trees before its grass.
+  `top` (dry ground, the default), `water` (the bed of a pond or stream, where a mangrove starts) or `underside` (under the
+  disc's lowest rock, which under most of a standing disc is the flare of its stem). They are placed in the order listed, so
+  vines listed after trees find the trees there, and before what the theme inherits, as vanilla grows a biome's trees before
+  its grass.
+  - `patches` (optional, `size` and `cover`) gathers a growth into patches about `size` blocks across that take up `cover` of
+    the surface (0.4 is two fifths), thickest in their middles and thinning to nothing at their edges, with none between. The
+    average over a disc stays one per `every` (a few percent under), so a smaller cover makes each patch thicker: at their
+    middles `2 / cover` times the average. Growths given patches of the same `size` share them, so trees with covers of 0.4,
+    0.6 and 0.8 stand in one grove, the first at its heart and the last out to its edges. Each disc has patches of its own.
+    Without `patches` a growth is spread evenly.
 
 The mod's own themes:
 
@@ -74,22 +81,29 @@ The mod's own themes:
   dirt, a few small ponds and streams, and its own growth: giant and ordinary jungle trees, bushes, ferns, vines, glow berries
   in the canopy, and under the disc glow berries, tufts of leaves and vines.
 - `disc_mangrove` inherits from `minecraft:mangrove_swamp` (favours the wide low discs). Mud over packed mud, about two fifths of
-  it shallow water, mangroves on the mud and (mostly the tall kind, which stands high on its roots) in the water, and under the
-  disc glow berries and hanging clumps of mangrove roots with vines; its stem is clad in roots.
+  it shallow water. Its trees stand in groves about 40 blocks across with clearings between: giant mangroves at the hearts of
+  the groves, on mud and in water, raised 5 to 8 blocks on roots a player can walk under; tall mangroves round them; short ones
+  only on the mud, out to the groves' edges. Under the disc, patches of hanging mangrove roots draped with vines, and glow
+  berries in patches of their own; its stem is clad in roots.
 
-Both are thinned so that a player can walk through: bushes, trunks, roots and low leaves stand in about a quarter of the
-ground, counting a place as blocked if either of the two blocks a player takes up is. The numbers to change are the `every`
-of the bushes and trees in each theme's `growth` (larger is thinner); ferns and grass do not block and can stay thick.
+Both are thinned so that a player can walk through: on the jungle discs bushes, trunks, roots and low leaves stand in about a
+quarter of the ground, counting a place as blocked if either of the two blocks a player takes up is. The numbers to change are
+the `every` of the bushes and trees in each theme's `growth` (larger is thinner) and, for the mangrove's groves, their `cover`
+(smaller leaves more clearing); ferns and grass do not block and can stay thick. The mangrove's groves have not been measured
+this way yet.
 - `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and kept to small discs
   in the outer half, which the layout puts behind larger discs.
 
 Jungle and mangrove grow their own trees because the parent's may not grow on a disc at all: an overworld overhaul such as
 William Wythers' Overhauled Overworld replaces those biomes with trees that only grow at certain heights above sea level and on
 soils its own terrain lays down. The disc's trees are vanilla's, kept under the mod's own ids
-(`data/overgrown_abyss/worldgen/configured_feature/disc/`) so that such a pack cannot change them, with two changes: more vines
+(`data/overgrown_abyss/worldgen/configured_feature/disc/`) so that such a pack cannot change them, with these changes: more vines
 hanging from their leaves; a `min_clipped_height`, so that a tree under a low part of the dome grows as tall as there is
-room instead of not at all; and a block more of trunk on the jungle tree and the short mangrove, which lifts their lowest
-leaves over a player's head. Vanilla's own tree feature is left out of what is inherited (`without_features`), or a disc would be
+room instead of not at all; a block more of trunk on the jungle tree and the short mangrove, which lifts their lowest
+leaves over a player's head; and root arms up to 24 blocks long on the tall mangrove (vanilla's 15 is too short for a trunk
+raised 7 blocks to reach the mud, and the tree is given up). `mangrove_giant` is the mod's own: the tall mangrove with its
+trunk raised 5 to 8 blocks, root arms that spread wider (`max_root_width` 10) and reach further (32), a trunk of 7 to 16 and a
+larger crown. It needs room for a trunk of at least 6 over its roots, so it grows under the higher parts of a dome. Vanilla's own tree feature is left out of what is inherited (`without_features`), or a disc would be
 twice as thick with trees without such a pack as with it. Everything else is still inherited: grass, flowers, melons, lily pads
 and whatever other mods add. With no themes every disc is the terrain's own rock in the biome it lies in.
 

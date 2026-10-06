@@ -1207,6 +1207,86 @@ natural fluids entering the hole are fine; `ceiling_margin` is the setting that 
 Not verified: nothing was looked at in game. A quarter of the ground blocked is a number, not a walk: whether it feels right
 is the owner's to judge.
 
+### Mangrove discs: roots under the whole disc, groves and giant mangroves
+
+Owner, after seeing the mangrove discs in game: the roots under a disc only appear around the thinnest segments of its rings,
+usually just the outer one, and they are too thick; wanted are roots of uneven density, trees of uneven density on top, and a
+preference for the largest mangroves, with roots large enough to walk under.
+
+**Why the roots kept to the rim.** What hangs under a disc was started in the block under the platform's underside. Under a
+standing disc that block is mostly rock: the stem's flare is as wide as the disc right under the platform and narrows from
+there (`funnel_scale` 1.5), so it fills that block out to about 0.6 of the radius, and further out it fills it in the inner
+part of each step of the bowl, where the underside lies just over a whole block. `DiscGrower` found the place taken and grew
+nothing. Counted from the code for the shipped shape (placed discs at the full bowl depth for their size), the share of
+columns where something could hang, by part of the radius:
+
+| Radius | 0 to 0.6 | 0.6 to 0.7 | 0.7 to 0.8 | 0.8 to 0.9 | 0.9 to the rim |
+|---|---|---|---|---|---|
+| 30 | 0% | 33% | 70% | 39% | 100% |
+| 48 | 0% | 0% | 73% | 55% | 100% |
+| 64 | 0% | 39% | 27% | 73% | 100% |
+
+Now it is every column but the stem itself. This applied to every theme, so jungle and crystal discs, and the
+`tuned-themes` pack, also grow under the whole disc now, at the same rate per block as before at the rim.
+
+**What changed.**
+
+- **What hangs starts under the disc's lowest rock** (`Disc.hangBlockAt`): under the flare where there is one (the flare's
+  radius `radius * funnel / (depth + funnel)` turned round for the depth), under the platform of a hanging disc, and not at
+  all in the stem's own columns. A stem that lands on a lower disc is cut off there, flare and all, and so is the place.
+- **Patches** (`DiscTheme.Patches`, a growth's optional `patches`): a smooth value per disc and patch size is turned into its
+  share of all such values (`RavineCells.shareBelow`, the inverse of the levels the ponds already used), and a growth's rate is
+  multiplied by a ramp over the top `cover` of that share: 0 below it, `2 / cover` at the top, 1 on average. So a growth keeps
+  its `every` over a disc while leaving `1 - cover` of it bare. Patches of the same size are the same patches, which nests the
+  covers: the giant mangroves fill the middles of the groves the smaller trees spread out from. The smooth-value levels and the
+  turned grid moved from `DiscWater` to `RavineCells`, now that two things use them.
+- **Giant mangrove** (`disc/mangrove_giant`): the tall mangrove with its trunk raised 5 to 8 blocks on its roots (3 to 7),
+  root arms that spread out further before they turn down (`max_root_width` 10, was 8) and may be 32 long, a trunk of 7 to 16
+  (4 to 14) with longer branches, a crown of radius 4 (3) and 120 leaf tries (70). It needs room for 6 blocks of trunk over its
+  roots, so where a dome is low it is not grown and the smaller trees have the place.
+- **The tall mangrove's root arms may be 24 long** (vanilla's 15).
+- **Thinner root clumps** (`disc/mangrove_roots_hanging`): 6 tries (14), and strands mostly 1 to 3 roots long, a quarter of
+  them 3 to 9 (all 1 to 6 before), each still tipped with hanging roots.
+- **The mangrove theme's growth.** Trees in groves 40 across: giants every 40 blocks of mud and every 36 of water at a cover
+  of 0.45 and 0.5, tall mangroves every 80 of mud and 60 of water at 0.65, short ones every 60 of mud only at 0.8 (they were
+  every 24 of mud and 60 of water, evenly), which leaves a fifth of the top as clearings. Under the disc: glow berries every 16
+  in patches 10 across at 0.5, root clumps every 24 in patches 14 across at 0.45 (every 10 evenly), and vines every 30 in the
+  same patches as the roots at 0.6, so that they hang about the roots.
+
+**Root arms, simulated.** Mangroves are given up when a root arm needs more steps than `max_root_length` to reach the
+ground. A Python model of `MangroveRootPlacer` (`[recall; verify]`: written from memory of 1.21.1, not read from the jar)
+grew trees on open mud 2 deep over packed mud and asked whether a player could stand under the trunk and walk out (two
+blocks clear, no squeezing between corners):
+
+| Settings | Grown | Walk under the trunk | Clear height under the trunk |
+|---|---|---|---|
+| short mangrove (raised 1 to 3) | 99% | 33% | 2.0 |
+| tall mangrove as before (3 to 7, arms 15) | 64% | 99% | 3.4 |
+| tall mangrove now (arms 24) | 96% | 100% | 4.0 |
+| giant (5 to 8, width 10, arms 32) | 99% | 100% | 5.5 |
+
+The 64% agrees with the earlier server count that few tall mangroves grew. In a pond 2 deep, where a tree starts on the bed
+of packed mud, the arms have less far to go: tall mangroves grew 91% before and 100% now, and the giants 100%, their trunks on
+average 3.5 blocks over the water (tall ones 3.0), and 99% of them can be swum under at the surface (tall ones 59%).
+
+**Verification.** This round could not be built: the session's container was refused `maven.fabricmc.net`,
+`maven.architectury.dev`, `files.minecraftforge.net`, `maven.neoforged.net` and Mojang's servers by its network policy, so
+Gradle could not fetch Loom or Minecraft. What was run instead: the changed `Disc` compiled on its own (with `DiscShape`
+less its codec), and the new `DiscTest` checks held on it; the changed `RavineCells` methods and `Patches.weightAt`, copied
+out of the edited files, compiled and gave for the new tests' numbers an average weight of 0.97 with 70.5% of the surface
+bare at a cover of 0.3. Over six hashes and patch sizes 8, 14 and 40 the average was 3 to 6% under 1 (the levels table is
+coarse in its last twentieth) and the bare share within 0.017 of `1 - cover`. The vanilla limits used (`max_root_width` 1 to
+12, `max_root_length` 1 to 64, `base_height` 0 to 32, foliage `radius` 0 to 16, `min_clipped_height` 0 to 80) were read from
+SpyglassMC's `vanilla-mcdoc`, not the jar.
+
+Not verified: `./gradlew build` and the unit tests (three new, one moved), both dedicated servers, and anything in game. To
+measure: things hanging inside 0.6 of the radius under mangrove discs; giant mangroves grown at their places and the clear
+height under them; the share of the mangrove top blocked at foot or head height (a quarter before) inside and outside the
+groves; how many more things now hang under jungle and crystal discs.
+
+Limits: near the stem the flare is steep, so what hangs from it starts well under the platform (about 13 blocks down 0.1 of
+the radius from the axis), below the margin of the disc's biome; vines there take the colour of the biome around the disc.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

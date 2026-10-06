@@ -227,22 +227,46 @@
       },
       "growth": [
         {
-          "feature": "overgrown_abyss:disc/mangrove_tall",
-          "every": 70
+          "feature": "overgrown_abyss:disc/mangrove_giant",
+          "every": 40,
+          "patches": {
+            "size": 40,
+            "cover": 0.45
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/mangrove_giant",
+          "every": 36,
+          "on": "water",
+          "patches": {
+            "size": 40,
+            "cover": 0.5
+          }
         },
         {
           "feature": "overgrown_abyss:disc/mangrove_tall",
-          "every": 32,
-          "on": "water"
+          "every": 80,
+          "patches": {
+            "size": 40,
+            "cover": 0.65
+          }
         },
         {
-          "feature": "overgrown_abyss:disc/mangrove",
-          "every": 24
+          "feature": "overgrown_abyss:disc/mangrove_tall",
+          "every": 60,
+          "on": "water",
+          "patches": {
+            "size": 40,
+            "cover": 0.65
+          }
         },
         {
           "feature": "overgrown_abyss:disc/mangrove",
           "every": 60,
-          "on": "water"
+          "patches": {
+            "size": 40,
+            "cover": 0.8
+          }
         },
         {
           "feature": "overgrown_abyss:disc/vines_hanging",
@@ -250,18 +274,30 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
-          "every": 9,
-          "on": "underside"
+          "every": 16,
+          "on": "underside",
+          "patches": {
+            "size": 10,
+            "cover": 0.5
+          }
         },
         {
           "feature": "overgrown_abyss:disc/mangrove_roots_hanging",
-          "every": 10,
-          "on": "underside"
+          "every": 24,
+          "on": "underside",
+          "patches": {
+            "size": 14,
+            "cover": 0.45
+          }
         },
         {
           "feature": "overgrown_abyss:disc/vines_hanging",
-          "every": 14,
-          "on": "underside"
+          "every": 30,
+          "on": "underside",
+          "patches": {
+            "size": 14,
+            "cover": 0.6
+          }
         }
       ]
     },

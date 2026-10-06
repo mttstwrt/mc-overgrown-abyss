@@ -50,10 +50,10 @@
     },
     "foliage_placer": {
       "type": "minecraft:random_spread_foliage_placer",
-      "foliage_height": 2,
-      "leaf_placement_attempts": 70,
+      "foliage_height": 3,
+      "leaf_placement_attempts": 120,
       "offset": 0,
-      "radius": 3
+      "radius": 4
     },
     "foliage_provider": {
       "type": "minecraft:simple_state_provider",
@@ -70,10 +70,10 @@
     "ignore_vines": true,
     "minimum_size": {
       "type": "minecraft:two_layers_feature_size",
-      "limit": 3,
+      "limit": 4,
       "lower_size": 0,
       "upper_size": 2,
-      "min_clipped_height": 5
+      "min_clipped_height": 6
     },
     "root_placer": {
       "type": "minecraft:mangrove_root_placer",
@@ -88,8 +88,8 @@
       },
       "mangrove_root_placement": {
         "can_grow_through": "#minecraft:mangrove_roots_can_grow_through",
-        "max_root_length": 24,
-        "max_root_width": 8,
+        "max_root_length": 32,
+        "max_root_width": 10,
         "muddy_roots_in": [
           "minecraft:mud",
           "minecraft:muddy_mangrove_roots"
@@ -116,26 +116,26 @@
       },
       "trunk_offset_y": {
         "type": "minecraft:uniform",
-        "max_inclusive": 7,
-        "min_inclusive": 3
+        "max_inclusive": 8,
+        "min_inclusive": 5
       }
     },
     "trunk_placer": {
       "type": "minecraft:upwards_branching_trunk_placer",
-      "base_height": 4,
+      "base_height": 7,
       "can_grow_through": "#minecraft:mangrove_logs_can_grow_through",
       "extra_branch_length": {
         "type": "minecraft:uniform",
-        "max_inclusive": 1,
+        "max_inclusive": 2,
         "min_inclusive": 0
       },
       "extra_branch_steps": {
         "type": "minecraft:uniform",
-        "max_inclusive": 6,
-        "min_inclusive": 1
+        "max_inclusive": 7,
+        "min_inclusive": 2
       },
-      "height_rand_a": 1,
-      "height_rand_b": 9,
+      "height_rand_a": 3,
+      "height_rand_b": 6,
       "place_branch_per_log_probability": 0.5
     },
     "trunk_provider": {
