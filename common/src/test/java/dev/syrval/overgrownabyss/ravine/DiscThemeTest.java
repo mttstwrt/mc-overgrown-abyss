@@ -239,8 +239,8 @@ class DiscThemeTest {
     @Test
     void aThemeGrowsThingsOnItsSurfacesAboutAsOftenAsItSays() throws Exception {
         RavineSettings base = shipped();
-        var onTop = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 50, DiscTheme.Surface.TOP);
-        var under = new DiscTheme.Growth(feature("minecraft:cave_vine"), 20, DiscTheme.Surface.UNDERSIDE);
+        var onTop = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 50, DiscTheme.Surface.TOP, Optional.empty());
+        var under = new DiscTheme.Growth(feature("minecraft:cave_vine"), 20, DiscTheme.Surface.UNDERSIDE, Optional.empty());
         var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(onTop, under));
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.ravine(), base.cone());
@@ -305,7 +305,7 @@ class DiscThemeTest {
                   "growth": [
                     {"feature": "overgrown_abyss:disc/amethyst_cluster", "every": 7},
                     {"feature": "minecraft:cave_vine", "every": 30, "on": "underside"},
-                    {"feature": "minecraft:mangrove", "every": 12, "on": "water"}
+                    {"feature": "minecraft:mangrove", "every": 12, "on": "water", "patches": {"size": 32.0, "cover": 0.25}}
                   ]
                 }
                 """);
@@ -315,8 +315,10 @@ class DiscThemeTest {
         assertEquals(DiscTheme.Ramp.EVEN, parsed.bySize(), "a ramp left out is even");
         assertTrue(parsed.palette().body().isPresent() && parsed.palette().top().isEmpty());
         assertEquals(DiscTheme.Surface.TOP, parsed.growth().get(0).on(), "things grow on the top unless told otherwise");
-        assertEquals(new DiscTheme.Growth(feature("minecraft:cave_vine"), 30, DiscTheme.Surface.UNDERSIDE), parsed.growth().get(1));
+        assertEquals(new DiscTheme.Growth(feature("minecraft:cave_vine"), 30, DiscTheme.Surface.UNDERSIDE, Optional.empty()), parsed.growth().get(1));
         assertEquals(DiscTheme.Surface.WATER, parsed.growth().get(2).on());
+        assertTrue(parsed.growth().get(0).patches().isEmpty(), "spread evenly unless given patches");
+        assertEquals(Optional.of(new DiscTheme.Patches(32, 0.25F)), parsed.growth().get(2).patches());
         assertEquals(Optional.of(new DiscWater(0.25F, 14, 2, 36, 1, 4)), parsed.water());
         assertEquals(json, DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, parsed).getOrThrow(), "and is written back the same");
         var onlyAWeight = JsonParser.parseString("{\"weight\": 2}");
@@ -326,6 +328,72 @@ class DiscThemeTest {
         var bad = json.getAsJsonObject().deepCopy();
         bad.getAsJsonArray("growth").get(0).getAsJsonObject().addProperty("every", 0);
         assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, bad).isError(), "growth on every block of none");
+        var coversNothing = json.getAsJsonObject().deepCopy();
+        coversNothing.getAsJsonArray("growth").get(2).getAsJsonObject().getAsJsonObject("patches").addProperty("cover", 0);
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, coversNothing).isError(), "patches that cover nothing");
+    }
+
+    @Test
+    void aGrowthInPatchesKeepsItsAverageButLeavesTheRestOfTheSurfaceBare() {
+        var groves = new DiscTheme.Patches(8, 0.3F);
+        var edges = new DiscTheme.Patches(8, 0.6F);
+        var other = new DiscTheme.Patches(12, 0.3F);
+        double sum = 0;
+        int bare = 0;
+        int apart = 0;
+        int all = 0;
+        for (int x = 0; x < 800; x++) {
+            for (int z = 0; z < 800; z++) {
+                double weight = groves.weightAt(77L, 3, x, z);
+                assertTrue(weight >= 0 && weight <= 2 / 0.3 + 1e-6, "a weight of " + weight);
+                assertTrue(weight == 0 || edges.weightAt(77L, 3, x, z) > 0, "patches of the same size are the same patches, the smaller cover inside the larger");
+                sum += weight;
+                bare += weight == 0 ? 1 : 0;
+                apart += weight > 0 && other.weightAt(77L, 3, x, z) == 0 ? 1 : 0;
+                all++;
+            }
+        }
+        assertEquals(1, sum / all, 0.06, "on average as often as asked for");
+        assertEquals(0.7, bare / (double) all, 0.03, "and none of it in the seven tenths the patches do not cover");
+        assertTrue(apart > 0.5 * 0.3 * 0.7 * all, "patches of another size lie elsewhere");
+        assertTrue(groves.weightAt(77L, 3, 5, 5) != groves.weightAt(77L, 4, 5, 5) || groves.weightAt(77L, 3, 50, 50) != groves.weightAt(77L, 4, 50, 50),
+                "each disc has patches of its own");
+    }
+
+    @Test
+    void aThemeGrowsWhatItGivesPatchesOnlyInThosePatches() throws Exception {
+        RavineSettings base = shipped();
+        var patches = new DiscTheme.Patches(8, 0.3F);
+        var inPatches = new DiscTheme.Growth(feature("minecraft:mangrove"), 6, DiscTheme.Surface.TOP, Optional.of(patches));
+        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(inPatches));
+        RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
+                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.ravine(), base.cone());
+        RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
+        CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
+        Disc d = cellDiscs.layout().discs().get(0);
+        int[] places = {0};
+        for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - d.radius()), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + d.radius()), 16); chunkX++) {
+            for (int chunkZ = Math.floorDiv((int) Math.floor(d.z() - d.radius()), 16); chunkZ <= Math.floorDiv((int) Math.floor(d.z() + d.radius()), 16); chunkZ++) {
+                DiscGrowth.forEach(settings, cell, cellDiscs, chunkX * 16, chunkZ * 16, (x, y, z, feature, on) -> {
+                    double fromAxis = Math.hypot(x - d.x(), z - d.z());
+                    // Other discs grow things in these chunks too; this disc's are the ones on its own top.
+                    if (fromAxis <= d.radius() && y == d.topBlockAt(fromAxis) + 1) {
+                        assertTrue(patches.weightAt(cell.hash(), 0, x, z) > 0, "grown outside its patches at " + x + ", " + z);
+                        places[0]++;
+                    }
+                });
+            }
+        }
+        // A disc holds only a few dozen patches, so its own average strays from the one asked for; what each column was given is exact.
+        double expected = 0;
+        for (int x = (int) Math.floor(d.x() - d.radius()); x <= d.x() + d.radius(); x++) {
+            for (int z = (int) Math.floor(d.z() - d.radius()); z <= d.z() + d.radius(); z++) {
+                // Nothing grows within a block and a half of the rim (DiscGrowth.RIM).
+                expected += Math.hypot(x - d.x(), z - d.z()) <= d.radius() - 1.5 ? Math.min(1, patches.weightAt(cell.hash(), 0, x, z) / 6) : 0;
+            }
+        }
+        assertTrue(expected > 50, expected + " places expected");
+        assertEquals(expected, places[0], 0.25 * expected, "places on the top, one in 6 asked for where the patches are as thick as on average");
     }
 
     @Test
@@ -361,7 +429,7 @@ class DiscThemeTest {
     void whatGrowsInWaterStartsOnTheBedOfAPondAndNowhereElse() throws Exception {
         RavineSettings base = shipped();
         var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
-        var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER);
+        var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER, Optional.empty());
         var stone = new DiscPalette(List.of(), List.of(), base.discThemes().get(0).palette().body(), DiscPalette.UNPAINTED.stem());
         var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater));
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),

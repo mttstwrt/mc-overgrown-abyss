@@ -41,7 +41,8 @@ final class DiscGrowth {
                 for (int x = fromX; x <= toX; x++) {
                     for (int z = fromZ; z <= toZ; z++) {
                         double fromAxis = Math.hypot(x - disc.x(), z - disc.z());
-                        if (fromAxis > disc.radius() - RIM || RavineCells.unitAt(cell.hash(), GROWTH_HASH_BASE + i * MAX_GROWTHS + g, x, z) * each.every() >= 1) {
+                        double draw = RavineCells.unitAt(cell.hash(), GROWTH_HASH_BASE + i * MAX_GROWTHS + g, x, z) * each.every();
+                        if (fromAxis > disc.radius() - RIM || draw >= each.weightAt(cell.hash(), i, x, z)) {
                             continue;
                         }
                         OptionalInt y = placeOn(each.on(), theme.get(), disc, shape, cell.hash(), i, x, z, fromAxis);

@@ -137,15 +137,45 @@ public record DiscTheme(
 
     /**
      * A feature grown on one surface of the platform: on average one for every {@code every} blocks of that surface. The feature
-     * is placed in the open block on the surface (over dry ground, or under the underside), so it must be one that grows from
-     * there. In water it is placed in the lowest block of the water, as vanilla starts a tree that stands in water on its bed.
+     * is placed in the open block on the surface (over dry ground, or under the disc's lowest rock), so it must be one that
+     * grows from there. In water it is placed in the lowest block of the water, as vanilla starts a tree that stands in water
+     * on its bed. Without {@code patches} it is spread evenly.
      */
-    public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, Surface on) {
+    public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, Surface on, Optional<Patches> patches) {
         static final Codec<Growth> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(Growth::feature),
                 Codec.intRange(1, 100_000).fieldOf("every").forGetter(Growth::every),
-                Surface.CODEC.optionalFieldOf("on", Surface.TOP).forGetter(Growth::on)
+                Surface.CODEC.optionalFieldOf("on", Surface.TOP).forGetter(Growth::on),
+                Patches.CODEC.optionalFieldOf("patches").forGetter(Growth::patches)
         ).apply(i, Growth::new));
+
+        /** How many times its average rate this grows in one column of the {@code index}-th disc of a hole. */
+        double weightAt(long hash, int index, int x, int z) {
+            return patches.map(found -> found.weightAt(hash, index, x, z)).orElse(1.0);
+        }
+    }
+
+    /**
+     * Where on a disc a growth gathers: in patches about {@code size} blocks across that take up {@code cover} of the surface,
+     * thickest in their middles and thinning to nothing at their edges, with none of it between them. The growth keeps its
+     * average over the whole disc, so the less it covers the thicker its patches: twice the average in the middle of patches
+     * that cover everything, ten times in those that cover a fifth.
+     *
+     * <p>Growths with patches of the same size share them on a disc, so trees given different covers stand in the same groves,
+     * the one with the least cover at their hearts. Each disc has patches of its own.
+     */
+    public record Patches(float size, float cover) {
+        private static final int HASH_BASE = 500_000;
+        static final Codec<Patches> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.floatRange(4, 256).fieldOf("size").forGetter(Patches::size),
+                Codec.floatRange(0.05F, 1).fieldOf("cover").forGetter(Patches::cover)
+        ).apply(i, Patches::new));
+
+        // A smooth value's share is spread evenly from 0 to 1, so a ramp over the top cover of it averages a half of its height.
+        double weightAt(long hash, int index, int x, int z) {
+            double share = RavineCells.shareBelow(RavineCells.smoothOver(hash, HASH_BASE + index, x, z, size));
+            return 2 * Math.max(0, share - (1 - cover)) / (cover * cover);
+        }
     }
 
     public static final Codec<DiscTheme> CODEC = RecordCodecBuilder.<DiscTheme>create(i -> i.group(
