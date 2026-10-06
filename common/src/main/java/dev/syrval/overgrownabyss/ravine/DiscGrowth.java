@@ -54,11 +54,12 @@ final class DiscGrowth {
         }
     }
 
-    // The block a growth starts in: the open one over the top block or under the lowest block, or the lowest block of water.
+    // The block a growth starts in: the open one over the top block or under the disc's lowest rock (the stem's flare under
+    // most of a standing disc), or the lowest block of water.
     private static OptionalInt placeOn(DiscTheme.Surface on, DiscTheme theme, Disc disc, DiscShape shape, long hash, int index, int x, int z, double fromAxis) {
         return switch (on) {
             case TOP -> OptionalInt.of(disc.topBlockAt(fromAxis) + 1);
-            case UNDERSIDE -> OptionalInt.of((int) Math.floor(disc.undersideAt(shape, fromAxis)));
+            case UNDERSIDE -> disc.hangBlockAt(shape, fromAxis);
             case WATER -> {
                 int depth = theme.water().map(water -> water.depthAt(disc, hash, index, x, z)).orElse(0);
                 yield depth > 0 ? OptionalInt.of(disc.topBlockAt(fromAxis) - depth + 1) : OptionalInt.empty();

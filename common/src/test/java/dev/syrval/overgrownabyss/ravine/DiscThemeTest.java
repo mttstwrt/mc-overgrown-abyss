@@ -265,6 +265,7 @@ class DiscThemeTest {
         assertEquals(places, again, "the same places every time");
         int tops = 0;
         int undersides = 0;
+        int inner = 0;
         for (Place place : places) {
             // Other discs of the cell grow things in these chunks too; count the ones on this disc.
             double fromAxis = Math.hypot(place.x() - d.x(), place.z() - d.z());
@@ -275,14 +276,18 @@ class DiscThemeTest {
                 assertTrue(d.platformDistance(settings.discs(), place.x(), place.y() - 1, place.z()) < 0, "the block under the place is the platform's top");
                 assertTrue(d.platformDistance(settings.discs(), place.x(), place.y(), place.z()) >= 0, "and the place itself is over it");
                 tops++;
-            } else if (place.on() == DiscTheme.Surface.UNDERSIDE && place.y() == (int) Math.floor(d.undersideAt(settings.discs(), fromAxis))) {
-                assertTrue(d.platformDistance(settings.discs(), place.x(), place.y() + 1, place.z()) < 0, "the block over the place is the platform's underside");
+            } else if (place.on() == DiscTheme.Surface.UNDERSIDE && place.y() == d.hangBlockAt(settings.discs(), fromAxis).orElse(Integer.MIN_VALUE)) {
+                // Under the middle of a standing disc the lowest rock is the stem's flare, not the platform.
+                assertTrue(d.rockDistance(settings.discs(), place.x(), place.y() + 1, place.z()) < 0, "the block over the place is the disc's rock");
+                assertTrue(d.rockDistance(settings.discs(), place.x(), place.y(), place.z()) >= 0, "and the place itself is open");
                 undersides++;
+                inner += fromAxis < d.radius() / 2 ? 1 : 0;
             }
         }
         double area = Math.PI * d.radius() * d.radius();
         assertTrue(tops > 0.5 * area / 50 && tops < 1.6 * area / 50, tops + " places on a top of " + Math.round(area) + " blocks, one in 50 asked for");
         assertTrue(undersides > 0.5 * area / 20 && undersides < 1.6 * area / 20, undersides + " places under it, one in 20 asked for");
+        assertTrue(inner > 0.5 * undersides / 4, inner + " of them under the inner half of the radius, a quarter of the area");
     }
 
     @Test

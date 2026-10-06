@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
 
 /** The disc, whatever geometry placed it: its dome, platform and stem or root, and how stems and roots end. */
@@ -220,6 +221,29 @@ class DiscTest {
         double top30 = d.topAt(30);
         assertEquals(Optional.of(new DiscPoint.Platform(top30 - 21, 21 - (top30 - 4))), d.pointAt(SHAPE, 30, 21, 0), "depths are measured from the bowl's two faces");
         assertThrows(IllegalArgumentException.class, () -> new Disc(0, 0, 20, 40, 18, -1, Disc.Support.Standing.TO_THE_FLOOR));
+    }
+
+    @Test
+    void whatHangsFromADiscStartsUnderItsLowestRockFlareAndAll() {
+        Disc standing = new Disc(0, 0, 20, 40, 18, 3, Disc.Support.Standing.TO_THE_FLOOR);
+        Disc landed = standing.withSupport(new Disc.Support.Standing(12.5));
+        Disc hanging = standing.withSupport(new Disc.Support.Hanging(60, 60));
+        for (int x = 0; x <= 38; x++) {
+            for (Disc d : List.of(standing, landed, hanging)) {
+                OptionalInt y = d.hangBlockAt(SHAPE, x);
+                if (y.isEmpty()) {
+                    assertTrue(d != hanging && x <= SHAPE.stemRadiusFor(40), "nowhere to hang from at " + x);
+                    continue;
+                }
+                assertTrue(d.rockDistance(SHAPE, x, y.getAsInt(), 0) >= 0, "the place is open at " + x);
+                assertTrue(d.rockDistance(SHAPE, x, y.getAsInt() + 1, 0) < 0, "under the disc's rock at " + x);
+            }
+        }
+        double underside = standing.undersideAt(SHAPE, 10);
+        assertTrue(standing.rockDistance(SHAPE, 10, Math.floor(underside), 0) < 0, "under the middle the flare fills the block under the platform");
+        assertTrue(standing.hangBlockAt(SHAPE, 10).getAsInt() < Math.floor(underside) - 3, "so what hangs starts under the flare");
+        assertEquals((int) Math.floor(hanging.undersideAt(SHAPE, 10)), hanging.hangBlockAt(SHAPE, 10).getAsInt(), "a hanging disc has no flare");
+        assertEquals(12, landed.hangBlockAt(SHAPE, 10).getAsInt(), "a stem that lands is cut off with its flare");
     }
 
     @Test

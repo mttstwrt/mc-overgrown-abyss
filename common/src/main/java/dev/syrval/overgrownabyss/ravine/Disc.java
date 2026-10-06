@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * One disc, in world coordinates with a vertical axis, whatever geometry placed it: the middle of its platform's top is at
@@ -81,6 +82,26 @@ record Disc(double x, double z, double floor, double radius, double height, doub
     /** Height of the platform's underside there: it follows the top, so the platform is as thick at the rim as in the middle. */
     double undersideAt(DiscShape shape, double fromAxis) {
         return topAt(fromAxis) - shape.floorThickness();
+    }
+
+    /**
+     * Height of the open block right under the disc's rock {@code fromAxis} blocks from its axis, where what hangs from the
+     * disc starts, or empty where that column is the stem itself. A standing disc's stem flares out to the platform's whole
+     * width, so under all but the rim the lowest rock is the flare's, below the platform's underside.
+     */
+    OptionalInt hangBlockAt(DiscShape shape, double fromAxis) {
+        double underside = undersideAt(shape, fromAxis);
+        if (!(support instanceof Support.Standing standing)) {
+            return OptionalInt.of((int) Math.floor(underside));
+        }
+        if (fromAxis <= shape.stemRadiusFor(radius)) {
+            return OptionalInt.empty();
+        }
+        // The inverse of the flare's radius in stemRadiusAt: how far under the underside it is still wider than this column.
+        double flare = shape.funnelScale() * (radius / fromAxis - 1);
+        int below = (int) Math.floor(underside - flare);
+        // A stem that lands on a lower disc is cut off there, flare and all.
+        return OptionalInt.of(Double.isInfinite(standing.bottom()) ? below : Math.max(below, (int) Math.ceil(standing.bottom()) - 1));
     }
 
     /**
