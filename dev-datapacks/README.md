@@ -15,15 +15,16 @@ the mod's file. The log line `Ravine settings:` at world load shows which values
 
 ## Packs
 
-The mod's own hole is now the cone: a single round hole, as wide as the city cavern at the floor and narrowing to `top_radius`
-45, with free-standing discs in layers `layer_spacing` 20 apart around a clear cylinder of radius 8. Its numbers:
+The mod's own hole is now the cone: a single round hole, `base_radius` 150 at the floor (a little wider than the city cavern's
+136) and narrowing to `top_radius` 45, with free-standing discs in layers `layer_spacing` 20 apart around a clear cylinder of radius 8. Its numbers:
 
 - Discs: radius 20 to 64, whatever room the cone has at the disc's height. A disc too large for the cone there sits against
   the clear cylinder and cuts its dome into the rock around the cone. `base_clearance` -16 starts the lowest layer 16 blocks
   under the cavern roof, in the cavern's airspace over the city.
-- Riders: discs standing on top of other discs, outside the cone, inside the dome of the disc under them. Each place on a disc
-  (larger discs have more) holds one with `rider_chance` 0.6; a rider's radius is at most `rider_scale` 0.6 of the radius of the
-  disc it stands on, and a rider may carry riders of its own. 0 keeps every disc in the ring around the cone.
+- Riders: discs standing on top of other discs, outside the cone. A rider stands near its host's outer edge, on the side away
+  from the middle of the cone, inside the host's dome; its own dome rises through the host's roof into the rock beyond. Each
+  place on a disc (larger discs have more) holds one with `rider_chance` 0.5; a rider's radius is at most `rider_scale` 0.6 of
+  its host's, and a rider may carry riders of its own. 0 keeps every disc in the ring around the cone.
 - `outer_radius` 200: nothing of any disc lies further than this from the middle of the cone.
 - Stems: `stem_fraction` 0.05 of the disc's radius, kept between `min_stem_radius` 1 (2 blocks across) and `max_stem_radius` 3
   (6 across). `funnel_scale` 1.5 flares the stem out to the disc's width under the platform.
@@ -33,15 +34,29 @@ The mod's own hole is now the cone: a single round hole, as wide as the city cav
 - Hanging: `hang_chance` 0.35, so about a third of the discs are drawn to hang from a root, and do so where they have a
   ceiling. `root_spread` 3 and `root_scale` 4 shape the root (3 stem radii wide where it meets the ceiling, half that 4 blocks
   away).
-- Materials: one mossy palette.
+- Themes: four, see below.
 
-`disc_palettes` (optional, see `DiscPalette`) is what discs are made of: each disc takes one palette by `weight`, and a palette
-gives blocks for the platform's `top` and `underside` (layers counted in from the surface), its `body`, and the `stem`
-(`surface` layers and `core`). Each block is a vanilla block-state provider, so it can be one block, a weighted mix or noise
-patches. A part left out, and every disc when there are no palettes, stays the terrain's own rock.
+`disc_themes` (optional, see `DiscTheme`) are the kinds of disc. Each disc is given one by a weighted draw, and a theme sets:
 
-- `cone`: the mod's own file plus a second palette in plain concrete (weight 1 against the mossy palette's 2: white top, black
-  underside, light grey body, orange stem surface, yellow stem core) that makes each part of a disc easy to tell apart.
+- `biome`: the biome stamped over the disc's dome and platform. It colours grass, leaves and water, decides what spawns, and
+  keeps the surrounding biome's features off the disc. The mod's own are in `data/overgrown_abyss/worldgen/biome/`.
+- `weight`, and three optional ramps that multiply it by where the disc is among the discs of its own hole: `by_height`
+  (`bottom` to `top`), `by_distance` (`centre` to `edge`) and `by_size` (`small` to `large`).
+- `only`: optional hard limits on the same three traits, each from 0 to 1, as `min` and `max`. A disc outside them never gets
+  the theme: `"only": {"distance": {"min": 0.55}, "size": {"max": 0.4}}` keeps a theme to small discs far from the centre.
+- `palette`: what the disc is made of. Blocks for the platform's `top` and `underside` (layers counted in from the surface), its
+  `body`, and the `stem` (`surface` layers and `core`). Each block is a vanilla block-state provider, so it can be one block, a
+  weighted mix or noise patches. A part left out stays the terrain's own rock.
+- `growth`: configured features placed on the platform, each on average once per `every` blocks of its `top` (the default) or
+  `underside`.
+
+The mod's own themes: `disc_lush` (mossy, anywhere), `disc_jungle` (grass, dense jungle trees and bamboo, three times as likely
+in the middle as at the edge), `disc_mangrove` (mud, mangroves; favours the wide low discs) and one rare one, `disc_crystal`
+(amethyst over calcite, with clusters), kept to small discs in the outer half, which the layout puts behind larger discs. With
+no themes every disc is the terrain's own rock in the biome it lies in.
+
+- `cone`: the mod's own file plus a fifth theme with no biome, in plain concrete (white top, black underside, light grey body,
+  orange stem surface, yellow stem core), that makes each part of a disc easy to tell apart.
 
 ### Ravine packs (set aside for now)
 
@@ -51,7 +66,8 @@ discs (bowl depths 0) and no hanging. Their own numbers are `spacing` (blocks of
 `row_jitter`, `side_stagger`, `max_overshoot` and the offsets (how far a disc's centre sits inside the wall).
 
 - `painted-ravine`: what the mod shipped before the cone (spacing 64, row spacing 20, row jitter 0.4, side stagger 0.5, max
-  overshoot 4, large offset bonus 0.8, radius 20 to 48, offset 0 to 0.1), with the two test palettes of the `cone` pack.
+  overshoot 4, large offset bonus 0.8, radius 20 to 48, offset 0 to 0.1), with two themes that are only palettes: a mossy one and
+  the concrete one of the `cone` pack.
 - `wide-bays`: spacing 57, radius 22 to 48, offset 0.4 to 0.75. Rooms reach deeper into the rock and merge into one
   large cavity with a scalloped edge.
 - `small-bays`: spacing 78, row spacing 14, radius 18 to 40, offset 0 to 0.3. Fewer, smaller bays; the slot is more visible.

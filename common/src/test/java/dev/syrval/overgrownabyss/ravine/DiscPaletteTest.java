@@ -6,14 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import org.junit.jupiter.api.Test;
 
-/** What a disc is made of: which material a point takes, which palette a disc gets, and the JSON a palette is written in. */
+/** What a disc is made of: which material a point takes, and the JSON a palette is written in. */
 class DiscPaletteTest {
     static {
         MinecraftBootstrap.init();
@@ -26,7 +25,6 @@ class DiscPaletteTest {
     static final BlockStateProvider BARK = BlockStateProvider.simple(Blocks.MUD_BRICKS);
     static final BlockStateProvider CORE = BlockStateProvider.simple(Blocks.PACKED_MUD);
     static final DiscPalette PALETTE = new DiscPalette(
-            1,
             List.of(new DiscPalette.Layer(1, MOSS), new DiscPalette.Layer(2, DIRT)),
             List.of(new DiscPalette.Layer(1, CALCITE)),
             Optional.of(STONE),
@@ -51,32 +49,19 @@ class DiscPaletteTest {
 
     @Test
     void aPartThePaletteLeavesOutKeepsTheTerrainsRock() {
-        var capOnly = new DiscPalette(1, List.of(new DiscPalette.Layer(1, MOSS)), List.of(), Optional.empty(), DiscPalette.Stem.UNPAINTED);
+        var capOnly = new DiscPalette(List.of(new DiscPalette.Layer(1, MOSS)), List.of(), Optional.empty(), DiscPalette.Stem.UNPAINTED);
         assertSame(MOSS, at(capOnly, new DiscPoint.Platform(0.5, 3.5)));
         assertTrue(capOnly.blockAt(new DiscPoint.Platform(2, 2)).isEmpty(), "no body");
         assertTrue(capOnly.blockAt(new DiscPoint.Stem(1)).isEmpty(), "no stem");
-        var barkOnly = new DiscPalette(1, List.of(), List.of(), Optional.empty(), new DiscPalette.Stem(List.of(new DiscPalette.Layer(1, BARK)), Optional.empty()));
+        var barkOnly = new DiscPalette(List.of(), List.of(), Optional.empty(), new DiscPalette.Stem(List.of(new DiscPalette.Layer(1, BARK)), Optional.empty()));
         assertSame(BARK, at(barkOnly, new DiscPoint.Stem(1)));
         assertTrue(barkOnly.blockAt(new DiscPoint.Stem(1.2)).isEmpty(), "no core");
-    }
-
-    @Test
-    void aDiscGetsAPaletteByWeight() {
-        var rare = new DiscPalette(1, List.of(), List.of(), Optional.of(MOSS), DiscPalette.Stem.UNPAINTED);
-        var common = new DiscPalette(3, List.of(), List.of(), Optional.of(STONE), DiscPalette.Stem.UNPAINTED);
-        List<DiscPalette> palettes = List.of(rare, common);
-        assertEquals(0, DiscPalette.pick(palettes, 0));
-        assertEquals(0, DiscPalette.pick(palettes, 0.2499));
-        assertEquals(1, DiscPalette.pick(palettes, 0.25));
-        assertEquals(1, DiscPalette.pick(palettes, 0.999999));
-        assertEquals(0, DiscPalette.pick(List.of(rare), 0.999999));
     }
 
     @Test
     void aPaletteIsWrittenWithVanillaBlockStateProviders() {
         var json = JsonParser.parseString("""
                 {
-                  "weight": 3,
                   "top": [
                     {"thickness": 1, "block": {"type": "minecraft:simple_state_provider", "state": {"Name": "minecraft:moss_block"}}}
                   ],
@@ -91,7 +76,6 @@ class DiscPaletteTest {
                 }
                 """);
         DiscPalette parsed = DiscPalette.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
-        assertEquals(3, parsed.weight());
         assertEquals(1, parsed.top().size());
         assertTrue(parsed.underside().isEmpty(), "a part left out is empty");
         assertTrue(parsed.body().isPresent());
@@ -99,26 +83,7 @@ class DiscPaletteTest {
         assertTrue(parsed.stem().core().isPresent());
         assertEquals(json, DiscPalette.CODEC.encodeStart(JsonOps.INSTANCE, parsed).getOrThrow(), "and is written back the same");
         var bad = json.getAsJsonObject().deepCopy();
-        bad.addProperty("weight", 0);
-        assertTrue(DiscPalette.CODEC.parse(JsonOps.INSTANCE, bad).isError(), "a palette no disc could get");
-    }
-
-    @Test
-    void theModsOwnCarveFileGivesEveryPartOfADiscAMaterialAndPalettesAreOptional() throws Exception {
-        try (var in = DiscPaletteTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/density_function/ravine/carve.json")) {
-            var json = JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
-            json.remove("type");
-            List<DiscPalette> shipped = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow().discPalettes();
-            assertTrue(!shipped.isEmpty(), "the mod's own discs have a material");
-            for (DiscPalette palette : shipped) {
-                assertTrue(palette.blockAt(new DiscPoint.Platform(0.5, 3.5)).isPresent(), "top");
-                assertTrue(palette.blockAt(new DiscPoint.Platform(3.5, 0.5)).isPresent(), "underside");
-                assertTrue(palette.blockAt(new DiscPoint.Platform(20, 20)).isPresent(), "body");
-                assertTrue(palette.blockAt(new DiscPoint.Stem(0.5)).isPresent(), "stem surface");
-                assertTrue(palette.blockAt(new DiscPoint.Stem(20)).isPresent(), "stem core");
-            }
-            json.remove("disc_palettes");
-            assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow().discPalettes().isEmpty(), "none unless given");
-        }
+        bad.getAsJsonArray("top").get(0).getAsJsonObject().addProperty("thickness", 0);
+        assertTrue(DiscPalette.CODEC.parse(JsonOps.INSTANCE, bad).isError(), "a layer of no thickness");
     }
 }

@@ -3,8 +3,8 @@ package dev.syrval.overgrownabyss.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
-import dev.syrval.overgrownabyss.compat.CavernBiomeResolver;
 import dev.syrval.overgrownabyss.compat.DiscPainter;
+import dev.syrval.overgrownabyss.compat.FootprintBiomeResolver;
 import dev.syrval.overgrownabyss.compat.RavineFootprintHolder;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.StructureManager;
@@ -20,26 +20,27 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** The two things a ravine changes in a chunk after its terrain is shaped: the cavern's biome and the discs' materials. */
+/** The two things a ravine changes in a chunk after its terrain is shaped: its own biomes and the discs' materials. */
 @Mixin(NoiseBasedChunkGenerator.class)
 abstract class NoiseBasedChunkGeneratorMixin {
     /**
-     * Cavern biome. Biomes are assigned per chunk from a resolver; wrapping it at the single call that fills them keeps
-     * the level's own biome source untouched, so structure and /locate biome checks still see the natural biomes.
+     * The biomes of the cavern and of themed discs. Biomes are assigned per chunk from a resolver; wrapping it at the single
+     * call that fills them keeps the level's own biome source untouched, so structure and /locate biome checks still see the
+     * natural biomes.
      */
     @WrapOperation(
             method = "doCreateBiomes",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/world/level/chunk/ChunkAccess;fillBiomesFromNoise(Lnet/minecraft/world/level/biome/BiomeResolver;Lnet/minecraft/world/level/biome/Climate$Sampler;)V"))
-    private void overgrownAbyss$cavernBiome(
+    private void overgrownAbyss$ownBiomes(
             ChunkAccess chunk,
             BiomeResolver resolver,
             Climate.Sampler sampler,
             Operation<Void> original,
             @Local(argsOnly = true) RandomState random) {
         var footprint = ((RavineFootprintHolder) (Object) random).overgrownAbyss$footprint();
-        original.call(chunk, CavernBiomeResolver.wrap(resolver, footprint), sampler);
+        original.call(chunk, FootprintBiomeResolver.wrap(resolver, footprint), sampler);
     }
 
     /**

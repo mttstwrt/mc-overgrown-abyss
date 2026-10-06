@@ -30,14 +30,18 @@ final class ConeDiscLayout implements DiscLayout {
     private static final int HASH_BASE = 9000;
     private static final int RIDER_HASH_BASE = 600_000;
     private static final double JITTER = 0.8;
-    // A rider's floor is between these shares of the way up its host's dome: high enough to walk under, low enough to stand in it.
-    private static final double RIDER_LOWEST = 0.5;
-    private static final double RIDER_HIGHEST = 0.8;
+    // Riders stand on the far side of their host from the cone's axis, within this angle either way of straight out, so that
+    // the host and what grows on it are between them and anyone looking from the middle.
+    private static final double RIDER_ARC = Math.toRadians(100);
+    // A rider's centre is between these shares of the way from its host's centre to as far out as its stem still lands on the host.
+    private static final double RIDER_NEAREST = 0.5;
+    private static final double RIDER_FURTHEST = 0.9;
     // Clear air kept between a host's top and the underside of a disc standing on it.
     private static final double RIDER_HEADROOM = 5;
-    // A rider's centre is between these shares of the way from its host's centre to as far out as its stem still lands on the host.
-    private static final double RIDER_NEAREST = 0.3;
-    private static final double RIDER_FURTHEST = 0.8;
+    // A rider's floor is no higher than this share of the way up its host's dome, and stays this share of the dome's height
+    // under the host's roof where it stands, so that its middle is inside the dome.
+    private static final double RIDER_HIGHEST = 0.8;
+    private static final double RIDER_UNDER_ROOF = 0.08;
 
     private final RavineSettings settings;
     private final ConeSettings cone;
@@ -183,15 +187,17 @@ final class ConeDiscLayout implements DiscLayout {
                 shape.bowlDepthFor(radius, RavineCells.unit(hash, base + 6))));
     }
 
-    /** How many places on top of a disc may each hold a rider: one for every {@code spacing} blocks of the circle halfway out. */
+    /** How many places on top of a disc may each hold a rider: one for every {@code spacing} blocks of the arc they stand on. */
     private int riderPlaces(Disc host) {
-        return cone.riderChance() <= 0 ? 0 : Math.clamp(Math.round(Math.PI * host.radius() / cone.spacing()), 0, MAX_RIDERS);
+        double arc = 2 * RIDER_ARC * (RIDER_NEAREST + RIDER_FURTHEST) / 2 * host.radius();
+        return cone.riderChance() <= 0 ? 0 : Math.clamp(Math.round(arc / cone.spacing()), 0, MAX_RIDERS);
     }
 
     /**
      * The disc standing on {@code host} at one of its places, or empty if the place stays free. A rider is smaller than its
-     * host, stands inside the host's dome with its stem on the host's platform, and has its centre outside the cone, where the
-     * ring has no discs. Its own dome then opens the rock above and beyond its host's.
+     * host and stands near the host's outer edge, on the side away from the cone's axis: inside the host's dome, with its stem
+     * on the host's platform and its centre outside the cone, where the ring has no discs. The host's roof is low there, so
+     * the rider's own dome rises through it and opens the rock above and beyond, out of sight of the middle of the cone.
      */
     private Optional<Drawn> rider(Disc host, int hostIndex, int place) {
         long hash = cell.hash();
@@ -206,17 +212,25 @@ final class ConeDiscLayout implements DiscLayout {
         // As far out on the host as the rider's stem still lands on its platform, wherever the centre is then put.
         double landing = host.radius() - shape.stemRadiusFor(radius) - 1 - PLACING_SLACK;
         double out = lerp(RavineCells.unit(hash, base + 2), RIDER_NEAREST, RIDER_FURTHEST) * landing;
-        double angle = 2 * Math.PI * (place + 0.5 + (RavineCells.unit(hash, base + 3) - 0.5) * JITTER) / riderPlaces(host);
-        double x = host.x() + out * Math.cos(angle);
-        double z = host.z() + out * Math.sin(angle);
-        double floor = host.floor() + lerp(RavineCells.unit(hash, base + 4), RIDER_LOWEST, RIDER_HIGHEST) * host.height();
+        double outward = Math.atan2(host.z() - cell.centreZ(), host.x() - cell.centreX());
+        double turn = 2 * (place + 0.5 + (RavineCells.unit(hash, base + 3) - 0.5) * JITTER) / riderPlaces(host) - 1;
+        double x = host.x() + out * Math.cos(outward + turn * RIDER_ARC);
+        double z = host.z() + out * Math.sin(outward + turn * RIDER_ARC);
+        // The floor is between the least that leaves headroom over the host's top there and the most that fits under its roof.
+        double share = out / host.radius();
+        double lowest = host.topAt(out) + shape.floorThickness() + RIDER_HEADROOM;
+        double highest = host.floor() + Math.min(RIDER_HIGHEST, Math.sqrt(1 - share * share) - RIDER_UNDER_ROOF) * host.height();
+        if (lowest > highest) {
+            return Optional.empty();
+        }
+        double floor = lerp(RavineCells.unit(hash, base + 4), lowest, highest);
         double fromAxis = cell.distanceToCentre(x, z);
         double height = domeHeight(radius, floor);
         boolean outsideTheCone = fromAxis > ConeShape.radiusAt(settings, cone, bounds, floor);
+        boolean behindItsHost = fromAxis > cell.distanceToCentre(host.x(), host.z());
         boolean withinBounds = fromAxis - radius >= cone.clearRadius() + PLACING_SLACK && fromAxis + radius <= cone.outerRadius();
-        boolean roomUnderIt = floor - shape.floorThickness() - host.topAt(out) >= RIDER_HEADROOM;
         boolean inTheHostsDome = host.domeDistance(x, floor, z) < 0;
-        if (!outsideTheCone || !withinBounds || !roomUnderIt || !inTheHostsDome || height < shape.minHeight()) {
+        if (!outsideTheCone || !behindItsHost || !withinBounds || !inTheHostsDome || height < shape.minHeight()) {
             return Optional.empty();
         }
         Disc rider = Disc.placed(x, z, floor, radius, height, shape.bowlDepthFor(radius, RavineCells.unit(hash, base + 6)));

@@ -2,7 +2,6 @@ package dev.syrval.overgrownabyss.ravine;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mojang.serialization.JsonOps;
@@ -27,20 +26,26 @@ class DiscBlocksTest {
     static final BlockStateProvider BODY = BlockStateProvider.simple(Blocks.CALCITE);
     static final BlockStateProvider STEM = BlockStateProvider.simple(Blocks.PACKED_MUD);
     static final DiscPalette PALETTE = new DiscPalette(
-            1, List.of(new DiscPalette.Layer(1, TOP)), List.of(), Optional.of(BODY), new DiscPalette.Stem(List.of(), Optional.of(STEM)));
-    static final RavineSettings STANDING = painted(ConeShapeTest.CONE, List.of(PALETTE));
-    static final RavineSettings HANGING = painted(ConeShapeTest.HANGING, List.of(PALETTE));
+            List.of(new DiscPalette.Layer(1, TOP)), List.of(), Optional.of(BODY), new DiscPalette.Stem(List.of(), Optional.of(STEM)));
+    static final DiscTheme THEME = themed(PALETTE);
+    static final RavineSettings STANDING = painted(ConeShapeTest.CONE, List.of(THEME));
+    static final RavineSettings HANGING = painted(ConeShapeTest.HANGING, List.of(THEME));
+
+    /** A theme that is only a palette: no biome, nothing growing, the same weight everywhere. */
+    static DiscTheme themed(DiscPalette palette) {
+        return new DiscTheme(Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, List.of());
+    }
 
     private record Block(int x, int y, int z) {}
 
-    static RavineSettings painted(ConeSettings cone, List<DiscPalette> palettes) {
-        return painted(cone, palettes, SHAPE);
+    static RavineSettings painted(ConeSettings cone, List<DiscTheme> themes) {
+        return painted(cone, themes, SHAPE);
     }
 
-    static RavineSettings painted(ConeSettings cone, List<DiscPalette> palettes, DiscShape shape) {
+    static RavineSettings painted(ConeSettings cone, List<DiscTheme> themes, DiscShape shape) {
         RavineSettings s = ConeShapeTest.withCone(cone, shape);
         return new RavineSettings(s.salt(), s.cellSize(), s.chance(), s.sizeBias(), s.floor(), s.top(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(),
-                s.discs(), palettes, s.environment(), s.ravine(), s.cone());
+                s.discs(), themes, s.environment(), s.ravine(), s.cone());
     }
 
     private static RavineCell cell(RavineSettings settings, int cz) {
@@ -50,12 +55,12 @@ class DiscBlocksTest {
     /** What the chunks touching a box of columns end up painted with: a later block replaces an earlier one, as in the world. */
     private static Map<Block, BlockStateProvider> paint(RavineSettings settings, RavineCell cell, double fromX, double toX, double fromZ, double toZ) {
         var painted = new HashMap<Block, BlockStateProvider>();
-        DiscLayout layout = Carved.layout(settings, BOUNDS, cell);
+        CellDiscs discs = CellDiscs.of(settings, BOUNDS, cell);
         for (int chunkX = Math.floorDiv((int) Math.floor(fromX), 16); chunkX <= Math.floorDiv((int) Math.floor(toX), 16); chunkX++) {
             for (int chunkZ = Math.floorDiv((int) Math.floor(fromZ), 16); chunkZ <= Math.floorDiv((int) Math.floor(toZ), 16); chunkZ++) {
                 int minX = chunkX * 16;
                 int minZ = chunkZ * 16;
-                DiscBlocks.forEach(settings, BOUNDS, cell, layout, minX, minZ, -128, 320, (x, y, z, block) -> {
+                DiscBlocks.forEach(settings, BOUNDS, cell, discs, minX, minZ, -128, 320, (x, y, z, block) -> {
                     assertTrue(x >= minX && x < minX + 16 && z >= minZ && z < minZ + 16 && y >= -128 && y < 320, "outside its chunk");
                     painted.put(new Block(x, y, z), block);
                 });
@@ -97,7 +102,7 @@ class DiscBlocksTest {
 
     @Test
     void aBowledPlatformIsPaintedUpToItsRaisedRim() {
-        RavineSettings bowled = painted(ConeShapeTest.LOW, List.of(PALETTE), DiscTest.SLIM);
+        RavineSettings bowled = painted(ConeShapeTest.LOW, List.of(THEME), DiscTest.SLIM);
         RavineCell c = cell(bowled, 1);
         int sampled = 0;
         int tops = 0;
@@ -183,35 +188,32 @@ class DiscBlocksTest {
         int minZ = Math.floorDiv((int) Math.floor(d.z()), 16) * 16;
         var first = new ArrayList<Block>();
         var second = new ArrayList<Block>();
-        DiscBlocks.forEach(STANDING, BOUNDS, c, Carved.layout(STANDING, BOUNDS, c), minX, minZ, -128, 320, (x, y, z, block) -> first.add(new Block(x, y, z)));
-        DiscBlocks.forEach(STANDING, BOUNDS, c, DiscLayouts.of(STANDING, BOUNDS, c), minX, minZ, -128, 320, (x, y, z, block) -> second.add(new Block(x, y, z)));
+        DiscBlocks.forEach(STANDING, BOUNDS, c, CellDiscs.of(STANDING, BOUNDS, c), minX, minZ, -128, 320, (x, y, z, block) -> first.add(new Block(x, y, z)));
+        DiscBlocks.forEach(STANDING, BOUNDS, c, CellDiscs.of(STANDING, BOUNDS, c), minX, minZ, -128, 320, (x, y, z, block) -> second.add(new Block(x, y, z)));
         assertTrue(first.size() > 100, first.size() + " blocks");
         assertEquals(first, second);
     }
 
     @Test
-    void aDiscKeepsThePaletteItsCellGivesIt() {
-        var other = new DiscPalette(1, List.of(), List.of(), Optional.of(STEM), DiscPalette.Stem.UNPAINTED);
-        RavineSettings two = painted(ConeShapeTest.CONE, List.of(PALETTE, other));
+    void aDiscKeepsTheThemeItsCellGivesIt() {
+        DiscTheme other = themed(new DiscPalette(List.of(), List.of(), Optional.of(STEM), DiscPalette.Stem.UNPAINTED));
+        RavineSettings two = painted(ConeShapeTest.CONE, List.of(THEME, other));
         RavineCell c = cell(two, 1);
-        int discs = Carved.layout(two, BOUNDS, c).discs().size();
-        int firsts = 0;
-        for (int i = 0; i < discs; i++) {
-            assertSame(DiscBlocks.paletteOf(two, c, i), DiscBlocks.paletteOf(two, c, i));
-            firsts += DiscBlocks.paletteOf(two, c, i) == PALETTE ? 1 : 0;
-        }
-        assertTrue(firsts > 0 && firsts < discs, firsts + " of " + discs + " discs got the first of two equal palettes");
+        List<Optional<DiscTheme>> themes = CellDiscs.of(two, BOUNDS, c).themes();
+        assertEquals(themes, CellDiscs.of(two, BOUNDS, c).themes(), "the same every time the cell's discs are built");
+        long firsts = themes.stream().filter(theme -> theme.orElseThrow() == THEME).count();
+        assertTrue(firsts > 0 && firsts < themes.size(), firsts + " of " + themes.size() + " discs got the first of two equal themes");
     }
 
     @Test
-    void aCarveWithoutPalettesOrWithoutALevelPaintsNothing() {
+    void aCarveWithoutThemesOrWithoutALevelPaintsNothing() {
         RavineCell c = cell(STANDING, 1);
         Disc d = Carved.layout(STANDING, BOUNDS, c).discs().get(0);
         int minX = Math.floorDiv((int) Math.floor(d.x()), 16) * 16;
         int minZ = Math.floorDiv((int) Math.floor(d.z()), 16) * 16;
-        assertTrue(count(carve(STANDING).bind(7L, BOUNDS), minX, minZ) > 100, "a bound carve with a palette paints");
+        assertTrue(count(carve(STANDING).bind(7L, BOUNDS), minX, minZ) > 100, "a bound carve with a theme paints");
         assertEquals(0, count(carve(STANDING), minX, minZ), "not bound to a level yet");
-        assertEquals(0, count(carve(painted(ConeShapeTest.CONE, List.of())).bind(7L, BOUNDS), minX, minZ), "no palettes");
+        assertEquals(0, count(carve(painted(ConeShapeTest.CONE, List.of())).bind(7L, BOUNDS), minX, minZ), "no themes");
     }
 
     // The codec is the only way to make a carve, as in the game.

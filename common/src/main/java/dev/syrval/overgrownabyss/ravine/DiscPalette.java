@@ -7,17 +7,18 @@ import java.util.Optional;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 
 /**
- * What a disc is made of. The terrain makes every disc out of its own rock; a palette replaces that, part by part, with
- * blocks of its own, and any part it leaves out keeps the terrain's rock. Blocks are vanilla block-state providers, so a part
- * can be one block, a weighted mix, or patches following a noise.
+ * What a disc is made of, as part of its {@link DiscTheme}. The terrain makes every disc out of its own rock; a palette
+ * replaces that, part by part, with blocks of its own, and any part it leaves out keeps the terrain's rock. Blocks are vanilla
+ * block-state providers, so a part can be one block, a weighted mix, or patches following a noise.
  *
- * @param weight    how often a disc gets this palette, against the weights of the others
  * @param top       layers counted down from the platform's flat top, the first one outermost
  * @param underside layers counted up from the platform's bottom face; where the platform is too thin for both, the top's win
  * @param body      the rest of the platform
  * @param stem      the stem, or the root of a hanging disc
  */
-public record DiscPalette(int weight, List<Layer> top, List<Layer> underside, Optional<BlockStateProvider> body, Stem stem) {
+public record DiscPalette(List<Layer> top, List<Layer> underside, Optional<BlockStateProvider> body, Stem stem) {
+    static final DiscPalette UNPAINTED = new DiscPalette(List.of(), List.of(), Optional.empty(), Stem.UNPAINTED);
+
 
     /** {@code thickness} blocks of one material. */
     public record Layer(int thickness, BlockStateProvider block) {
@@ -44,7 +45,6 @@ public record DiscPalette(int weight, List<Layer> top, List<Layer> underside, Op
     }
 
     public static final Codec<DiscPalette> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Codec.intRange(1, 1000).fieldOf("weight").forGetter(DiscPalette::weight),
             Layer.CODEC.listOf().optionalFieldOf("top", List.of()).forGetter(DiscPalette::top),
             Layer.CODEC.listOf().optionalFieldOf("underside", List.of()).forGetter(DiscPalette::underside),
             BlockStateProvider.CODEC.optionalFieldOf("body").forGetter(DiscPalette::body),
@@ -76,21 +76,5 @@ public record DiscPalette(int weight, List<Layer> top, List<Layer> underside, Op
             }
         }
         return Optional.empty();
-    }
-
-    /** Which of the palettes a uniform draw in [0, 1) picks, by weight. */
-    static int pick(List<DiscPalette> palettes, double unit) {
-        int total = 0;
-        for (DiscPalette palette : palettes) {
-            total += palette.weight();
-        }
-        double left = unit * total;
-        for (int i = 0; i < palettes.size(); i++) {
-            left -= palettes.get(i).weight();
-            if (left < 0) {
-                return i;
-            }
-        }
-        return palettes.size() - 1;
     }
 }

@@ -78,6 +78,20 @@ record Disc(double x, double z, double floor, double radius, double height, doub
         return topAt(fromAxis) - shape.floorThickness();
     }
 
+    /**
+     * Whether a point is in the space this disc's biome covers: its dome and its platform, grown by {@code margin} blocks all
+     * round, so that what stands on the rim or hangs under the platform is in it too.
+     */
+    boolean biomeContains(DiscShape shape, double px, double py, double pz, double margin) {
+        double fromAxis = Math.hypot(px - x, pz - z);
+        if (fromAxis > radius + margin || py < undersideAt(shape, fromAxis) - margin) {
+            return false;
+        }
+        double share = Math.min(fromAxis / radius, 1);
+        double roof = floor + height * Math.sqrt(1 - share * share);
+        return py <= Math.max(roof, topAt(fromAxis)) + margin;
+    }
+
     /** The dome: a roof of the same shape as the cavern's over the whole platform, so a ledge has headroom. */
     double domeDistance(double px, double py, double pz) {
         if (py >= floor + height) {

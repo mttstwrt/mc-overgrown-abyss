@@ -17,7 +17,7 @@ class ConeShapeTest {
         MinecraftBootstrap.init();
     }
 
-    static final ConeSettings CONE = new ConeSettings(45, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 0F, 200F, 0F, 0.6F);
+    static final ConeSettings CONE = new ConeSettings(45, 136, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 0F, 200F, 0F, 0.6F);
     static final DiscShape SHAPE = new DiscShape(18, 40, 0.45F, 14, 6, 0.22F, 2.5F, 32F, 1.5F, 3F, 4F, 0F, 0F, 0F);
     static final RavineBounds BOUNDS = new RavineBounds(-104, 80);
 
@@ -28,20 +28,20 @@ class ConeShapeTest {
     static RavineSettings withCone(ConeSettings cone, DiscShape shape) {
         RavineSettings s = RavineCellsTest.settings(42L, 1F);
         return new RavineSettings(s.salt(), s.cellSize(), 1F, s.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
-                136, 56, s.edgeFalloff(), shape, s.discPalettes(), s.environment(), Optional.empty(), Optional.of(cone));
+                136, 56, s.edgeFalloff(), shape, s.discThemes(), s.environment(), Optional.empty(), Optional.of(cone));
     }
 
     static final RavineSettings SETTINGS = withCone(CONE);
     /** The cone the mod ships: discs down into the cavern's airspace and out past the cone, riders, thin stems, varied bowls. */
-    static final ConeSettings LOW = new ConeSettings(45, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0.6F, 0.6F);
+    static final ConeSettings LOW = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0.6F, 0.6F);
     static final RavineSettings LOW_SETTINGS = withCone(LOW, DiscTest.VARIED);
     /** The same with a rider at every place that can hold one, and with none. */
-    static final ConeSettings RIDDEN = new ConeSettings(45, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 1F, 0.6F);
-    static final ConeSettings UNRIDDEN = new ConeSettings(45, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0F, 0.6F);
+    static final ConeSettings RIDDEN = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 1F, 0.6F);
+    static final ConeSettings UNRIDDEN = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0F, 0.6F);
     /** A level of vanilla's height, where the cavern is wider than the cone just under its roof. */
     static final RavineBounds VANILLA = new RavineBounds(-40, 80);
     /** The same cone with every disc drawn to hang. */
-    static final ConeSettings HANGING = new ConeSettings(45, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 1F, 200F, 0F, 0.6F);
+    static final ConeSettings HANGING = new ConeSettings(45, 136, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 1F, 200F, 0F, 0.6F);
 
     private static RavineCell cell(int cx, int cz) {
         return RavineCells.at(7L, SETTINGS, cx, cz).orElseThrow();
@@ -199,7 +199,7 @@ class ConeShapeTest {
 
     @Test
     void aStackedDiscHasItsStemLandOnThePlatformBelowIt() {
-        ConeSettings stacking = new ConeSettings(45, 1.6F, 8, 26, 0F, 80, 1F, 14, 8, 0F, 200F, 0F, 0.6F);
+        ConeSettings stacking = new ConeSettings(45, 136, 1.6F, 8, 26, 0F, 80, 1F, 14, 8, 0F, 200F, 0F, 0.6F);
         RavineSettings settings = withCone(stacking);
         RavineCell c = RavineCells.at(7L, settings, 2, 2).orElseThrow();
         ConeDiscLayout layout = new ConeDiscLayout(settings, stacking, BOUNDS, c);
@@ -294,7 +294,7 @@ class ConeShapeTest {
 
     @Test
     void discsMayStandBelowTheCavernRoofButStayClearOfItsFloor() {
-        ConeSettings high = new ConeSettings(45, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, 4, 0.35F, 200F, 0.6F, 0.6F);
+        ConeSettings high = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, 4, 0.35F, 200F, 0.6F, 0.6F);
         assertTrue(ConeDiscLayout.layers(LOW_SETTINGS, LOW, VANILLA) > ConeDiscLayout.layers(withCone(high, DiscTest.SLIM), high, VANILLA), "a lower start fits another layer");
         double roof = VANILLA.floorY() + LOW_SETTINGS.cavernHeight();
         int underTheRoof = 0;
@@ -368,13 +368,17 @@ class ConeShapeTest {
                 double fromAxis = c.distanceToCentre(rider.x(), rider.z());
                 assertTrue(fromAxis > ConeShape.radiusAt(settings, RIDDEN, BOUNDS, rider.floor()) - 1, "a rider inside the cone: " + rider);
                 assertTrue(fromAxis - rider.radius() >= RIDDEN.clearRadius() - 1e-9 && fromAxis + rider.radius() <= RIDDEN.outerRadius() + ConeDiscLayout.PLACING_SLACK);
+                // Its host: a larger disc nearer the axis that has the rider in its dome, out towards its edge.
                 Disc host = null;
                 for (Disc other : all) {
-                    if (other != rider && other.radius() * RIDDEN.riderScale() >= rider.radius() - 1e-9 && other.domeDistance(rider.x(), rider.floor(), rider.z()) < 0.8) {
+                    boolean larger = other != rider && other.radius() * RIDDEN.riderScale() >= rider.radius() - 1e-9;
+                    boolean nearerTheAxis = c.distanceToCentre(other.x(), other.z()) < fromAxis;
+                    boolean towardsItsEdge = Math.hypot(rider.x() - other.x(), rider.z() - other.z()) > 0.35 * other.radius();
+                    if (larger && nearerTheAxis && towardsItsEdge && other.domeDistance(rider.x(), rider.floor(), rider.z()) < 0.8) {
                         host = other;
                     }
                 }
-                assertTrue(host != null, "no larger disc has " + rider + " in its dome");
+                assertTrue(host != null, "no larger disc nearer the axis has " + rider + " in the outer part of its dome");
                 ridersOfRiders += all.indexOf(host) >= ring.size() ? 1 : 0;
                 if (rider.support() instanceof Disc.Support.Standing stem) {
                     assertTrue(stem.bottom() > Double.NEGATIVE_INFINITY, "a standing rider's stem lands on a platform: " + rider);
@@ -382,7 +386,7 @@ class ConeShapeTest {
             }
         }
         assertTrue(riders > 10, riders + " riders on " + ringDiscs + " ring discs");
-        assertTrue(ridersOfRiders >= 0);
+        assertTrue(ridersOfRiders > 0, "riders carry riders of their own");
     }
 
     @Test
@@ -444,6 +448,23 @@ class ConeShapeTest {
         assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isSuccess());
         json.getAsJsonObject("cone").addProperty("base_clearance", -50);
         assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
+    }
+
+    @Test
+    void theConesBaseHasItsOwnRadiusApartFromTheCaverns() {
+        ConeSettings wide = new ConeSettings(45, 150, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0.8F, 0.6F);
+        RavineSettings settings = withCone(wide, DiscTest.VARIED);
+        assertEquals(150, ConeShape.radiusAt(settings, wide, VANILLA, VANILLA.floorY()), 1e-9);
+        assertEquals(45, ConeShape.radiusAt(settings, wide, VANILLA, VANILLA.topY()), 1e-9);
+        assertTrue(ConeShape.radiusAt(settings, wide, VANILLA, 0) > ConeShape.radiusAt(LOW_SETTINGS, LOW, VANILLA, 0) + 5, "wider all the way up but for the top");
+        RavineCell c = RavineCells.at(7L, settings, 1, 1).orElseThrow();
+        // On the floor between the cavern's edge and the cone's: only the wider cone opens it.
+        assertTrue(Carved.distance(settings, VANILLA, c, c.centreX() + 144, VANILLA.floorY() + 1, c.centreZ()) < 0, "the cone opens the ground past the cavern");
+        assertTrue(Carved.distance(LOW_SETTINGS, VANILLA, RavineCells.at(7L, LOW_SETTINGS, 1, 1).orElseThrow(), c.centreX() + 144, VANILLA.floorY() + 1, c.centreZ()) > 0);
+        assertEquals(136, settings.cavernRadius(), "the cavern keeps its own radius");
+        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, settings).getOrThrow().getAsJsonObject();
+        json.getAsJsonObject("cone").addProperty("base_radius", 40);
+        assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError(), "a base narrower than the top");
     }
 
     @Test

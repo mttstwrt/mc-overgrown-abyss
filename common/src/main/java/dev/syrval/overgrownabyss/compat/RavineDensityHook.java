@@ -6,13 +6,16 @@ import dev.syrval.overgrownabyss.ravine.RavineCarve;
 import dev.syrval.overgrownabyss.ravine.LandCheck;
 import dev.syrval.overgrownabyss.ravine.RavineCells;
 import dev.syrval.overgrownabyss.ravine.DiscShape;
+import dev.syrval.overgrownabyss.ravine.DiscTheme;
 import dev.syrval.overgrownabyss.ravine.RavinePlacement;
 import dev.syrval.overgrownabyss.ravine.RavineEnvironment;
 import dev.syrval.overgrownabyss.ravine.RavineFootprint;
 import dev.syrval.overgrownabyss.ravine.RavineSettings;
 import dev.syrval.overgrownabyss.ravine.RavineShape;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.core.Holder;
@@ -34,6 +37,7 @@ import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.WorldGenerationContext;
+import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 
 /**
  * Wraps the final density of every noise-settings in {@code #overgrown_abyss:carved} with
@@ -89,7 +93,7 @@ public final class RavineDensityHook {
         return state;
     }
 
-    // The land check and cavern biome need the finished RandomState (climate sampler) and the level's registries.
+    // The land check and the biomes need the finished RandomState (climate sampler) and the level's registries.
     private static void installLevelBindings(
             RegistryAccess registries,
             ChunkGenerator generator,
@@ -97,11 +101,13 @@ public final class RavineDensityHook {
             RandomState state,
             List<RavineCarve> carves) {
         Registry<Biome> biomes = registries.registryOrThrow(Registries.BIOME);
+        Registry<ConfiguredFeature<?, ?>> features = registries.registryOrThrow(Registries.CONFIGURED_FEATURE);
         List<RavineFootprint.Region> regions = new ArrayList<>();
         for (RavineCarve carve : carves) {
             RavineEnvironment environment = carve.settings().environment();
             carve.restrictToLand(landCheck(generator.getBiomeSource(), state.sampler(), settings.seaLevel(), environment.forbiddenBiomes()));
-            regions.add(new RavineFootprint.Region(carve, cavernBiome(biomes, environment)));
+            regions.add(new RavineFootprint.Region(carve, cavernBiome(biomes, environment), discBiomes(biomes, carve.settings().discThemes())));
+            warnOfMissingGrowth(features, carve.settings().discThemes());
             logSettings(carve.settings());
             logRavinesNearOrigin(carve);
         }
@@ -121,6 +127,27 @@ public final class RavineDensityHook {
             }
             return biome;
         });
+    }
+
+    // A theme whose biome is missing still gives its discs their material and growth; they keep the biome they lie in.
+    private static Map<ResourceKey<Biome>, Holder<Biome>> discBiomes(Registry<Biome> biomes, List<DiscTheme> themes) {
+        Map<ResourceKey<Biome>, Holder<Biome>> found = new HashMap<>();
+        for (DiscTheme theme : themes) {
+            theme.biome().ifPresent(key -> biomes.getHolder(key).ifPresentOrElse(
+                    holder -> found.put(key, holder),
+                    () -> OvergrownAbyss.LOGGER.warn("Disc biome {} does not exist; discs of that theme keep the biome they lie in", key.location())));
+        }
+        return found;
+    }
+
+    private static void warnOfMissingGrowth(Registry<ConfiguredFeature<?, ?>> features, List<DiscTheme> themes) {
+        for (DiscTheme theme : themes) {
+            for (DiscTheme.Growth growth : theme.growth()) {
+                if (features.getHolder(growth.feature()).isEmpty()) {
+                    OvergrownAbyss.LOGGER.warn("Configured feature {} does not exist; a disc theme's growth of it is skipped", growth.feature().location());
+                }
+            }
+        }
     }
 
     // disableMobGeneration() is deprecated by Mojang but still a record component, so copying the record needs it.
@@ -145,7 +172,10 @@ public final class RavineDensityHook {
                 s.sizeBias(), s.edgeFalloff(), discs.minRadius(), discs.maxRadius(), discs.heightRatio(), discs.floorThickness(),
                 discs.stemFraction(), discs.minStemRadius(), discs.maxStemRadius(), discs.funnelScale(), discs.rootSpread(), discs.rootScale(),
                 discs.minBowlDepth(), discs.maxBowlDepth());
-        OvergrownAbyss.LOGGER.info("Disc palettes: {}{}", s.discPalettes().size(), s.discPalettes().isEmpty() ? " (every disc is the terrain's own rock)" : "");
+        OvergrownAbyss.LOGGER.info(
+                "Disc themes: {}{}", s.discThemes().size(),
+                s.discThemes().isEmpty() ? " (every disc is the terrain's own rock)" : " " + s.discThemes().stream()
+                        .map(theme -> theme.biome().map(key -> key.location().toString()).orElse("no biome")).toList());
         s.ravine().ifPresent(ravine -> {
             RavinePlacement p = ravine.placement();
             OvergrownAbyss.LOGGER.info(

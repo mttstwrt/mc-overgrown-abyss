@@ -1,9 +1,12 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import com.mojang.serialization.MapCodec;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.KeyDispatchDataCodec;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 /**
@@ -25,6 +28,8 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
     private static final double CAVERN_BIOME_MARGIN = 4;
+    // One biome cell: enough for what stands on a disc's rim or hangs under it to be in the disc's biome.
+    private static final double DISC_BIOME_MARGIN = 4;
 
     private final RavineSettings settings;
     private final long seed;
@@ -32,19 +37,19 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     private final RavineBounds bounds;
     private final LandGate landGate;
     // The discs of each cell, built once: they never change, and each sample would otherwise rebuild them from hashes.
-    private final ConcurrentHashMap<RavineCell, DiscLayout> layouts;
+    private final ConcurrentHashMap<RavineCell, CellDiscs> discs;
     private final Output output;
 
     /** Which of a ravine's two functions an instance computes. */
     private enum Output { OPEN, ROCK }
 
     private RavineCarve(
-            RavineSettings settings, long seed, RavineBounds bounds, LandGate landGate, ConcurrentHashMap<RavineCell, DiscLayout> layouts, Output output) {
+            RavineSettings settings, long seed, RavineBounds bounds, LandGate landGate, ConcurrentHashMap<RavineCell, CellDiscs> discs, Output output) {
         this.settings = settings;
         this.seed = seed;
         this.bounds = bounds;
         this.landGate = landGate;
-        this.layouts = layouts;
+        this.discs = discs;
         this.output = output;
     }
 
@@ -62,7 +67,7 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
 
     /** The rock this ravine adds back, which only a cone has: 1 inside its structures, -1 elsewhere. Shares this carve's land check. */
     public RavineCarve rock() {
-        return new RavineCarve(settings, seed, bounds, landGate, layouts, Output.ROCK);
+        return new RavineCarve(settings, seed, bounds, landGate, discs, Output.ROCK);
     }
 
     public RavineSettings settings() {
@@ -110,12 +115,54 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
      * between {@code minY} and {@code maxY} (exclusive). See {@link DiscBlocks}.
      */
     public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
-        if (bounds == null || settings.discPalettes().isEmpty()) {
+        if (bounds == null || settings.discThemes().isEmpty()) {
             return;
         }
         // A cell is a whole number of chunks, so the chunk's corner is in the same cell as the rest of it.
-        cellAt(minX, minZ).ifPresent(cell -> DiscBlocks.forEach(
-                settings, bounds, cell, layouts.computeIfAbsent(cell, c -> DiscLayouts.of(settings, bounds, c)), minX, minZ, minY, maxY, sink));
+        cellAt(minX, minZ).ifPresent(cell -> DiscBlocks.forEach(settings, bounds, cell, discsOf(cell), minX, minZ, minY, maxY, sink));
+    }
+
+    /**
+     * Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is
+     * {@code (minX, minZ)}. See {@link DiscGrowth}.
+     */
+    public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {
+        if (bounds == null || settings.discThemes().isEmpty()) {
+            return;
+        }
+        cellAt(minX, minZ).ifPresent(cell -> DiscGrowth.forEach(settings, cell, discsOf(cell), minX, minZ, sink));
+    }
+
+    /**
+     * The biome of the disc a point belongs to, if that disc's theme has one: the point is in the disc's dome or platform, or
+     * within a margin of them. Where the spaces of several discs overlap, the highest disc has it, which is the one a rider
+     * stands on rather than its host's.
+     */
+    public Optional<ResourceKey<Biome>> discBiomeAt(int x, int y, int z) {
+        if (bounds == null || settings.discThemes().isEmpty()) {
+            return Optional.empty();
+        }
+        Optional<RavineCell> cell = cellAt(x, z).filter(c -> c.distanceToCentre(x, z) <= settings.maxReach() + DISC_BIOME_MARGIN);
+        if (cell.isEmpty()) {
+            return Optional.empty();
+        }
+        CellDiscs cellDiscs = discsOf(cell.get());
+        List<Disc> all = cellDiscs.layout().discs();
+        Optional<ResourceKey<Biome>> found = Optional.empty();
+        double highest = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < all.size(); i++) {
+            Disc disc = all.get(i);
+            Optional<ResourceKey<Biome>> biome = cellDiscs.themes().get(i).flatMap(DiscTheme::biome);
+            if (biome.isPresent() && disc.floor() > highest && disc.biomeContains(settings.discs(), x, y, z, DISC_BIOME_MARGIN)) {
+                found = biome;
+                highest = disc.floor();
+            }
+        }
+        return found;
+    }
+
+    private CellDiscs discsOf(RavineCell cell) {
+        return discs.computeIfAbsent(cell, c -> CellDiscs.of(settings, bounds, c));
     }
 
     @Override
@@ -130,7 +177,7 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         if (found.isEmpty()) {
             return nothing();
         }
-        DiscLayout layout = layouts.computeIfAbsent(found.get(), cell -> DiscLayouts.of(settings, bounds, cell));
+        DiscLayout layout = discsOf(found.get()).layout();
         double distance = output == Output.ROCK
                 ? RavineShape.rockDistance(settings, bounds, found.get(), layout, x, y, z)
                 : RavineShape.signedDistance(settings, bounds, found.get(), layout, x, y, z);

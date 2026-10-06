@@ -77,6 +77,11 @@ public final class RavineCells {
         return (mix(hash + index * GOLDEN) >>> 11) * 0x1.0p-53;
     }
 
+    /** The {@code index}-th uniform value in {@code [0, 1)} drawn from a cell hash for one block column. */
+    static double unitAt(long hash, int index, int x, int z) {
+        return unit(mix(mix(hash + x * 0xC2B2AE3D27D4EB4FL) + z * 0x165667B19E3779F9L), index);
+    }
+
     /** The {@code index}-th value in [-1, 1) drawn from a cell hash. */
     private static double signed(long hash, int index) {
         return unit(hash, index) * 2 - 1;

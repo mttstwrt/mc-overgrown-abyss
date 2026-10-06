@@ -188,7 +188,7 @@ class RavineShapeTest {
         RavinePlacement placement = new RavinePlacement(
                 spacing, rowSpacing, ceilingMargin, minOffset, maxOffset, rowJitter, largeOffsetBonus, maxOvershoot, sideStagger);
         return new RavineSettings(s.salt(), s.cellSize(), s.chance(), s.sizeBias(), s.floor(), s.top(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(),
-                new DiscShape(minRadius, maxRadius, heightRatio, minHeight, floorThickness, 0.2F, 2.5F, 32F, 1.5F, 3F, 4F, 0F, 0F, 0F), s.discPalettes(), s.environment(),
+                new DiscShape(minRadius, maxRadius, heightRatio, minHeight, floorThickness, 0.2F, 2.5F, 32F, 1.5F, 3F, 4F, 0F, 0F, 0F), s.discThemes(), s.environment(),
                 Optional.of(new RavineGeometry(g.length(), g.width(), g.bottomWidthFactor(), g.curvature(), placement)), Optional.empty());
     }
 }

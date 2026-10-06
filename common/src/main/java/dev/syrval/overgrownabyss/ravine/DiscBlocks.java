@@ -5,42 +5,38 @@ import java.util.Optional;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 
 /**
- * The blocks of one chunk that take a disc's material in place of the terrain's own rock (see {@link DiscPalette}). Each chunk
- * finds its own blocks from the layout alone, so the result is the same whatever order chunks generate in.
+ * The blocks of one chunk that take a disc's material in place of the terrain's own rock (see {@link DiscPalette}), each disc
+ * by the palette of its theme. Each chunk finds its own blocks from the layout alone, so the result is the same whatever order
+ * chunks generate in.
  *
  * <p>A platform is painted over its whole round footprint, wherever it lies: in open air, and inside the wall under its dome,
  * where the terrain may have left a cave. A stem or root is painted only where the terrain made it, which is inside the
  * hole. Nothing else here knows about the hole, so a disc placed anywhere is painted the same way.
  */
 final class DiscBlocks {
-    private static final int PALETTE_HASH_BASE = 200_000;
     private static final int CHUNK_SIZE = 16;
 
     private DiscBlocks() {}
 
     /** The blocks of the chunk whose lowest corner is {@code (minX, minZ)}, between {@code minY} and {@code maxY} (exclusive). */
     static void forEach(
-            RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout,
+            RavineSettings settings, RavineBounds bounds, RavineCell cell, CellDiscs cellDiscs,
             int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
-        var painter = new Painter(settings, bounds, cell, layout, minX, minZ, minY, maxY, sink);
-        List<Disc> discs = layout.discs();
+        var painter = new Painter(settings, bounds, cell, cellDiscs.layout(), minX, minZ, minY, maxY, sink);
+        List<Disc> discs = cellDiscs.layout().discs();
         // Stems and roots first, platforms second, so a platform keeps its own material where a stem passes through it.
         for (int i = 0; i < discs.size(); i++) {
-            if (painter.reaches(discs.get(i))) {
-                painter.support(discs.get(i), paletteOf(settings, cell, i));
+            Disc disc = discs.get(i);
+            if (painter.reaches(disc)) {
+                cellDiscs.themes().get(i).ifPresent(theme -> painter.support(disc, theme.palette()));
             }
         }
         for (int i = 0; i < discs.size(); i++) {
-            if (painter.reaches(discs.get(i))) {
-                painter.platform(discs.get(i), paletteOf(settings, cell, i));
+            Disc disc = discs.get(i);
+            if (painter.reaches(disc)) {
+                cellDiscs.themes().get(i).ifPresent(theme -> painter.platform(disc, theme.palette()));
             }
         }
-    }
-
-    /** The palette of the {@code index}-th disc of a cell's layout. */
-    static DiscPalette paletteOf(RavineSettings settings, RavineCell cell, int index) {
-        List<DiscPalette> palettes = settings.discPalettes();
-        return palettes.get(DiscPalette.pick(palettes, RavineCells.unit(cell.hash(), PALETTE_HASH_BASE + index)));
     }
 
     private record Painter(

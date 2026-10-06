@@ -29,96 +29,51 @@
     "max_bowl_depth": 0,
     "bowl_variation": 0
   },
-  "disc_palettes": [
+  "disc_themes": [
     {
       "weight": 2,
-      "top": [
-        {
-          "thickness": 1,
-          "block": {
-            "type": "minecraft:noise_threshold_provider",
-            "seed": 2345,
-            "noise": {
-              "firstOctave": 0,
-              "amplitudes": [
-                1.0
+      "palette": {
+        "top": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:noise_threshold_provider",
+              "seed": 2345,
+              "noise": {
+                "firstOctave": 0,
+                "amplitudes": [
+                  1.0
+                ]
+              },
+              "scale": 0.08,
+              "threshold": -0.2,
+              "high_chance": 0.15,
+              "default_state": {
+                "Name": "minecraft:moss_block"
+              },
+              "low_states": [
+                {
+                  "Name": "minecraft:podzol"
+                }
+              ],
+              "high_states": [
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                }
               ]
-            },
-            "scale": 0.08,
-            "threshold": -0.2,
-            "high_chance": 0.15,
-            "default_state": {
-              "Name": "minecraft:moss_block"
-            },
-            "low_states": [
-              {
-                "Name": "minecraft:podzol"
+            }
+          },
+          {
+            "thickness": 2,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:rooted_dirt"
               }
-            ],
-            "high_states": [
-              {
-                "Name": "minecraft:mossy_cobblestone"
-              }
-            ]
-          }
-        },
-        {
-          "thickness": 2,
-          "block": {
-            "type": "minecraft:simple_state_provider",
-            "state": {
-              "Name": "minecraft:rooted_dirt"
             }
           }
-        }
-      ],
-      "underside": [
-        {
-          "thickness": 1,
-          "block": {
-            "type": "minecraft:weighted_state_provider",
-            "entries": [
-              {
-                "data": {
-                  "Name": "minecraft:mossy_cobblestone"
-                },
-                "weight": 2
-              },
-              {
-                "data": {
-                  "Name": "minecraft:cobblestone"
-                },
-                "weight": 1
-              }
-            ]
-          }
-        }
-      ],
-      "body": {
-        "type": "minecraft:weighted_state_provider",
-        "entries": [
-          {
-            "data": {
-              "Name": "minecraft:stone"
-            },
-            "weight": 3
-          },
-          {
-            "data": {
-              "Name": "minecraft:andesite"
-            },
-            "weight": 1
-          },
-          {
-            "data": {
-              "Name": "minecraft:mossy_cobblestone"
-            },
-            "weight": 1
-          }
-        ]
-      },
-      "stem": {
-        "surface": [
+        ],
+        "underside": [
           {
             "thickness": 1,
             "block": {
@@ -132,7 +87,7 @@
                 },
                 {
                   "data": {
-                    "Name": "minecraft:moss_block"
+                    "Name": "minecraft:cobblestone"
                   },
                   "weight": 1
                 }
@@ -140,60 +95,109 @@
             }
           }
         ],
-        "core": {
-          "type": "minecraft:simple_state_provider",
-          "state": {
-            "Name": "minecraft:stone"
+        "body": {
+          "type": "minecraft:weighted_state_provider",
+          "entries": [
+            {
+              "data": {
+                "Name": "minecraft:stone"
+              },
+              "weight": 3
+            },
+            {
+              "data": {
+                "Name": "minecraft:andesite"
+              },
+              "weight": 1
+            },
+            {
+              "data": {
+                "Name": "minecraft:mossy_cobblestone"
+              },
+              "weight": 1
+            }
+          ]
+        },
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:weighted_state_provider",
+                "entries": [
+                  {
+                    "data": {
+                      "Name": "minecraft:mossy_cobblestone"
+                    },
+                    "weight": 2
+                  },
+                  {
+                    "data": {
+                      "Name": "minecraft:moss_block"
+                    },
+                    "weight": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:stone"
+            }
           }
         }
       }
     },
     {
       "weight": 1,
-      "top": [
-        {
-          "thickness": 1,
-          "block": {
-            "type": "minecraft:simple_state_provider",
-            "state": {
-              "Name": "minecraft:white_concrete"
-            }
-          }
-        }
-      ],
-      "underside": [
-        {
-          "thickness": 1,
-          "block": {
-            "type": "minecraft:simple_state_provider",
-            "state": {
-              "Name": "minecraft:black_concrete"
-            }
-          }
-        }
-      ],
-      "body": {
-        "type": "minecraft:simple_state_provider",
-        "state": {
-          "Name": "minecraft:light_gray_concrete"
-        }
-      },
-      "stem": {
-        "surface": [
+      "palette": {
+        "top": [
           {
             "thickness": 1,
             "block": {
               "type": "minecraft:simple_state_provider",
               "state": {
-                "Name": "minecraft:orange_concrete"
+                "Name": "minecraft:white_concrete"
               }
             }
           }
         ],
-        "core": {
+        "underside": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:black_concrete"
+              }
+            }
+          }
+        ],
+        "body": {
           "type": "minecraft:simple_state_provider",
           "state": {
-            "Name": "minecraft:yellow_concrete"
+            "Name": "minecraft:light_gray_concrete"
+          }
+        },
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:simple_state_provider",
+                "state": {
+                  "Name": "minecraft:orange_concrete"
+                }
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:yellow_concrete"
+            }
           }
         }
       }

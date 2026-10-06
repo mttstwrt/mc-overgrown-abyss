@@ -874,6 +874,120 @@ Not verified: nothing was looked at in game; Larion not run, where a taller cone
 ravine packs were only loaded by a unit test; whether the city is intact under the lower discs and stems; how riders read from
 inside a host's dome.
 
+### Disc themes: a micro-biome for each disc (first pass)
+
+Owner: start on the micro-biomes for each disc. From the earlier discussion: complete control over vegetation colour, foliage,
+ground material and structures per disc, and rarity by position (discs near the centre more likely jungle; small discs low down
+and far from the centre line more likely rare custom biomes such as a crystal geode or a honeycomb platform).
+
+This pass builds the foundation and four starter themes. Structures on discs and coded patterns are not in it.
+
+- **A theme per disc** (`disc_themes` in `carve.json`, `DiscTheme`; it replaces `disc_palettes`). A theme is a `biome`, a `weight`
+  with three ramps, a `palette` (the block palette from before, without its own weight) and a `growth` list. Every part but the
+  weight is optional. Each disc is given one theme when its cell's discs are built (`CellDiscs`); a disc no theme has weight for
+  stays plain rock.
+- **Rarity by position.** A theme's weight is multiplied along three ramps: `by_height` (`bottom` to `top`), `by_distance`
+  (`centre` to `edge`) and `by_size` (`small` to `large`). The traits are measured among the discs of the same hole (lowest to
+  highest disc, centre to outermost disc), so a ramp runs its whole length in every hole whatever the world's height. Size is
+  measured from the smallest radius a disc may have to the largest. My first version measured height and distance against the
+  whole hole; discs only fill part of that, the ramps barely moved, and the "rare" themes came out as a third of all discs.
+- **Biome.** A theme's biome is stamped over the disc's dome and platform and 4 blocks round them, by the same resolver wrap as
+  the cavern's (`FootprintBiomeResolver`, renamed from `CavernBiomeResolver`). Where the spaces of several discs overlap the
+  highest disc has it, so a rider keeps its own biome inside its host's dome. A disc in the cavern's airspace keeps its own biome
+  rather than the cavern's lush caves. The four biomes are datapack files in `data/overgrown_abyss/worldgen/biome/`: each sets
+  `grass_color`, `foliage_color` and for two of them water colours, takes its spawn lists and sounds from vanilla's jungle or lush
+  caves, and lists no features.
+- **Growth.** A disc biome is not one the biome source can produce, so vanilla never runs a feature list for it (checked earlier in
+  the jar). Each theme lists configured features with an `every` (one per that many blocks of surface, on average) and a surface,
+  `top` or `underside`; `DiscGrower`, hooked at the tail of `ChunkGenerator.applyBiomeDecoration` (new `ChunkGeneratorMixin`),
+  places them in the open block on that surface. The places are drawn from the cell's hash and each block's coordinates, so they
+  do not depend on chunk order. A place is skipped if it is not open or the surface there is not a sturdy face.
+- **Starter themes** (weights in the file): `disc_lush` (the mossy palette; moss patches, azalea trees, flowers, spore blossoms
+  and cave vines underneath), `disc_jungle` (grass over dirt; jungle trees and bushes, bamboo, jungle grass, melons, cave vines;
+  three times as likely at the centre as at the edge), and two rare ones weighted towards small, low, outlying discs:
+  `disc_crystal` (amethyst with some budding amethyst over calcite, smooth basalt underneath; clusters above and below, from two
+  small `simple_block` features of our own) and `disc_honeycomb` (honeycomb with honey patches; bee nests, the odd oak with a
+  hive). Flowers cannot stand on honeycomb, which is why that theme grows nests instead.
+- **What the numbers give** (7 cones, seed 20261003, vanilla height): 78 jungle, 72 lush, 18 crystal, 16 honeycomb, so 18% rare.
+  In a unit test over 64 holes the rare share is under 12% in the middle and more than two and a half times that on small, low,
+  outlying discs.
+- **Side effects of the stamped biomes, as intended:** the surrounding biome's features stay off themed discs. The lush caves water
+  and clay that the last round found in the tops of low discs is gone (0 of 90 top probes, 26 before).
+
+| Check | Result |
+|---|---|
+| Unit tests (103): a theme's JSON and its defaults; a weight along each ramp; the draw, including themes with no weight; traits measured among a hole's own discs; the shipped themes gather where their ramps say; where a disc's biome reaches; the highest disc's biome wins, none outside discs or before a level is bound; growth places on a top and an underside at about the asked rate, the same every time; each shipped theme has a biome file, a block for every part, and growth whose own feature files exist; palettes, blocks and all earlier tests | pass (`./gradlew build`, both loader jars built) |
+| NeoForge dedicated server, seed 20261003, new world with the `cone` pack (five themes), 145 chunks around the cone at 956,-499 | boots with `Disc themes: 5`, no missing biome or feature. Biome 4 blocks over the top of each disc (`execute if biome`): 82 of 85 as computed; cavern floor still lush caves. Tops 88 of 90, undersides 90 of 90 (the 2 tops are dirt under a tree) |
+| Fabric dedicated server with no datapack (seed set to 20261003 for the run), 154 chunks around the same cone | `Disc themes: 4`. Biome 88 of 90; tops 88 of 90, undersides 90 of 90. No errors |
+| What grew at the growth places (Fabric; NeoForge alike): 40 places per theme and feature, where nothing else of the layout is in the way | crystal: clusters at 40 of 40 on top and 40 of 40 underneath. Honeycomb: nests at 35 of 40 (the rest are on honey, which is not a sturdy face), oak logs at 24 of 29 tree places. Jungle: bamboo at 31 of 40, jungle logs at 27 (trees) and 31 (bushes) of 40, cave vines at 40 of 40, melons at 8 of 40. Lush: spore blossoms 40 of 40, cave vines 40 of 40, azalea trunks at 11 of 19, moss and flower patches around the rest |
+| Generation time, dedicated server | 145 chunks in 15 s (NeoForge) and 154 in 15 s (Fabric); the last round took 14 s for 121 |
+
+The biome misses (2 to 3 per run) are at the edge between two discs' spaces, where the game's own biome lookup blurs neighbouring
+cells; they read as the neighbouring disc's biome.
+
+Not verified: nothing was looked at in game. In particular the colours: the biomes are stamped, but tint is drawn by the client and
+no client was run, modded or not. Larion not run. Mobs spawning by a disc's biome was not checked. The ravine packs were only
+loaded by a unit test (`painted-ravine` now has two themes that are only palettes).
+
+Not in this pass: structures on discs (ruins by theme), coded patterns (honeycomb cells, geode shells; the two rare themes only
+approximate them with layers and noise patches), growth on stems, a theme's own mob lists (they are vanilla's), ravine discs
+varying by theme position along the ravine.
+
+### Hiding the rare discs: outer-edge riders, limits, mangrove, a wider base
+
+Owner, after looking at the first themes in game:
+
+- Drop the honeycomb disc; make it a structure that can spawn on lush or jungle discs later.
+- Keep crystal discs to smaller discs further from the centre.
+- Going straight down the centre almost every disc is in plain view. What is there looks good, but jungle and lush discs should
+  screen the discs further back. Use the cone's geometry to hide the rarer biomes: a wide disc near the bottom and middle can carry
+  a smaller disc near its outer edge, which cuts its way up outside the cone. With denser foliage on lush and jungle discs and a
+  new mangrove biome, that hides the rare discs and the shape of the cone, so the place feels bigger without the cone being much
+  bigger. The cone's base radius can also grow a bit.
+
+What changed:
+
+- **Honeycomb theme removed**, with its biome file and bee nest feature. A honeycomb structure for lush and jungle discs is noted
+  under future additions; nothing of it is built.
+- **Limits on a theme** (`only` in a theme: `min` and `max` on height, distance and size, each from 0 to 1). A ramp only makes a
+  theme more or less likely; a limit rules it out. Crystal is now `"only": {"distance": {"min": 0.55}, "size": {"max": 0.4}}`:
+  discs in the outer 45% of their hole's reach and in the smallest 40% of the size range.
+- **Riders stand on the outer side of their host.** A rider's place is within 100 degrees either way of straight out from the
+  cone's axis through its host's centre, half to nine tenths of the way out to where its stem still lands, and it must be further
+  from the axis than its host's centre. Its floor is as low as headroom over the host's top allows and no higher than fits under
+  the host's roof there, which is low near the rim, so the rider's own dome rises through that roof into the rock beyond the cone.
+  Before, riders stood anywhere round their host, half of them on the side facing the middle.
+- **`cone.base_radius`** (150): the cone's radius at the floor is its own number now, apart from the cavern's (still 136). Where the
+  cone is wider than the cavern's dome it opens the ground beyond it.
+- **`rider_chance` 0.6 to 0.5.** With places only on the outer side nearly every place is a valid one, so the count went up;
+  0.5 gives 6 to 18 riders per cone at vanilla height.
+- **Mangrove theme** (`disc_mangrove`): mud with moss and muddy root patches over packed mud and stone, mangrove roots under the
+  platform and as the stem's surface; mangroves and tall mangroves, grass, cave vines underneath. Weighted to low and large discs
+  (twice as likely at the bottom as elsewhere, and on the largest discs), since those are the hosts. Colours and spawns from
+  vanilla's mangrove swamp.
+- **Denser foliage.** Jungle: a tree every 45 blocks of top (90 before), a bush every 30 (60), bamboo every 120 (350). Lush: an
+  azalea tree every 200 (700), moss patches every 110 (160), tall grass, and hanging moss under the platform.
+
+What the numbers give (7 cones, seed 20261003, vanilla height): 21 to 33 discs per cone, 7 to 23 of them centred outside the cone;
+67 jungle, 61 lush, 48 mangrove, 16 crystal (8%); two cones have no crystal disc. In a unit test over 64 holes no crystal disc is in
+the inner third, all 240 stand behind a larger disc of another theme (one nearer the axis whose footprint reaches theirs), and
+mangrove is half of the wide low discs against a fifth of all discs.
+
+| Check | Result |
+|---|---|
+| Unit tests (105): limits rule a theme out and a missing end of a span is the end of the trait; the shipped themes gather where their ramps and limits say, every crystal disc inside its limits and behind a larger disc of another theme; riders outside the cone, further from the axis than a larger disc that has them in the outer part of its dome, and carrying riders of their own; the cone's base radius apart from the cavern's, and a base narrower than the top rejected; all earlier tests | pass (`./gradlew build`, both loader jars built) |
+| NeoForge dedicated server, seed 20261003, new world with the `cone` pack, 149 chunks around the cone at 956,-499 | no errors, no missing biome or feature. The floor between the cavern's edge and the cone's is open. Biome 86 of 93, tops 97 of 99, undersides 97 of 99 |
+| Fabric dedicated server with no datapack (seed set to 20261003 for the run), 157 chunks | no errors. Biome 93 of 99, tops 97 of 99, undersides 98 of 99 |
+| Growth, 40 places per theme and feature (Fabric; NeoForge alike) | crystal clusters 40 of 40 above and 40 of 40 below. Jungle: trunks at 23 of 40 tree places and 29 of 40 bush places, bamboo at 29. Lush: azalea trunks at 16, spore blossoms 39 of 40, cave vines 38 of 40. Mangrove: a trunk in the column over 21 of 40 mangrove places and 8 of 40 tall mangrove places (a mangrove's trunk starts a few blocks up, on its roots; the tall ones mostly do not fit under a dome), with leaves through most of those columns |
+| Generation time, dedicated server | 149 chunks in 16 s and 157 in 16 s |
+
+After that check I raised the mangrove rate from one per 45 blocks to one per 30 and lowered tall mangroves from one per 55 to one
+per 80, since the tall ones mostly fail; that change was not run in a world.
+
+Not verified: nothing was looked at in game, so whether the rare discs are in fact hidden from the centre line, and how much, is
+open; the unit test only shows that a larger disc stands between each of them and the axis. Larion not run. The ravine packs were
+only loaded by a unit test.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.
@@ -923,6 +1037,14 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
   its edge), a decision on which ledges get what, and the custom buildings from the hanging-temples item below.
 - **Open questions:** micro-biomes by biome override (as the cavern does for lush caves) or by placed features only;
   whether bridge-landing ledges get ruins first, since they are the walkable ones.
+
+### Honeycomb as a structure on discs (owner idea)
+
+- **Idea:** the honeycomb disc theme was removed (2026-10-05); the owner wants honeycomb back as a structure that can spawn on
+  lush or jungle discs.
+- **What exists:** nothing of it. The removed theme was honeycomb blocks with honey patches and bee nests placed as single blocks.
+- **What it needs:** the structure-on-discs placement that ruins by theme also need (a start per disc, read from the cell's
+  discs, since structures test the biome source and not a disc's stamped biome), and the honeycomb pieces themselves.
 
 ### Hanging temples (built into the mod)
 

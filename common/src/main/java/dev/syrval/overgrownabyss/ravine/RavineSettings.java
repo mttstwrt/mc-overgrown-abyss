@@ -13,8 +13,9 @@ import net.minecraft.world.level.levelgen.WorldGenerationContext;
 /**
  * Datapack tunables for one hole in the ground and the city cavern at its floor. The hole is either a {@code ravine} (a long
  * curving shaft, see {@link RavineGeometry}) or a {@code cone} (see {@link ConeSettings}); exactly one is given. Both are filled
- * with the same discs, which {@code discs} describes (see {@link DiscShape}). {@code disc_palettes} is what discs are made of
- * (see {@link DiscPalette}): each disc takes one, by weight. Without any, every disc is the terrain's own rock.
+ * with the same discs, which {@code discs} describes (see {@link DiscShape}). {@code disc_themes} are the kinds of disc there
+ * are (see {@link DiscTheme}): each disc is given one, which sets its biome, what it is made of and what grows on it. Without
+ * any, every disc is the terrain's own rock in the biome it lies in.
  *
  * <p>Each ravine draws one size from 0 to 1 (a uniform draw raised to {@code size_bias}: 1 is even, below 1 favours large
  * ravines, above 1 small ones). The vertical bounds are anchors so the cavern floor follows the world bottom of whatever
@@ -32,7 +33,7 @@ public record RavineSettings(
         int cavernHeight,
         float edgeFalloff,
         DiscShape discs,
-        List<DiscPalette> discPalettes,
+        List<DiscTheme> discThemes,
         RavineEnvironment environment,
         Optional<RavineGeometry> ravine,
         Optional<ConeSettings> cone) {
@@ -48,14 +49,14 @@ public record RavineSettings(
             Codec.intRange(1, 1024).fieldOf("cavern_height").forGetter(RavineSettings::cavernHeight),
             Codec.floatRange(0.5F, 64).fieldOf("edge_falloff").forGetter(RavineSettings::edgeFalloff),
             DiscShape.CODEC.fieldOf("discs").forGetter(RavineSettings::discs),
-            DiscPalette.CODEC.listOf().optionalFieldOf("disc_palettes", List.of()).forGetter(RavineSettings::discPalettes),
+            DiscTheme.CODEC.listOf().optionalFieldOf("disc_themes", List.of()).forGetter(RavineSettings::discThemes),
             RavineEnvironment.CODEC.fieldOf("environment").forGetter(RavineSettings::environment),
             RavineGeometry.CODEC.optionalFieldOf("ravine").forGetter(RavineSettings::ravine),
             ConeSettings.CODEC.optionalFieldOf("cone").forGetter(RavineSettings::cone)
     ).apply(i, RavineSettings::new)).validate(RavineSettings::validate);
 
     public RavineSettings {
-        discPalettes = List.copyOf(discPalettes);
+        discThemes = List.copyOf(discThemes);
     }
 
     // A cone's cell is a round hole: no length and no curves.
@@ -85,12 +86,12 @@ public record RavineSettings(
 
     /**
      * Furthest horizontal distance from a hole's centre that the carve can reach. For a ravine: the longest ravine's half length
-     * plus its widest wall, pushed out by the curves and by the discs cut out of the wall. For a cone: the cavern's radius, which
-     * is the cone's at the floor, or the outer radius its discs are held to if that is more. Then the falloff.
+     * plus its widest wall, pushed out by the curves and by the discs cut out of the wall. For a cone: the largest of the
+     * cavern's radius, the cone's at the floor and the outer radius its discs are held to. Then the falloff.
      */
     public double maxReach() {
         if (cone.isPresent()) {
-            return Math.max(cavernRadius, cone.get().outerRadius()) + ConeDiscLayout.PLACING_SLACK + edgeFalloff;
+            return Math.max(Math.max(cavernRadius, cone.get().baseRadius()), cone.get().outerRadius()) + ConeDiscLayout.PLACING_SLACK + edgeFalloff;
         }
         RavineGeometry g = geometry();
         double ravine = g.length().maxInclusive() / 2.0 + g.width().maxInclusive() / 2.0 + g.curvature().maxDisplacement()
@@ -125,9 +126,6 @@ public record RavineSettings(
         }
         if (s.cone.isPresent() && lowestUnderside(s, s.cone.get()) <= 0) {
             return DataResult.error(() -> "the cone's base_clearance puts its lowest discs at or under the cavern floor");
-        }
-        if (s.cone.isPresent() && s.cone.get().topRadius() > s.cavernRadius) {
-            return DataResult.error(() -> "the cone's top_radius must not exceed cavern_radius, since it widens towards the floor");
         }
         return DataResult.success(s);
     }

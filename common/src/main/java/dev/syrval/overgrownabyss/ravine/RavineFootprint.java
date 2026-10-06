@@ -1,8 +1,10 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
@@ -20,12 +22,15 @@ public interface RavineFootprint {
         }
 
         @Override
-        public Optional<Holder<Biome>> cavernBiome(int x, int y, int z) {
+        public Optional<Holder<Biome>> biomeAt(int x, int y, int z) {
             return Optional.empty();
         }
 
         @Override
         public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {}
+
+        @Override
+        public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {}
     };
 
     /** Whether the column is touched by an active ravine, including wall noise and falloff. */
@@ -34,8 +39,11 @@ public interface RavineFootprint {
     /** Whether the point lies in the carved volume itself, as opposed to natural terrain next to it. */
     boolean isOpen(DensityFunction.FunctionContext context);
 
-    /** The biome the cavern takes at this point, if it is inside a cavern that has one configured. */
-    Optional<Holder<Biome>> cavernBiome(int x, int y, int z);
+    /**
+     * The biome a ravine gives this point in place of the level's own: that of the disc it belongs to, if the disc's theme has
+     * one, or else the cavern's, if it is inside a cavern that has one configured.
+     */
+    Optional<Holder<Biome>> biomeAt(int x, int y, int z);
 
     /**
      * Calls {@code sink} with every block that takes a disc's material in the chunk whose lowest corner is {@code (minX, minZ)},
@@ -43,8 +51,15 @@ public interface RavineFootprint {
      */
     void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink);
 
-    /** One bound carve and the biome (if any) resolved for its cavern. */
-    record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome) {}
+    /** Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is {@code (minX, minZ)}. */
+    void forEachGrowth(int minX, int minZ, DiscGrowthSink sink);
+
+    /** One bound carve, the biome (if any) resolved for its cavern, and the biomes of its disc themes that exist in the level. */
+    record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome, Map<ResourceKey<Biome>, Holder<Biome>> discBiomes) {
+        public Region {
+            discBiomes = Map.copyOf(discBiomes);
+        }
+    }
 
     static RavineFootprint of(List<Region> regions) {
         List<Region> copy = List.copyOf(regions);
@@ -74,8 +89,13 @@ public interface RavineFootprint {
             }
 
             @Override
-            public Optional<Holder<Biome>> cavernBiome(int x, int y, int z) {
+            public Optional<Holder<Biome>> biomeAt(int x, int y, int z) {
                 for (Region region : copy) {
+                    // A disc standing in the cavern's airspace keeps its own biome there.
+                    Optional<Holder<Biome>> disc = region.carve().discBiomeAt(x, y, z).map(region.discBiomes()::get);
+                    if (disc.isPresent()) {
+                        return disc;
+                    }
                     if (region.cavernBiome().isPresent() && region.carve().isCavern(x, y, z)) {
                         return region.cavernBiome();
                     }
@@ -87,6 +107,13 @@ public interface RavineFootprint {
             public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
                 for (Region region : copy) {
                     region.carve().forEachDiscBlock(minX, minZ, minY, maxY, sink);
+                }
+            }
+
+            @Override
+            public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachGrowth(minX, minZ, sink);
                 }
             }
         };

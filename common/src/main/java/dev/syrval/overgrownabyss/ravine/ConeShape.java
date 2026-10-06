@@ -19,13 +19,13 @@ final class ConeShape {
      * never further out than that, empty if it is never that close, which is anywhere inside the top radius.
      */
     static OptionalDouble heightAt(RavineSettings settings, ConeSettings cone, RavineBounds bounds, double radius) {
-        if (radius >= settings.cavernRadius()) {
+        if (radius >= cone.baseRadius()) {
             return OptionalDouble.of(bounds.floorY());
         }
         if (radius <= cone.topRadius()) {
             return OptionalDouble.empty();
         }
-        double t = 1 - Math.pow((radius - cone.topRadius()) / (settings.cavernRadius() - cone.topRadius()), 1.0 / cone.flare());
+        double t = 1 - Math.pow((radius - cone.topRadius()) / (cone.baseRadius() - cone.topRadius()), 1.0 / cone.flare());
         return OptionalDouble.of(bounds.floorY() + t * (bounds.topY() - bounds.floorY()));
     }
 
@@ -67,17 +67,17 @@ final class ConeShape {
         return radial > reach ? Double.POSITIVE_INFINITY : Discs.domeDistance(layout, x, y, z);
     }
 
-    /** Radius of the cone at height {@code y}: the cavern's at the floor, narrowing to the top radius. */
+    /** Radius of the cone at height {@code y}: the base radius at the floor, narrowing to the top radius. */
     static double radiusAt(RavineSettings settings, ConeSettings cone, RavineBounds bounds, double y) {
         double t = Math.clamp((y - bounds.floorY()) / (double) (bounds.topY() - bounds.floorY()), 0, 1);
-        return cone.topRadius() + (settings.cavernRadius() - cone.topRadius()) * Math.pow(1 - t, cone.flare());
+        return cone.topRadius() + (cone.baseRadius() - cone.topRadius()) * Math.pow(1 - t, cone.flare());
     }
 
     // Dividing by the slope's length makes this the distance to the wall's surface rather than just the horizontal gap.
     private static double coneDistance(RavineSettings settings, ConeSettings cone, RavineBounds bounds, double radial, double y) {
         double height = bounds.topY() - bounds.floorY();
         double t = Math.clamp((y - bounds.floorY()) / height, 0, 1);
-        double slope = (settings.cavernRadius() - cone.topRadius()) * cone.flare() * Math.pow(1 - t, cone.flare() - 1) / height;
+        double slope = (cone.baseRadius() - cone.topRadius()) * cone.flare() * Math.pow(1 - t, cone.flare() - 1) / height;
         return (radial - radiusAt(settings, cone, bounds, y)) / Math.sqrt(1 + slope * slope);
     }
 }
