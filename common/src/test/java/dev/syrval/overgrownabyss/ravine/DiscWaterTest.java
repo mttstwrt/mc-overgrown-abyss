@@ -134,26 +134,6 @@ class DiscWaterTest {
     }
 
     @Test
-    void aShareIsTurnedIntoALevelOfTheSmoothValuesThatHoldsThatShare() {
-        assertEquals(0, DiscWater.levelBelow(0), 1e-9);
-        assertEquals(0.5, DiscWater.levelBelow(0.5), 1e-9);
-        assertEquals(1, DiscWater.levelBelow(1), 1e-9);
-        for (double share : new double[] {0.05, 0.1, 0.3, 0.5, 0.7, 0.92}) {
-            double level = DiscWater.levelBelow(share);
-            assertEquals(1 - level, DiscWater.levelBelow(1 - share), 1e-9, "the values lie evenly about a half");
-            int below = 0;
-            int all = 0;
-            for (int x = 0; x < 600; x++) {
-                for (int z = 0; z < 600; z++) {
-                    below += RavineCells.smoothAt(0xABCDEFL, 9, x / 7.3, z / 7.3) < level ? 1 : 0;
-                    all++;
-                }
-            }
-            assertEquals(share, below / (double) all, 0.015, "values under the level for a share of " + share);
-        }
-    }
-
-    @Test
     void waterIsWrittenAsHowMuchAndTheRestHasDefaults() {
         DiscWater plain = DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"ponds\": 0.25}")).getOrThrow();
         assertEquals(new DiscWater(0.25F, 12, 0, 40, 2, 3), plain);

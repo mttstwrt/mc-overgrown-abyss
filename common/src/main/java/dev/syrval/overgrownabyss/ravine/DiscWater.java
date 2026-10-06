@@ -2,7 +2,6 @@ package dev.syrval.overgrownabyss.ravine;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.List;
 
 /**
  * Shallow water lying in the top of a disc: ponds, and streams that wind across it. Water takes the place of the top blocks
@@ -33,19 +32,6 @@ public record DiscWater(float ponds, float pondSize, float streamWidth, float st
     private static final int HASH_BASE = 400_000;
     // Where a stream's value changes by less than this over the spacing of the streams, it marks no line to follow.
     private static final double LEVEL_GROUND = 0.25;
-    // The values that a twentieth, two twentieths and so on of RavineCells.smoothAt lie below, measured over three million
-    // draws. Blended values gather around a half, so a share of the top is turned into a level through these.
-    private static final List<Double> LEVELS = List.of(
-            0.000, 0.148, 0.209, 0.258, 0.299, 0.337, 0.372, 0.405, 0.438, 0.469, 0.500,
-            0.531, 0.562, 0.595, 0.628, 0.663, 0.701, 0.742, 0.791, 0.852, 1.000);
-
-    /** The value that {@code share} of all smooth values lie below. */
-    static double levelBelow(double share) {
-        double at = Math.clamp(share, 0, 1) * (LEVELS.size() - 1);
-        int below = Math.min((int) at, LEVELS.size() - 2);
-        return LEVELS.get(below) + (LEVELS.get(below + 1) - LEVELS.get(below)) * (at - below);
-    }
-
     /**
      * How deep the water is in one column of a disc's top, or 0 where there is none. {@code index} is the disc's place in its
      * layout, which gives each disc of a hole its own ponds and streams.
@@ -60,12 +46,12 @@ public record DiscWater(float ponds, float pondSize, float streamWidth, float st
     }
 
     private int wantedAt(long hash, int index, int x, int z) {
-        double pond = smooth(hash, HASH_BASE + 2 * index, x, z, pondSize);
+        double pond = RavineCells.smoothOver(hash, HASH_BASE + 2 * index, x, z, pondSize);
         // The half of a pond where the value is highest is its middle.
-        if (pond >= levelBelow(1 - ponds / 2.0)) {
+        if (pond >= RavineCells.levelBelow(1 - ponds / 2.0)) {
             return depth;
         }
-        if (pond >= levelBelow(1 - ponds)) {
+        if (pond >= RavineCells.levelBelow(1 - ponds)) {
             return 1;
         }
         return streamWidth > 0 && fromStream(hash, HASH_BASE + 2 * index + 1, x, z) < streamWidth / 2 ? 1 : 0;
@@ -78,21 +64,12 @@ public record DiscWater(float ponds, float pondSize, float streamWidth, float st
      */
     private double fromStream(long hash, int index, int x, int z) {
         double slope = Math.hypot(
-                smooth(hash, index, x + 1, z, streamSpacing) - smooth(hash, index, x - 1, z, streamSpacing),
-                smooth(hash, index, x, z + 1, streamSpacing) - smooth(hash, index, x, z - 1, streamSpacing)) / 2;
+                RavineCells.smoothOver(hash, index, x + 1, z, streamSpacing) - RavineCells.smoothOver(hash, index, x - 1, z, streamSpacing),
+                RavineCells.smoothOver(hash, index, x, z + 1, streamSpacing) - RavineCells.smoothOver(hash, index, x, z - 1, streamSpacing)) / 2;
         if (slope * streamSpacing < LEVEL_GROUND) {
             return Double.POSITIVE_INFINITY;
         }
-        return Math.abs(smooth(hash, index, x, z, streamSpacing) - 0.5) / slope;
-    }
-
-    // The smooth values lie on a square grid, which shows as water running north and south or east and west. Each set of
-    // values is turned by an angle of its own, so the grid lines up with nothing.
-    private static double smooth(long hash, int index, int x, int z, double size) {
-        double angle = RavineCells.unit(hash, index) * 2 * Math.PI;
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-        return RavineCells.smoothAt(hash, index, (x * cos - z * sin) / size, (x * sin + z * cos) / size);
+        return Math.abs(RavineCells.smoothOver(hash, index, x, z, streamSpacing) - 0.5) / slope;
     }
 
     // Water would run off into lower ground beside it, and the top steps down wherever the bowl does.

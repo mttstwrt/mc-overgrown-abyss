@@ -176,6 +176,34 @@ class RavineCellsTest {
     }
 
     @Test
+    void aShareIsTurnedIntoALevelOfTheSmoothValuesThatHoldsThatShare() {
+        assertEquals(0, RavineCells.levelBelow(0), 1e-9);
+        assertEquals(0.5, RavineCells.levelBelow(0.5), 1e-9);
+        assertEquals(1, RavineCells.levelBelow(1), 1e-9);
+        for (double share : new double[] {0.05, 0.1, 0.3, 0.5, 0.7, 0.92}) {
+            double level = RavineCells.levelBelow(share);
+            assertEquals(1 - level, RavineCells.levelBelow(1 - share), 1e-9, "the values lie evenly about a half");
+            int below = 0;
+            int all = 0;
+            for (int x = 0; x < 600; x++) {
+                for (int z = 0; z < 600; z++) {
+                    below += RavineCells.smoothAt(0xABCDEFL, 9, x / 7.3, z / 7.3) < level ? 1 : 0;
+                    all++;
+                }
+            }
+            assertEquals(share, below / (double) all, 0.015, "values under the level for a share of " + share);
+            assertEquals(share, RavineCells.shareBelow(level), 1e-9, "and the level turns back into the share");
+        }
+        assertEquals(0, RavineCells.shareBelow(0), 1e-9);
+        assertEquals(1, RavineCells.shareBelow(1), 1e-9);
+        double previous = -1;
+        for (double level = 0; level <= 1; level += 0.01) {
+            assertTrue(RavineCells.shareBelow(level) > previous, "a higher level holds a larger share");
+            previous = RavineCells.shareBelow(level);
+        }
+    }
+
+    @Test
     void containingMapsNegativeCoordinatesToTheRightCell() {
         assertEquals(RavineCells.at(5L, SETTINGS, -1, -1), RavineCells.containing(5L, SETTINGS, -0.5, -2047));
         assertEquals(RavineCells.at(5L, SETTINGS, -2, 0), RavineCells.containing(5L, SETTINGS, -2049, 0));

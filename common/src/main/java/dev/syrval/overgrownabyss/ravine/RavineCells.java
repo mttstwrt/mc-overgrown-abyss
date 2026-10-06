@@ -1,5 +1,6 @@
 package dev.syrval.overgrownabyss.ravine;
 
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.world.level.ChunkPos;
 
@@ -11,6 +12,11 @@ import net.minecraft.world.level.ChunkPos;
 public final class RavineCells {
     private static final double S_CURVE_CHANCE = 0.75;
     private static final long GOLDEN = 0x9E3779B97F4A7C15L;
+    // The levels that a twentieth, two twentieths and so on of smoothAt lie below, measured over three million draws. Blended
+    // values gather around a half, so a share of a surface is turned into a level through these, and a level back into a share.
+    private static final List<Double> LEVELS = List.of(
+            0.000, 0.148, 0.209, 0.258, 0.299, 0.337, 0.372, 0.405, 0.438, 0.469, 0.500,
+            0.531, 0.562, 0.595, 0.628, 0.663, 0.701, 0.742, 0.791, 0.852, 1.000);
 
     private RavineCells() {}
 
@@ -94,6 +100,36 @@ public final class RavineCells {
         return lerp(ease(z - wholeZ),
                 lerp(alongX, unitAt(hash, index, wholeX, wholeZ), unitAt(hash, index, wholeX + 1, wholeZ)),
                 lerp(alongX, unitAt(hash, index, wholeX, wholeZ + 1), unitAt(hash, index, wholeX + 1, wholeZ + 1)));
+    }
+
+    /**
+     * {@link #smoothAt} over block columns, something else altogether about {@code size} blocks away. Its grid is square, which
+     * would show as ponds or patches lined up north and south or east and west, so each index turns it by an angle of its own
+     * and it lines up with nothing.
+     */
+    static double smoothOver(long hash, int index, int x, int z, double size) {
+        double angle = unit(hash, index) * 2 * Math.PI;
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        return smoothAt(hash, index, (x * cos - z * sin) / size, (x * sin + z * cos) / size);
+    }
+
+    /** The smooth value that {@code share} of all smooth values lie below. */
+    static double levelBelow(double share) {
+        double at = Math.clamp(share, 0, 1) * (LEVELS.size() - 1);
+        int below = Math.min((int) at, LEVELS.size() - 2);
+        return LEVELS.get(below) + (LEVELS.get(below + 1) - LEVELS.get(below)) * (at - below);
+    }
+
+    /** The share of all smooth values that lie below {@code level}: the inverse of {@link #levelBelow}. */
+    static double shareBelow(double level) {
+        int above = 1;
+        while (above < LEVELS.size() - 1 && LEVELS.get(above) < level) {
+            above++;
+        }
+        double from = LEVELS.get(above - 1);
+        double along = Math.clamp((level - from) / (LEVELS.get(above) - from), 0, 1);
+        return (above - 1 + along) / (LEVELS.size() - 1);
     }
 
     // Level at both ends, so the blend has no crease along the grid.
