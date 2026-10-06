@@ -124,6 +124,9 @@ public record RavineSettings(
         if (s.cone.isPresent() && s.cone.get().outerRadius() < s.cone.get().clearRadius() + 2 * s.discs.minRadius() + ConeDiscLayout.PLACING_SLACK) {
             return DataResult.error(() -> "the cone's outer_radius leaves no room for even the smallest disc beside the clear cylinder");
         }
+        if (s.discThemes.stream().anyMatch(theme -> theme.water().isPresent()) && s.discs.floorThickness() <= DiscWater.MAX_DEPTH) {
+            return DataResult.error(() -> "floor_thickness must be above " + DiscWater.MAX_DEPTH + " for a disc theme to hold water, or the water has no bed");
+        }
         if (s.cone.isPresent() && lowestUnderside(s, s.cone.get()) <= 0) {
             return DataResult.error(() -> "the cone's base_clearance puts its lowest discs at or under the cavern floor");
         }

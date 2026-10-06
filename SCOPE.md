@@ -1087,6 +1087,126 @@ modifier on top of the inherited list.
 Not verified: mobs actually spawning on a disc in game; the server runs only show the merged lists' sizes, and the unit tests
 their contents.
 
+### Jungle and mangrove discs: their own trees, water, and what hangs under them
+
+Owner, after trying the inheriting themes in their modpack: the baseline method is liked, but neither jungle nor mangrove discs
+grow any foliage. Wanted: jungle discs with dense underbrush and full-height jungle trees where they fit, vines and glow berries
+hanging from the trees and from the bottom of the disc, and small ponds and streams no more than 2 blocks deep; mangrove discs
+with water no more than 2 deep, dense mangroves and vines, and custom roots hanging out of the bottom of the disc with vines.
+
+**Why they were bare.** On the dev servers both grew (the previous round's numbers). The owner's pack has William Wythers'
+Overhauled Overworld, which replaces `minecraft:jungle` and `minecraft:mangrove_swamp`. Its trees choose their places by height
+above sea level (a `surface_relative_threshold_filter` against a fixed height: surface between y 63 and 140, by tree type) and
+by soil its own surface rules lay down (rooted dirt, sand, red sand two blocks down). A disc is mostly under sea level and has
+plain grass or mud, so every one of those trees rules itself out; nothing fails and nothing is logged. Inheritance did what it
+says, from a parent whose rules make no sense on a disc. So a disc cannot leave its trees to its parent.
+
+**What changed.**
+
+- **A theme's own growth comes first, in listed order.** `growth` ran after the inherited features, and the inherited grass
+  took the blocks the trees start in. Now a theme's growths run one at a time in the order listed (trees, then what hangs from
+  them), and the inherited features after, as vanilla lists a biome's trees before its grass.
+- **The discs' own trees** (`configured_feature/disc/`): vanilla's jungle tree, giant jungle tree, bush, mangrove and tall
+  mangrove under the mod's ids, so a pack that restyles vanilla's cannot change a disc. Two changes: more vines from their leaves,
+  and `min_clipped_height`, so a tree under a low part of a dome grows as tall as the room allows instead of not at all. The
+  parent's own tree feature is left out (`without_features`), so discs are equally wooded with and without such a pack.
+- **Water** (`DiscWater`, the theme's `water`): ponds as a share of the top, streams of a given width following a winding line,
+  1 deep, and 2 in the middle of a pond. It takes the place of the platform's top blocks at the paint pass, so it is never deeper
+  than asked and has the palette's blocks as sides and bed. Nothing schedules it to flow, so it is only put where it is held in:
+  not within `bank` of the rim, not in a column with lower ground beside it (a one-block dam wherever the bowl steps down), and
+  only under open air (not under a stem, root or the wall's rock standing on the platform). `DiscPlacementContext` now follows
+  the heightmaps that see through water down to the bed, so inherited features that ask for water depth get the right answer
+  (lily pads and, with the overhaul, seagrass turned up in the ponds).
+- **Growth in water** (`"on": "water"`): started in the lowest block of water, as vanilla starts a mangrove on the bed.
+- **Under the disc:** glow berries, tufts of leaves and vines under jungle discs; clumps of mangrove roots tipped with hanging
+  roots, and vines, under mangrove discs. Vines only hang from a block beside their top, so under a flat underside they cling to
+  the tufts, the roots, the steps of the bowl and the flare of the stem.
+- **Mangrove ground:** mud over packed mud, underside and stem clad in mangrove roots. The packed mud is needed: a mangrove's
+  roots pass through mud, and in a platform of mud alone they left through the underside, never landed, and the tree was given
+  up (about one tree in ten grew).
+
+Glow berries cannot hang from leaves in Minecraft (they need a firm face over them), so "from the trees" is from the branches of
+the giant trees, and otherwise from the rock of the dome and from undersides.
+
+Measured on dedicated servers, seed 20261003, new worlds, 100 chunks; 220 places sampled over the discs of each theme:
+
+| | NeoForge | NeoForge with the overhaul mod | Fabric |
+|---|---|---|---|
+| Jungle: bush or tree at ground level | 128 | 138 | 134 |
+| Jungle: tree canopy 3, 5 or 8 blocks up | 82 | 84 | 79 |
+| Jungle: water in the top | 29 | 29 | 29 |
+| Jungle: something hanging under the disc (of 84 places) | 48 | 42 | 37 |
+| Mangrove: canopy 3, 5 or 8 blocks up | 174 | 172 | 170 |
+| Mangrove: open water in the top (more has roots standing in it) | 65 | 65 | 60 |
+| Mangrove: something hanging under the disc (of 110 places) | 83 | 76 | 68 |
+| Water columns found running, or with water in the third block down | 0 | 0 | 0 |
+| Bed under 1-deep and 2-deep water (300 columns) | all ground | all ground | all ground |
+| Errors from the mod; inherited features that failed | 0; 0 | 0; 0 | 0; 0 |
+| Generation | 14 s | 31 s | 15 s |
+
+The overhaul run had the mod's jar and its library copied from the owner's pack into the dev server's `mods` folder for that
+run; its log shows `disc_jungle` inheriting 18 features from the replaced jungle. Lush discs are unchanged (same top blocks as
+the previous round). The NeoForge column is the final build. The other two were run one setting earlier: the only change since
+is glow berries being tried in the canopy three times as often.
+
+Glow berries in the canopy stay few all the same: 6 of 536 samples taken 3, 5 and 8 blocks over jungle ground were a glow berry
+vine, against 11 of 168 under the discs. There are few firm faces among the trees for them to hang from.
+
+Unit tests (124): the smooth values; water's share, depth, bank, stream width and that no water has lower ground beside it; a
+chunk's water columns; growth in water; a theme with water needing ground to hold it and a platform thick enough for a bed; the
+shipped themes and that every feature file a theme names exists.
+
+Not verified: nothing was looked at in game, so how any of it looks is the owner's to judge, and the densities are first
+guesses. The owner's whole pack was not run (it also has Larion and C2ME). Fluid behaviour after a player changes a pond's
+bank is vanilla's: the water then runs like any other.
+
+Limits: a pond that crosses a step of the bowl is cut by a one-block dam; where two platforms overlap a block apart, the lower
+one's water is left out under the higher one; trees can grow into the clear cylinder's edge.
+
+### Thinning the jungle and mangrove discs, and glow berries under mangrove discs
+
+Owner, after seeing the round above in game: the foliage is a bit too dense; reduce it so that a player could reasonably walk
+through the biomes. Also add glow berries underneath mangrove discs.
+
+What stops a player is a solid block at foot or head height: a bush's leaves, a trunk, a mangrove root, or the lowest leaves of
+a short tree. Grass, ferns, vines and what hangs do not. So the measure is the share of sampled ground with such a block in
+either of the two blocks a player takes up, and only those things were thinned:
+
+- **Jungle:** bushes one for every 50 blocks of ground (was 10); jungle trees every 20 (was 16) and giants every 36 (was 30).
+  The jungle tree's trunk is 5 to 12 blocks (vanilla's and before: 4 to 12), since its leaves start three blocks under its top
+  and a trunk of four put them at head height. Ferns and grass of the theme's own every 25 (was 45), to keep the ground green.
+- **Mangrove:** on the mud, short mangroves every 24 (was 12) and tall ones every 70 (was 40). In the water mostly tall ones,
+  every 32, and short ones every 60 (was 12 and 40 the other way round): a short mangrove starts on the bed, so its leaves were
+  at head height over the water, while a tall one stands three to seven blocks up on its roots. The short mangrove's trunk is
+  one block taller (3 to 8).
+- **Glow berries under mangrove discs:** the same hanging glow berries as under jungle discs, one for every 9 blocks of
+  underside, listed before the root clumps.
+
+Dedicated servers, seed 20261003, new worlds, 100 chunks, 220 places sampled over the discs of each theme:
+
+| | Before | NeoForge | NeoForge with the overhaul mod | Fabric |
+|---|---|---|---|---|
+| Jungle: no way through at foot or head height | 128 at foot height alone | 58 (26%) | 49 (22%) | 55 (25%) |
+| Jungle: tree canopy 3, 5 or 8 blocks up | 82 | 58 | 63 | 59 |
+| Mangrove: no way through at foot or head height | 81 at foot height alone | 55 (25%) | 53 (24%) | 52 (24%) |
+| Mangrove: tree canopy 3, 5 or 8 blocks up | 174 | 119 | 117 | 116 |
+| Glow berries under mangrove discs (of 110 places, at two heights) | 0 | 13 | 13 | 12 |
+| The discs' own water: columns running, or deeper than 2 | 0 | 0 | 0 | 0 |
+| Errors from the mod; inherited features that failed | | 0; 0 | 0; 0 | 0; 0 |
+
+"Before" is the previous round's final build (the mangrove figure from its run one setting earlier, with the same mangrove
+settings), where head height was not sampled, so the true share was higher than shown. All
+three columns after are the final build. Unit tests: 124 pass (`./gradlew build`, both loader jars); none changed, as this
+round is settings and feature files only.
+
+Seen while measuring, and not from this change: at this seed a vanilla river (y 57 to 59) lies over a jungle disc's dome and
+the dome cuts into its bed. The river falls onto that disc and on down to the one under it, and spreads a few blocks where it
+lands. That is vanilla water running as vanilla water does, not the discs' ponds, which were all still. The owner has said
+natural fluids entering the hole are fine; `ceiling_margin` is the setting that keeps domes further under the surface.
+
+Not verified: nothing was looked at in game. A quarter of the ground blocked is a number, not a walk: whether it feels right
+is the owner's to judge.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

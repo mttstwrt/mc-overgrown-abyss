@@ -2,10 +2,12 @@ package dev.syrval.overgrownabyss.ravine;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Where the themes of a cell's discs grow things in one chunk (see {@link DiscTheme.Growth}). Each block of a surface is drawn
- * for from the cell's hash and its own coordinates, so the places are the same whatever order chunks generate in.
+ * for from the cell's hash and its own coordinates, so the places are the same whatever order chunks generate in. Within a
+ * chunk a disc's growths come in the order its theme lists them.
  */
 final class DiscGrowth {
     private static final int GROWTH_HASH_BASE = 300_000;
@@ -32,25 +34,35 @@ final class DiscGrowth {
             int toX = Math.min(minX + CHUNK_SIZE - 1, (int) Math.floor(disc.x() + disc.radius()));
             int fromZ = Math.max(minZ, (int) Math.ceil(disc.z() - disc.radius()));
             int toZ = Math.min(minZ + CHUNK_SIZE - 1, (int) Math.floor(disc.z() + disc.radius()));
-            for (int x = fromX; x <= toX; x++) {
-                for (int z = fromZ; z <= toZ; z++) {
-                    double fromAxis = Math.hypot(x - disc.x(), z - disc.z());
-                    if (fromAxis > disc.radius() - RIM) {
-                        continue;
-                    }
-                    for (int g = 0; g < Math.min(growth.size(), MAX_GROWTHS); g++) {
-                        DiscTheme.Growth each = growth.get(g);
-                        if (RavineCells.unitAt(cell.hash(), GROWTH_HASH_BASE + i * MAX_GROWTHS + g, x, z) * each.every() >= 1) {
+            // One growth at a time, in the order the theme lists them, so that what is listed later finds what was listed
+            // earlier already there: vines after the trees they hang from.
+            for (int g = 0; g < Math.min(growth.size(), MAX_GROWTHS); g++) {
+                DiscTheme.Growth each = growth.get(g);
+                for (int x = fromX; x <= toX; x++) {
+                    for (int z = fromZ; z <= toZ; z++) {
+                        double fromAxis = Math.hypot(x - disc.x(), z - disc.z());
+                        if (fromAxis > disc.radius() - RIM || RavineCells.unitAt(cell.hash(), GROWTH_HASH_BASE + i * MAX_GROWTHS + g, x, z) * each.every() >= 1) {
                             continue;
                         }
-                        // The open block on the surface: the one over the top block, or the one under the lowest block.
-                        int y = each.on() == DiscTheme.Surface.TOP
-                                ? (int) Math.ceil(disc.topAt(fromAxis))
-                                : (int) Math.floor(disc.undersideAt(shape, fromAxis));
-                        sink.accept(x, y, z, each.feature(), each.on());
+                        OptionalInt y = placeOn(each.on(), theme.get(), disc, shape, cell.hash(), i, x, z, fromAxis);
+                        if (y.isPresent()) {
+                            sink.accept(x, y.getAsInt(), z, each.feature(), each.on());
+                        }
                     }
                 }
             }
         }
+    }
+
+    // The block a growth starts in: the open one over the top block or under the lowest block, or the lowest block of water.
+    private static OptionalInt placeOn(DiscTheme.Surface on, DiscTheme theme, Disc disc, DiscShape shape, long hash, int index, int x, int z, double fromAxis) {
+        return switch (on) {
+            case TOP -> OptionalInt.of(disc.topBlockAt(fromAxis) + 1);
+            case UNDERSIDE -> OptionalInt.of((int) Math.floor(disc.undersideAt(shape, fromAxis)));
+            case WATER -> {
+                int depth = theme.water().map(water -> water.depthAt(disc, hash, index, x, z)).orElse(0);
+                yield depth > 0 ? OptionalInt.of(disc.topBlockAt(fromAxis) - depth + 1) : OptionalInt.empty();
+            }
+        };
     }
 }

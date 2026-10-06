@@ -157,6 +157,25 @@ class RavineCellsTest {
     }
 
     @Test
+    void smoothValuesAreTheDrawnOnesAtWholeCoordinatesAndChangeGraduallyBetween() {
+        long hash = 0x1234_5678_9ABCL;
+        for (int x = -3; x <= 3; x++) {
+            for (int z = -3; z <= 3; z++) {
+                assertEquals(RavineCells.unitAt(hash, 4, x, z), RavineCells.smoothAt(hash, 4, x, z), 1e-12);
+            }
+        }
+        for (double x = -5; x < 5; x += 0.013) {
+            for (double z = -5; z < 5; z += 0.37) {
+                double here = RavineCells.smoothAt(hash, 4, x, z);
+                assertTrue(here >= 0 && here < 1, "out of range: " + here);
+                // Between two whole coordinates a value moves by at most the difference of the drawn ones, at most 1.5 times as fast as evenly.
+                assertTrue(Math.abs(RavineCells.smoothAt(hash, 4, x + 0.013, z) - here) <= 1.5 * 0.013 + 1e-9, "a jump at " + x + ", " + z);
+            }
+        }
+        assertTrue(RavineCells.smoothAt(hash, 4, 0.4, 0.4) != RavineCells.smoothAt(hash, 5, 0.4, 0.4), "each index is a pattern of its own");
+    }
+
+    @Test
     void containingMapsNegativeCoordinatesToTheRightCell() {
         assertEquals(RavineCells.at(5L, SETTINGS, -1, -1), RavineCells.containing(5L, SETTINGS, -0.5, -2047));
         assertEquals(RavineCells.at(5L, SETTINGS, -2, 0), RavineCells.containing(5L, SETTINGS, -2049, 0));

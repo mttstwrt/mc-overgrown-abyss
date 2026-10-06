@@ -30,11 +30,12 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * @param bySize     from the smallest radius a disc may have to the largest
  * @param only       the discs the theme may be given to at all, by the same three traits; outside these it has no weight
  * @param palette    what the disc is made of; a part it leaves out keeps the terrain's own rock
- * @param growth     what grows on the disc
+ * @param water      ponds and streams in the disc's top
+ * @param growth     what grows on the disc, in the order listed and before what it inherits
  */
 public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
-        Limits only, DiscPalette palette, List<Growth> growth) {
+        Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth) {
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -115,9 +116,10 @@ public record DiscTheme(
         }
     }
 
-    /** The surface of a platform that something grows on. */
+    /** Where on a platform something grows: on the dry ground of its top, in the water of its top, or under it. */
     public enum Surface implements StringRepresentable {
         TOP("top"),
+        WATER("water"),
         UNDERSIDE("underside");
 
         static final Codec<Surface> CODEC = StringRepresentable.fromEnum(Surface::values);
@@ -135,7 +137,8 @@ public record DiscTheme(
 
     /**
      * A feature grown on one surface of the platform: on average one for every {@code every} blocks of that surface. The feature
-     * is placed in the open block on the surface (over the top, or under the underside), so it must be one that grows from there.
+     * is placed in the open block on the surface (over dry ground, or under the underside), so it must be one that grows from
+     * there. In water it is placed in the lowest block of the water, as vanilla starts a tree that stands in water on its bed.
      */
     public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, Surface on) {
         static final Codec<Growth> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -154,6 +157,7 @@ public record DiscTheme(
             Ramp.codec("small", "large").optionalFieldOf("by_size", Ramp.EVEN).forGetter(DiscTheme::bySize),
             Limits.CODEC.optionalFieldOf("only", Limits.NONE).forGetter(DiscTheme::only),
             DiscPalette.CODEC.optionalFieldOf("palette", DiscPalette.UNPAINTED).forGetter(DiscTheme::palette),
+            DiscWater.CODEC.optionalFieldOf("water").forGetter(DiscTheme::water),
             Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(DiscTheme::growth)
     ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);
 
@@ -164,6 +168,11 @@ public record DiscTheme(
         }
         if (theme.inherits.isPresent() && theme.inherits.get().biome().equals(theme.biome.get())) {
             return DataResult.error(() -> "a theme's biome cannot inherit from itself");
+        }
+        // Left as the terrain's own rock, the ground around the water could be a cave, and the water would drain into it.
+        if (theme.water.isPresent() && !theme.palette.coversTop(theme.water.get().depth() + 1)) {
+            return DataResult.error(() -> "a theme with water needs a palette that gives its platform's top "
+                    + (theme.water.get().depth() + 1) + " blocks of material: the water's sides and its bed");
         }
         return DataResult.success(theme);
     }

@@ -30,6 +30,9 @@ public interface RavineFootprint {
         public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {}
 
         @Override
+        public void forEachDiscWater(int minX, int minZ, DiscWaterSink sink) {}
+
+        @Override
         public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {}
 
         @Override
@@ -53,6 +56,9 @@ public interface RavineFootprint {
      * between {@code minY} and {@code maxY} (exclusive).
      */
     void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink);
+
+    /** Calls {@code sink} with every column where a disc holds water in the chunk whose lowest corner is {@code (minX, minZ)}. */
+    void forEachDiscWater(int minX, int minZ, DiscWaterSink sink);
 
     /** Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachGrowth(int minX, int minZ, DiscGrowthSink sink);
@@ -116,6 +122,13 @@ public interface RavineFootprint {
             public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
                 for (Region region : copy) {
                     region.carve().forEachDiscBlock(minX, minZ, minY, maxY, sink);
+                }
+            }
+
+            @Override
+            public void forEachDiscWater(int minX, int minZ, DiscWaterSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachDiscWater(minX, minZ, sink);
                 }
             }
 

@@ -66,6 +66,17 @@ public record DiscPalette(List<Layer> top, List<Layer> underside, Optional<Block
         };
     }
 
+    /** Whether every one of the platform's highest {@code blocks} blocks is given a material, whatever the platform's thickness. */
+    boolean coversTop(int blocks) {
+        for (int below = 0; below < blocks; below++) {
+            // Far from the underside, so only the top's layers and the body can answer.
+            if (blockAt(new DiscPoint.Platform(below + 0.5, Double.MAX_VALUE)).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // A block counts as being in a layer if its centre-line depth is within it, so a thickness of 1 is exactly the outermost block.
     private static Optional<BlockStateProvider> layerAt(List<Layer> layers, double depth) {
         double reach = 0;

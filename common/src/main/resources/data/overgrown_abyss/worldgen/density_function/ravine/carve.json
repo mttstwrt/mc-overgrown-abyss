@@ -48,7 +48,10 @@
     {
       "biome": "overgrown_abyss:disc_jungle",
       "inherits": {
-        "biome": "minecraft:jungle"
+        "biome": "minecraft:jungle",
+        "without_features": [
+          "minecraft:trees_jungle"
+        ]
       },
       "weight": 4,
       "by_distance": {
@@ -76,12 +79,62 @@
             }
           }
         ]
-      }
+      },
+      "water": {
+        "ponds": 0.06,
+        "pond_size": 12,
+        "stream_width": 2,
+        "stream_spacing": 44
+      },
+      "growth": [
+        {
+          "feature": "overgrown_abyss:disc/jungle_tree_giant",
+          "every": 36
+        },
+        {
+          "feature": "overgrown_abyss:disc/jungle_tree",
+          "every": 20
+        },
+        {
+          "feature": "overgrown_abyss:disc/jungle_bush",
+          "every": 50
+        },
+        {
+          "feature": "overgrown_abyss:disc/jungle_undergrowth",
+          "every": 25
+        },
+        {
+          "feature": "overgrown_abyss:disc/vines_hanging",
+          "every": 60
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_berries_canopy",
+          "every": 30
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_berries_hanging",
+          "every": 8,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/jungle_overhang",
+          "every": 10,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/vines_hanging",
+          "every": 10,
+          "on": "underside"
+        }
+      ]
     },
     {
       "biome": "overgrown_abyss:disc_mangrove",
       "inherits": {
-        "biome": "minecraft:mangrove_swamp"
+        "biome": "minecraft:mangrove_swamp",
+        "without_features": [
+          "minecraft:trees_mangrove"
+        ]
       },
       "weight": 3,
       "by_height": {
@@ -95,16 +148,122 @@
       "palette": {
         "top": [
           {
-            "thickness": 4,
+            "thickness": 2,
             "block": {
               "type": "minecraft:simple_state_provider",
               "state": {
                 "Name": "minecraft:mud"
               }
             }
+          },
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:packed_mud"
+              }
+            }
           }
-        ]
-      }
+        ],
+        "underside": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:weighted_state_provider",
+              "entries": [
+                {
+                  "data": {
+                    "Name": "minecraft:muddy_mangrove_roots"
+                  },
+                  "weight": 2
+                },
+                {
+                  "data": {
+                    "Name": "minecraft:mangrove_roots"
+                  },
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        ],
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:weighted_state_provider",
+                "entries": [
+                  {
+                    "data": {
+                      "Name": "minecraft:mangrove_roots"
+                    },
+                    "weight": 2
+                  },
+                  {
+                    "data": {
+                      "Name": "minecraft:muddy_mangrove_roots"
+                    },
+                    "weight": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:packed_mud"
+            }
+          }
+        }
+      },
+      "water": {
+        "ponds": 0.4,
+        "pond_size": 18,
+        "stream_width": 2,
+        "stream_spacing": 30
+      },
+      "growth": [
+        {
+          "feature": "overgrown_abyss:disc/mangrove_tall",
+          "every": 70
+        },
+        {
+          "feature": "overgrown_abyss:disc/mangrove_tall",
+          "every": 32,
+          "on": "water"
+        },
+        {
+          "feature": "overgrown_abyss:disc/mangrove",
+          "every": 24
+        },
+        {
+          "feature": "overgrown_abyss:disc/mangrove",
+          "every": 60,
+          "on": "water"
+        },
+        {
+          "feature": "overgrown_abyss:disc/vines_hanging",
+          "every": 50
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_berries_hanging",
+          "every": 9,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/mangrove_roots_hanging",
+          "every": 10,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/vines_hanging",
+          "every": 14,
+          "on": "underside"
+        }
+      ]
     },
     {
       "biome": "overgrown_abyss:disc_crystal",

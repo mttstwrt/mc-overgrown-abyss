@@ -73,6 +73,11 @@ record Disc(double x, double z, double floor, double radius, double height, doub
         return floor + bowl * share * share;
     }
 
+    /** Height of the platform's highest block there; the open block on the top is the one above it. */
+    int topBlockAt(double fromAxis) {
+        return (int) Math.ceil(topAt(fromAxis)) - 1;
+    }
+
     /** Height of the platform's underside there: it follows the top, so the platform is as thick at the rim as in the middle. */
     double undersideAt(DiscShape shape, double fromAxis) {
         return topAt(fromAxis) - shape.floorThickness();

@@ -123,6 +123,14 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         cellAt(minX, minZ).ifPresent(cell -> DiscBlocks.forEach(settings, bounds, cell, discsOf(cell), minX, minZ, minY, maxY, sink));
     }
 
+    /** Calls {@code sink} with every column where a disc holds water in the chunk whose lowest corner is {@code (minX, minZ)}. */
+    public void forEachDiscWater(int minX, int minZ, DiscWaterSink sink) {
+        if (bounds == null || settings.discThemes().isEmpty()) {
+            return;
+        }
+        cellAt(minX, minZ).ifPresent(cell -> DiscBlocks.forEachWater(cell, discsOf(cell), minX, minZ, sink));
+    }
+
     /**
      * Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is
      * {@code (minX, minZ)}. See {@link DiscGrowth}.
@@ -188,7 +196,7 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         @Override
         public OptionalInt groundAt(int x, int z) {
             double fromAxis = Math.hypot(x - disc.x(), z - disc.z());
-            return fromAxis < disc.radius() ? OptionalInt.of((int) Math.ceil(disc.topAt(fromAxis))) : OptionalInt.empty();
+            return fromAxis < disc.radius() ? OptionalInt.of(disc.topBlockAt(fromAxis) + 1) : OptionalInt.empty();
         }
 
         @Override

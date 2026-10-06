@@ -16,6 +16,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.GenerationStep;
@@ -28,9 +29,9 @@ import net.minecraft.world.level.levelgen.placement.PlacementContext;
 import net.minecraft.world.level.levelgen.placement.PlacementModifier;
 
 /**
- * Grows things on the discs of one chunk: the features of the biome each disc's theme inherits from, and then what the theme
- * asks for itself (see {@code DiscTheme}). A disc's biome is not one the level's biome source can produce, so vanilla never
- * runs a feature list for it; this does, in vanilla's own way but with each disc as the ground.
+ * Grows things on the discs of one chunk: what each disc's theme asks for itself, and then the features of the biome the
+ * theme inherits from (see {@code DiscTheme}). A disc's biome is not one the level's biome source can produce, so vanilla
+ * never runs a feature list for it; this does, in vanilla's own way but with each disc as the ground.
  */
 public final class DiscGrower {
     // Keeps these draws apart from vanilla's own decoration draws for the same chunk.
@@ -48,9 +49,10 @@ public final class DiscGrower {
         ChunkPos chunkPos = chunk.getPos();
         var draws = new WorldgenRandom(new XoroshiroRandomSource(level.getSeed() ^ SALT));
         long decorationSeed = draws.setDecorationSeed(level.getSeed() ^ SALT, chunkPos.getMinBlockX(), chunkPos.getMinBlockZ());
-        growInherited(level, generator, footprint, chunkPos, draws, decorationSeed);
-        draws.setDecorationSeed(level.getSeed() ^ SALT, chunkPos.getMinBlockX(), chunkPos.getMinBlockZ());
+        // A theme's own growth is its trees, and vanilla too grows a biome's trees before its grass: grass that came first
+        // would hold the very blocks the trees start in. What is inherited then fills in around them.
         growThemesOwn(level, generator, footprint, chunkPos, draws);
+        growInherited(level, generator, footprint, chunkPos, draws, decorationSeed);
     }
 
     // The parent biome's features, read now: the list is whatever the parent has after other mods have changed it.
@@ -116,11 +118,15 @@ public final class DiscGrower {
         Registry<ConfiguredFeature<?, ?>> features = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
         footprint.forEachGrowth(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, y, z, feature, on) -> {
             BlockPos pos = new BlockPos(x, y, z);
-            // The place must be open and still be on the disc's own surface: another disc's platform or stem may have taken it.
-            boolean onTop = on == DiscTheme.Surface.TOP;
-            BlockPos surface = onTop ? pos.below() : pos.above();
-            if (level.isOutsideBuildHeight(pos) || !level.isEmptyBlock(pos)
-                    || !level.getBlockState(surface).isFaceSturdy(level, surface, onTop ? Direction.UP : Direction.DOWN)) {
+            if (level.isOutsideBuildHeight(pos)) {
+                return;
+            }
+            // The place must be open and still be on the disc's own surface: another disc's platform or stem may have taken
+            // it, and the water of a pond is left out where something stands on the platform.
+            boolean under = on == DiscTheme.Surface.UNDERSIDE;
+            BlockPos surface = under ? pos.above() : pos.below();
+            boolean open = on == DiscTheme.Surface.WATER ? level.getBlockState(pos).is(Blocks.WATER) : level.isEmptyBlock(pos);
+            if (!open || !level.getBlockState(surface).isFaceSturdy(level, surface, under ? Direction.DOWN : Direction.UP)) {
                 return;
             }
             features.getHolder(feature).ifPresent(found -> found.value().place(level, generator, draws, pos));

@@ -56,15 +56,42 @@ The mod's own hole is now the cone: a single round hole, `base_radius` 150 at th
 - `palette`: what the disc is made of. Blocks for the platform's `top` and `underside` (layers counted in from the surface), its
   `body`, and the `stem` (`surface` layers and `core`). Each block is a vanilla block-state provider, so it can be one block, a
   weighted mix or noise patches. A part left out stays the terrain's own rock.
-- `growth`: configured features of the theme's own, placed on the platform after what it inherits, each on average once per
-  `every` blocks of its `top` (the default) or `underside`.
+- `water`: ponds and streams lying in the platform's top (see `DiscWater`). `ponds` is the share of the top that is pond (0.1 is
+  a tenth) and `pond_size` about how far apart ponds are; `stream_width` is how wide a stream is in blocks (0 for none) and
+  `stream_spacing` about how far apart streams and their bends are. `depth` (1 or 2, default 2) is how deep the middle of a pond
+  is; pond edges and streams are 1 deep. `bank` (default 3) keeps the water that many blocks from the rim. Water never runs:
+  none is put where the ground beside it is lower, which leaves a one-block dam wherever the bowl steps down. A theme with water
+  needs a palette for the ground that holds it (`depth` + 1 blocks of `top`, or a `body`).
+- `growth`: configured features of the theme's own, each placed on average once per `every` blocks of where it grows: `on` is
+  `top` (dry ground, the default), `water` (the bed of a pond or stream, where a mangrove starts) or `underside`. They are placed
+  in the order listed, so vines listed after trees find the trees there, and before what the theme inherits, as vanilla grows a
+  biome's trees before its grass.
 
-The mod's own themes inherit and add nothing of their own: `disc_lush` from `minecraft:lush_caves` (a plain stone platform;
-lush caves moss it over itself), `disc_jungle` from `minecraft:jungle` (grass over dirt, since trees need soil and no surface rule reaches a
-disc; three times as likely in the middle as at the edge) and `disc_mangrove` from `minecraft:mangrove_swamp` (mud; favours the
-wide low discs). `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and
-kept to small discs in the outer half, which the layout puts behind larger discs. With no themes every disc is the terrain's
-own rock in the biome it lies in.
+The mod's own themes:
+
+- `disc_lush` inherits from `minecraft:lush_caves` and adds nothing: a plain stone platform, which lush caves moss over itself.
+- `disc_jungle` inherits from `minecraft:jungle` (three times as likely in the middle of the cone as at its edge). Grass over
+  dirt, a few small ponds and streams, and its own growth: giant and ordinary jungle trees, bushes, ferns, vines, glow berries
+  in the canopy, and under the disc glow berries, tufts of leaves and vines.
+- `disc_mangrove` inherits from `minecraft:mangrove_swamp` (favours the wide low discs). Mud over packed mud, about two fifths of
+  it shallow water, mangroves on the mud and (mostly the tall kind, which stands high on its roots) in the water, and under the
+  disc glow berries and hanging clumps of mangrove roots with vines; its stem is clad in roots.
+
+Both are thinned so that a player can walk through: bushes, trunks, roots and low leaves stand in about a quarter of the
+ground, counting a place as blocked if either of the two blocks a player takes up is. The numbers to change are the `every`
+of the bushes and trees in each theme's `growth` (larger is thinner); ferns and grass do not block and can stay thick.
+- `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and kept to small discs
+  in the outer half, which the layout puts behind larger discs.
+
+Jungle and mangrove grow their own trees because the parent's may not grow on a disc at all: an overworld overhaul such as
+William Wythers' Overhauled Overworld replaces those biomes with trees that only grow at certain heights above sea level and on
+soils its own terrain lays down. The disc's trees are vanilla's, kept under the mod's own ids
+(`data/overgrown_abyss/worldgen/configured_feature/disc/`) so that such a pack cannot change them, with two changes: more vines
+hanging from their leaves; a `min_clipped_height`, so that a tree under a low part of the dome grows as tall as there is
+room instead of not at all; and a block more of trunk on the jungle tree and the short mangrove, which lifts their lowest
+leaves over a player's head. Vanilla's own tree feature is left out of what is inherited (`without_features`), or a disc would be
+twice as thick with trees without such a pack as with it. Everything else is still inherited: grass, flowers, melons, lily pads
+and whatever other mods add. With no themes every disc is the terrain's own rock in the biome it lies in.
 
 - `tuned-themes`: the mod's file as it was before biomes were inherited, with the hand-made palettes and growth lists for lush,
   jungle and mangrove (denser foliage, mangrove roots on stems). For comparing the two in game. It inherits spawns only

@@ -33,7 +33,7 @@ class DiscBlocksTest {
 
     /** A theme that is only a palette: no biome, nothing growing, the same weight everywhere. */
     static DiscTheme themed(DiscPalette palette) {
-        return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, List.of());
+        return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, Optional.empty(), List.of());
     }
 
     private record Block(int x, int y, int z) {}
@@ -178,6 +178,48 @@ class DiscBlocksTest {
         }
         assertTrue(roots > 3, roots + " hanging discs");
         assertTrue(checked > 50, checked + " root blocks checked");
+    }
+
+    @Test
+    void aChunksWaterIsItsShareOfEachDiscsPondsAndStreams() {
+        var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
+        var wet = new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
+                PALETTE, Optional.of(water), List.of());
+        RavineSettings settings = painted(ConeShapeTest.LOW, List.of(wet), DiscTest.SLIM);
+        RavineCell cell = cell(settings, 1);
+        CellDiscs discs = CellDiscs.of(settings, BOUNDS, cell);
+        Disc d = discs.layout().discs().get(0);
+        record Column(int x, int surface, int z, int depth) {}
+        var found = new ArrayList<Column>();
+        for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - d.radius()), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + d.radius()), 16); chunkX++) {
+            for (int chunkZ = Math.floorDiv((int) Math.floor(d.z() - d.radius()), 16); chunkZ <= Math.floorDiv((int) Math.floor(d.z() + d.radius()), 16); chunkZ++) {
+                int minX = chunkX * 16;
+                int minZ = chunkZ * 16;
+                DiscBlocks.forEachWater(cell, discs, minX, minZ, (x, surface, z, depth) -> {
+                    assertTrue(x >= minX && x < minX + 16 && z >= minZ && z < minZ + 16, "outside its chunk");
+                    found.add(new Column(x, surface, z, depth));
+                });
+            }
+        }
+        // Other discs reach into these chunks too; the first disc's own columns are the ones at its height.
+        var expected = new ArrayList<Column>();
+        for (int x = (int) Math.floor(d.x() - d.radius()); x <= d.x() + d.radius(); x++) {
+            for (int z = (int) Math.floor(d.z() - d.radius()); z <= d.z() + d.radius(); z++) {
+                int depth = water.depthAt(d, cell.hash(), 0, x, z);
+                if (depth > 0) {
+                    int surface = d.topBlockAt(Math.hypot(x - d.x(), z - d.z()));
+                    assertTrue(d.platformDistance(settings.discs(), x, surface, z) < 0 && d.platformDistance(settings.discs(), x, surface + 1, z) >= 0,
+                            "the water's highest block is the platform's highest");
+                    assertTrue(d.platformDistance(settings.discs(), x, surface - depth, z) < 0, "and the platform is its bed");
+                    expected.add(new Column(x, surface, z, depth));
+                }
+            }
+        }
+        assertTrue(expected.size() > 100, expected.size() + " columns of water on the disc");
+        assertTrue(found.containsAll(expected), "every column of the disc's water is reported by the chunk it is in");
+        var none = new ArrayList<Column>();
+        DiscBlocks.forEachWater(cell(STANDING, 0), CellDiscs.of(STANDING, BOUNDS, cell(STANDING, 0)), (int) d.x() & ~15, (int) d.z() & ~15, (x, surface, z, depth) -> none.add(new Column(x, surface, z, depth)));
+        assertTrue(none.isEmpty(), "a theme without water has none");
     }
 
     @Test

@@ -6,12 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.regex.Pattern;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -38,7 +41,7 @@ class DiscThemeTest {
     }
 
     static DiscTheme theme(String biome, float weight, DiscTheme.Ramp byHeight, DiscTheme.Ramp byDistance, DiscTheme.Ramp bySize) {
-        return new DiscTheme(Optional.of(biome(biome)), Optional.empty(), weight, byHeight, byDistance, bySize, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, List.of());
+        return new DiscTheme(Optional.of(biome(biome)), Optional.empty(), weight, byHeight, byDistance, bySize, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of());
     }
 
     static final DiscTheme.Ramp EVEN = DiscTheme.Ramp.EVEN;
@@ -106,7 +109,7 @@ class DiscThemeTest {
     @Test
     void aThemesLimitsRuleItOutWhereARampWouldOnlyMakeItUnlikely() {
         var smallAndFar = new DiscTheme.Limits(DiscTheme.Span.ALL, new DiscTheme.Span(0.55F, 1), new DiscTheme.Span(0, 0.4F));
-        var kept = new DiscTheme(Optional.of(biome("kept")), Optional.empty(), 100, EVEN, EVEN, EVEN, smallAndFar, DiscPalette.UNPAINTED, List.of());
+        var kept = new DiscTheme(Optional.of(biome("kept")), Optional.empty(), 100, EVEN, EVEN, EVEN, smallAndFar, DiscPalette.UNPAINTED, Optional.empty(), List.of());
         assertEquals(100, kept.weightFor(new DiscTraits(0.5, 0.8, 0.2)), 1e-9, "inside its limits it has its weight");
         assertEquals(0, kept.weightFor(new DiscTraits(0.5, 0.5, 0.2)), 1e-9, "too near the centre");
         assertEquals(0, kept.weightFor(new DiscTraits(0.5, 0.8, 0.5)), 1e-9, "too large");
@@ -238,7 +241,7 @@ class DiscThemeTest {
         RavineSettings base = shipped();
         var onTop = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 50, DiscTheme.Surface.TOP);
         var under = new DiscTheme.Growth(feature("minecraft:cave_vine"), 20, DiscTheme.Surface.UNDERSIDE);
-        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, List.of(onTop, under));
+        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(onTop, under));
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.ravine(), base.cone());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
@@ -293,9 +296,11 @@ class DiscThemeTest {
                   "palette": {
                     "body": {"type": "minecraft:simple_state_provider", "state": {"Name": "minecraft:calcite"}}
                   },
+                  "water": {"ponds": 0.25, "pond_size": 14.0, "stream_width": 2.0, "stream_spacing": 36.0, "depth": 1, "bank": 4},
                   "growth": [
                     {"feature": "overgrown_abyss:disc/amethyst_cluster", "every": 7},
-                    {"feature": "minecraft:cave_vine", "every": 30, "on": "underside"}
+                    {"feature": "minecraft:cave_vine", "every": 30, "on": "underside"},
+                    {"feature": "minecraft:mangrove", "every": 12, "on": "water"}
                   ]
                 }
                 """);
@@ -306,13 +311,81 @@ class DiscThemeTest {
         assertTrue(parsed.palette().body().isPresent() && parsed.palette().top().isEmpty());
         assertEquals(DiscTheme.Surface.TOP, parsed.growth().get(0).on(), "things grow on the top unless told otherwise");
         assertEquals(new DiscTheme.Growth(feature("minecraft:cave_vine"), 30, DiscTheme.Surface.UNDERSIDE), parsed.growth().get(1));
+        assertEquals(DiscTheme.Surface.WATER, parsed.growth().get(2).on());
+        assertEquals(Optional.of(new DiscWater(0.25F, 14, 2, 36, 1, 4)), parsed.water());
         assertEquals(json, DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, parsed).getOrThrow(), "and is written back the same");
         var onlyAWeight = JsonParser.parseString("{\"weight\": 2}");
         DiscTheme bare = DiscTheme.CODEC.parse(JsonOps.INSTANCE, onlyAWeight).getOrThrow();
-        assertTrue(bare.biome().isEmpty() && bare.growth().isEmpty() && bare.palette().equals(DiscPalette.UNPAINTED), "everything but the weight is optional");
+        assertTrue(bare.biome().isEmpty() && bare.growth().isEmpty() && bare.water().isEmpty() && bare.palette().equals(DiscPalette.UNPAINTED),
+                "everything but the weight is optional");
         var bad = json.getAsJsonObject().deepCopy();
         bad.getAsJsonArray("growth").get(0).getAsJsonObject().addProperty("every", 0);
         assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, bad).isError(), "growth on every block of none");
+    }
+
+    @Test
+    void aThemeWithWaterNeedsAPaletteForTheGroundThatHoldsIt() {
+        String water = "\"water\": {\"ponds\": 0.3}";
+        String grass = "{\"thickness\": 1, \"block\": {\"type\": \"minecraft:simple_state_provider\", \"state\": {\"Name\": \"minecraft:grass_block\"}}}";
+        String dirt = "{\"thickness\": 2, \"block\": {\"type\": \"minecraft:simple_state_provider\", \"state\": {\"Name\": \"minecraft:dirt\"}}}";
+        String stone = "\"body\": {\"type\": \"minecraft:simple_state_provider\", \"state\": {\"Name\": \"minecraft:stone\"}}";
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1, " + water + "}")).isError(),
+                "left as the terrain's rock, the ground round a pond may be a cave");
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1, \"palette\": {\"top\": [" + grass + "]}, " + water + "}")).isError(),
+                "one block of ground under water two deep");
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1, \"palette\": {\"top\": [" + grass + ", " + dirt + "]}, " + water + "}")).isSuccess(),
+                "three blocks: two of water and its bed");
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1, \"palette\": {" + stone + "}, " + water + "}")).isSuccess(),
+                "a body is ground all the way down");
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
+                "{\"weight\": 1, \"palette\": {\"top\": [" + grass + ", " + grass + "]}, \"water\": {\"ponds\": 0.3, \"depth\": 1}}")).isSuccess(), "shallower water needs less");
+    }
+
+    @Test
+    void waterNeedsAPlatformThickEnoughToHaveABed() throws Exception {
+        try (var in = DiscThemeTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/density_function/ravine/carve.json")) {
+            var json = JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
+            json.remove("type");
+            assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isSuccess());
+            json.getAsJsonObject("discs").addProperty("floor_thickness", 2);
+            assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError(), "water two deep in a platform two thick");
+        }
+    }
+
+    @Test
+    void whatGrowsInWaterStartsOnTheBedOfAPondAndNowhereElse() throws Exception {
+        RavineSettings base = shipped();
+        var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
+        var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER);
+        var stone = new DiscPalette(List.of(), List.of(), base.discThemes().get(0).palette().body(), DiscPalette.UNPAINTED.stem());
+        var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater));
+        RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
+                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(swamp), base.environment(), base.ravine(), base.cone());
+        RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
+        CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
+        Disc d = cellDiscs.layout().discs().get(0);
+        int[] places = {0};
+        int wet = 0;
+        for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - d.radius()), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + d.radius()), 16); chunkX++) {
+            for (int chunkZ = Math.floorDiv((int) Math.floor(d.z() - d.radius()), 16); chunkZ <= Math.floorDiv((int) Math.floor(d.z() + d.radius()), 16); chunkZ++) {
+                DiscGrowth.forEach(settings, cell, cellDiscs, chunkX * 16, chunkZ * 16, (x, y, z, feature, on) -> {
+                    double fromAxis = Math.hypot(x - d.x(), z - d.z());
+                    int depth = water.depthAt(d, cell.hash(), 0, x, z);
+                    // Other discs grow things in these chunks too; this disc's are the ones in its own water.
+                    if (fromAxis <= d.radius() && depth > 0 && y == d.topBlockAt(fromAxis) - depth + 1) {
+                        places[0]++;
+                    }
+                    assertEquals(DiscTheme.Surface.WATER, on);
+                });
+            }
+        }
+        for (int x = (int) Math.floor(d.x() - d.radius()); x <= d.x() + d.radius(); x++) {
+            for (int z = (int) Math.floor(d.z() - d.radius()); z <= d.z() + d.radius(); z++) {
+                wet += water.depthAt(d, cell.hash(), 0, x, z) > 0 ? 1 : 0;
+            }
+        }
+        assertTrue(wet > 100, wet + " columns of water");
+        assertTrue(places[0] > 0.5 * wet / 4 && places[0] < 1.6 * wet / 4, places[0] + " places in " + wet + " columns of water, one in 4 asked for");
     }
 
     @Test
@@ -395,38 +468,65 @@ class DiscThemeTest {
     }
 
     @Test
-    void theModsOwnThemesInheritTheirBiomesAndOnlyTheCrystalOneIsMadeByHand() throws Exception {
+    void theModsOwnThemesInheritTheirBiomesAndGrowWhatTheirParentsMayNot() throws Exception {
         List<DiscTheme> themes = shipped().discThemes();
         assertEquals(4, themes.size());
         var parents = new HashMap<String, String>();
+        var leftOut = new HashMap<String, List<String>>();
         for (DiscTheme theme : themes) {
             String name = theme.biome().orElseThrow().location().getPath();
             assertTrue(DiscThemeTest.class.getResource("/data/overgrown_abyss/worldgen/biome/" + name + ".json") != null, "no biome file for " + name);
             String overworld = new String(DiscThemeTest.class.getResourceAsStream("/data/minecraft/tags/worldgen/biome/is_overworld.json").readAllBytes(), StandardCharsets.UTF_8);
             assertTrue(overworld.contains("overgrown_abyss:" + name), name + " is not tagged as an overworld biome");
-            theme.inherits().ifPresent(inherits -> parents.put(name, inherits.biome().location().toString()));
+            theme.inherits().ifPresent(inherits -> {
+                parents.put(name, inherits.biome().location().toString());
+                leftOut.put(name, inherits.withoutFeatures().stream().map(key -> key.location().toString()).toList());
+            });
             String biomeFile = new String(DiscThemeTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/biome/" + name + ".json").readAllBytes(), StandardCharsets.UTF_8);
             int ownSpawns = 0;
             for (var category : JsonParser.parseString(biomeFile).getAsJsonObject().getAsJsonObject("spawners").entrySet()) {
                 ownSpawns += category.getValue().getAsJsonArray().size();
             }
-            if (theme.inherits().isPresent()) {
-                // The file's spawns are added to what is inherited, so a copy of the parent's list there would pin every entry.
-                assertEquals(0, ownSpawns, name + " changes the spawns it inherits");
-                assertTrue(theme.growth().isEmpty(), name + " adds growth of its own to what it inherits");
-                assertTrue(theme.palette().underside().isEmpty() && theme.palette().stem().core().isEmpty() && theme.palette().stem().surface().isEmpty(),
-                        name + " is made of more than the ground its parent would have");
-                assertTrue(theme.palette().blockAt(new DiscPoint.Platform(0.5, 3.5)).isPresent(), name + " leaves its platform to the terrain, cave holes and all");
-            } else {
-                assertTrue(ownSpawns > 0, name + " inherits nothing and has no spawns of its own");
-                assertTrue(theme.palette().blockAt(new DiscPoint.Platform(0.5, 3.5)).isPresent() && theme.palette().blockAt(new DiscPoint.Platform(20, 20)).isPresent(), name);
-                assertTrue(!theme.growth().isEmpty(), name + " grows nothing");
-                for (DiscTheme.Growth growth : theme.growth()) {
-                    String file = "/data/overgrown_abyss/worldgen/configured_feature/" + growth.feature().location().getPath() + ".json";
-                    assertTrue(DiscThemeTest.class.getResource(file) != null, "no feature file " + file);
-                }
+            // The file's spawns are added to what is inherited, so a copy of the parent's list there would pin every entry.
+            assertEquals(theme.inherits().isPresent(), ownSpawns == 0, name + ": spawns of its own only where it inherits none");
+            assertTrue(theme.palette().blockAt(new DiscPoint.Platform(0.5, 3.5)).isPresent(), name + " leaves its platform to the terrain, cave holes and all");
+            for (DiscTheme.Growth growth : theme.growth()) {
+                // Under the mod's own ids, so that a pack which restyles vanilla's trees does not change a disc.
+                assertEquals("overgrown_abyss", growth.feature().location().getNamespace(), name + " grows " + growth.feature().location());
+                String file = "/data/overgrown_abyss/worldgen/configured_feature/" + growth.feature().location().getPath() + ".json";
+                assertTrue(DiscThemeTest.class.getResource(file) != null, "no feature file " + file);
+                assertTrue(growth.on() != DiscTheme.Surface.WATER || theme.water().isPresent(), name + " grows something in water it does not have");
             }
         }
         assertEquals(Map.of("disc_lush", "minecraft:lush_caves", "disc_jungle", "minecraft:jungle", "disc_mangrove", "minecraft:mangrove_swamp"), parents);
+        // A disc grows its own trees, since another pack may give the parent trees that cannot grow on one; the parent's are
+        // left out so that a disc is not twice as thick with trees where they can.
+        assertEquals(Map.of("disc_lush", List.of(), "disc_jungle", List.of("minecraft:trees_jungle"), "disc_mangrove", List.of("minecraft:trees_mangrove")), leftOut);
+        DiscTheme lush = themes.get(0);
+        assertTrue(lush.growth().isEmpty() && lush.water().isEmpty(), "the lush disc is its parent and nothing more");
+        for (DiscTheme wet : List.of(themes.get(1), themes.get(2))) {
+            assertTrue(wet.water().orElseThrow().depth() <= 2, "water deeper than two blocks");
+            assertTrue(wet.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.UNDERSIDE), "nothing hangs under the disc");
+        }
+        assertTrue(themes.get(2).growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.WATER), "no mangrove stands in the water");
+        assertTrue(themes.get(2).water().orElseThrow().ponds() > themes.get(1).water().orElseThrow().ponds(), "a swamp is wetter than a jungle");
+    }
+
+    @Test
+    void everyFeatureFileOfADiscIsWholeAndNamesOnlyFeaturesThatExist() throws Exception {
+        Path features = Path.of(DiscThemeTest.class.getResource("/data/overgrown_abyss/worldgen/configured_feature/disc").toURI());
+        int files = 0;
+        try (var paths = Files.list(features)) {
+            for (Path file : paths.toList()) {
+                String text = Files.readString(file);
+                assertTrue(JsonParser.parseString(text).getAsJsonObject().has("type"), file + " has no type");
+                var named = Pattern.compile("\"overgrown_abyss:(disc/[a-z_]+)\"").matcher(text);
+                while (named.find()) {
+                    assertTrue(Files.exists(features.getParent().resolve(named.group(1) + ".json")), file.getFileName() + " names " + named.group(1));
+                }
+                files++;
+            }
+        }
+        assertTrue(files >= 12, files + " feature files");
     }
 }

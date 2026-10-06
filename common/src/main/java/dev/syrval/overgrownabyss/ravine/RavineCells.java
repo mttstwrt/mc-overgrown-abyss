@@ -82,6 +82,25 @@ public final class RavineCells {
         return unit(mix(mix(hash + x * 0xC2B2AE3D27D4EB4FL) + z * 0x165667B19E3779F9L), index);
     }
 
+    /**
+     * The {@code index}-th smooth value in {@code [0, 1)} drawn from a cell hash: {@link #unitAt} at whole coordinates, blended
+     * in between. Given block coordinates divided by a size, it changes little from one block to the next and is something
+     * else altogether that many blocks away.
+     */
+    static double smoothAt(long hash, int index, double x, double z) {
+        int wholeX = (int) Math.floor(x);
+        int wholeZ = (int) Math.floor(z);
+        double alongX = ease(x - wholeX);
+        return lerp(ease(z - wholeZ),
+                lerp(alongX, unitAt(hash, index, wholeX, wholeZ), unitAt(hash, index, wholeX + 1, wholeZ)),
+                lerp(alongX, unitAt(hash, index, wholeX, wholeZ + 1), unitAt(hash, index, wholeX + 1, wholeZ + 1)));
+    }
+
+    // Level at both ends, so the blend has no crease along the grid.
+    private static double ease(double t) {
+        return t * t * (3 - 2 * t);
+    }
+
     /** The {@code index}-th value in [-1, 1) drawn from a cell hash. */
     private static double signed(long hash, int index) {
         return unit(hash, index) * 2 - 1;

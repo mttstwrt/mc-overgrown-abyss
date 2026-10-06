@@ -39,6 +39,30 @@ final class DiscBlocks {
         }
     }
 
+    /** The columns of the chunk whose lowest corner is {@code (minX, minZ)} where a disc's theme puts water in its top (see {@link DiscWater}). */
+    static void forEachWater(RavineCell cell, CellDiscs cellDiscs, int minX, int minZ, DiscWaterSink sink) {
+        List<Disc> discs = cellDiscs.layout().discs();
+        for (int i = 0; i < discs.size(); i++) {
+            Optional<DiscWater> water = cellDiscs.themes().get(i).flatMap(DiscTheme::water);
+            if (water.isEmpty()) {
+                continue;
+            }
+            Disc disc = discs.get(i);
+            int fromX = Math.max(minX, (int) Math.ceil(disc.x() - disc.radius()));
+            int toX = Math.min(minX + CHUNK_SIZE - 1, (int) Math.floor(disc.x() + disc.radius()));
+            int fromZ = Math.max(minZ, (int) Math.ceil(disc.z() - disc.radius()));
+            int toZ = Math.min(minZ + CHUNK_SIZE - 1, (int) Math.floor(disc.z() + disc.radius()));
+            for (int x = fromX; x <= toX; x++) {
+                for (int z = fromZ; z <= toZ; z++) {
+                    int depth = water.get().depthAt(disc, cell.hash(), i, x, z);
+                    if (depth > 0) {
+                        sink.accept(x, disc.topBlockAt(Math.hypot(x - disc.x(), z - disc.z())), z, depth);
+                    }
+                }
+            }
+        }
+    }
+
     private record Painter(
             RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout,
             int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
