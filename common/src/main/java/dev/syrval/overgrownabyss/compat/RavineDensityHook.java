@@ -13,6 +13,7 @@ import dev.syrval.overgrownabyss.ravine.RavineFootprint;
 import dev.syrval.overgrownabyss.ravine.RavineSettings;
 import dev.syrval.overgrownabyss.ravine.RavineShape;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -108,6 +110,7 @@ public final class RavineDensityHook {
             carve.restrictToLand(landCheck(generator.getBiomeSource(), state.sampler(), settings.seaLevel(), environment.forbiddenBiomes()));
             regions.add(new RavineFootprint.Region(carve, cavernBiome(biomes, environment), discBiomes(biomes, carve.settings().discThemes())));
             warnOfMissingGrowth(features, carve.settings().discThemes());
+            bindInheritance(biomes, carve.settings().discThemes());
             logSettings(carve.settings());
             logRavinesNearOrigin(carve);
         }
@@ -138,6 +141,39 @@ public final class RavineDensityHook {
                     () -> OvergrownAbyss.LOGGER.warn("Disc biome {} does not exist; discs of that theme keep the biome they lie in", key.location())));
         }
         return found;
+    }
+
+    /**
+     * Points each inheriting disc biome at its parent. Only vanilla-style biomes are parents: a disc biome is never one, which
+     * also rules out two of them inheriting from each other.
+     */
+    private static void bindInheritance(Registry<Biome> biomes, List<DiscTheme> themes) {
+        for (DiscTheme theme : themes) {
+            if (theme.inherits().isEmpty() || theme.biome().isEmpty()) {
+                continue;
+            }
+            DiscTheme.Inherits inherits = theme.inherits().get();
+            Optional<Holder.Reference<Biome>> child = biomes.getHolder(theme.biome().get());
+            Optional<Holder.Reference<Biome>> parent = biomes.getHolder(inherits.biome());
+            boolean parentIsADiscBiome = themes.stream().anyMatch(other -> other.biome().filter(inherits.biome()::equals).isPresent());
+            if (child.isEmpty() || parent.isEmpty() || parentIsADiscBiome) {
+                OvergrownAbyss.LOGGER.warn(
+                        "Disc biome {} cannot inherit from {}: {}", theme.biome().get().location(), inherits.biome().location(),
+                        parentIsADiscBiome ? "that is a disc biome itself" : "one of the two does not exist");
+                continue;
+            }
+            ((InheritingBiome) (Object) child.get().value()).overgrownAbyss$inheritFrom(parent.get());
+            var inherited = parent.get().value().getGenerationSettings().features();
+            long grown = inherits.stages().stream().filter(stage -> stage.ordinal() < inherited.size())
+                    .mapToLong(stage -> inherited.get(stage.ordinal()).stream().filter(f -> f.unwrapKey().filter(inherits.without()::contains).isEmpty()).count())
+                    .sum();
+            // Read back through the child, which shows the spawn lists really are the parent's.
+            long spawns = Arrays.stream(MobCategory.values())
+                    .mapToLong(category -> child.get().value().getMobSettings().getMobs(category).unwrap().size()).sum();
+            OvergrownAbyss.LOGGER.info(
+                    "Disc biome {} inherits from {}: {} features in {} and {} spawn entries",
+                    theme.biome().get().location(), inherits.biome().location(), grown, inherits.stages(), spawns);
+        }
     }
 
     private static void warnOfMissingGrowth(Registry<ConfiguredFeature<?, ?>> features, List<DiscTheme> themes) {

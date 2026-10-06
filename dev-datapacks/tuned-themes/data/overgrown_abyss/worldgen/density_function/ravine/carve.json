@@ -1,0 +1,575 @@
+{
+  "type": "overgrown_abyss:ravine_carve",
+  "salt": 1094861636,
+  "cell_size": 2048,
+  "chance": 0.5,
+  "size_bias": 0.5,
+  "floor": {
+    "above_bottom": 24
+  },
+  "top": {
+    "absolute": 80
+  },
+  "cavern_radius": 136,
+  "cavern_height": 56,
+  "edge_falloff": 8,
+  "discs": {
+    "min_radius": 20,
+    "max_radius": 64,
+    "height_ratio": 0.45,
+    "min_height": 14,
+    "floor_thickness": 4,
+    "stem_fraction": 0.05,
+    "min_stem_radius": 1,
+    "max_stem_radius": 3,
+    "funnel_scale": 1.5,
+    "root_spread": 3,
+    "root_scale": 4,
+    "min_bowl_depth": 1,
+    "max_bowl_depth": 4,
+    "bowl_variation": 0.75
+  },
+  "disc_themes": [
+    {
+      "biome": "overgrown_abyss:disc_lush",
+      "weight": 4,
+      "palette": {
+        "top": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:noise_threshold_provider",
+              "seed": 2345,
+              "noise": {
+                "firstOctave": 0,
+                "amplitudes": [
+                  1.0
+                ]
+              },
+              "scale": 0.08,
+              "threshold": -0.2,
+              "high_chance": 0.15,
+              "default_state": {
+                "Name": "minecraft:moss_block"
+              },
+              "low_states": [
+                {
+                  "Name": "minecraft:podzol"
+                }
+              ],
+              "high_states": [
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                }
+              ]
+            }
+          },
+          {
+            "thickness": 2,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:rooted_dirt"
+              }
+            }
+          }
+        ],
+        "underside": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:weighted_state_provider",
+              "entries": [
+                {
+                  "data": {
+                    "Name": "minecraft:mossy_cobblestone"
+                  },
+                  "weight": 2
+                },
+                {
+                  "data": {
+                    "Name": "minecraft:cobblestone"
+                  },
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        ],
+        "body": {
+          "type": "minecraft:weighted_state_provider",
+          "entries": [
+            {
+              "data": {
+                "Name": "minecraft:stone"
+              },
+              "weight": 3
+            },
+            {
+              "data": {
+                "Name": "minecraft:andesite"
+              },
+              "weight": 1
+            },
+            {
+              "data": {
+                "Name": "minecraft:mossy_cobblestone"
+              },
+              "weight": 1
+            }
+          ]
+        },
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:weighted_state_provider",
+                "entries": [
+                  {
+                    "data": {
+                      "Name": "minecraft:mossy_cobblestone"
+                    },
+                    "weight": 2
+                  },
+                  {
+                    "data": {
+                      "Name": "minecraft:moss_block"
+                    },
+                    "weight": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:stone"
+            }
+          }
+        }
+      },
+      "growth": [
+        {
+          "feature": "minecraft:azalea_tree",
+          "every": 200
+        },
+        {
+          "feature": "minecraft:moss_patch",
+          "every": 110
+        },
+        {
+          "feature": "minecraft:patch_tall_grass",
+          "every": 70
+        },
+        {
+          "feature": "minecraft:flower_default",
+          "every": 300
+        },
+        {
+          "feature": "minecraft:moss_patch_ceiling",
+          "every": 160,
+          "on": "underside"
+        },
+        {
+          "feature": "minecraft:spore_blossom",
+          "every": 150,
+          "on": "underside"
+        },
+        {
+          "feature": "minecraft:cave_vine",
+          "every": 25,
+          "on": "underside"
+        }
+      ]
+    },
+    {
+      "biome": "overgrown_abyss:disc_jungle",
+      "weight": 4,
+      "by_distance": {
+        "centre": 3,
+        "edge": 0.4
+      },
+      "palette": {
+        "top": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:grass_block"
+              }
+            }
+          },
+          {
+            "thickness": 2,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:dirt"
+              }
+            }
+          }
+        ],
+        "underside": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:weighted_state_provider",
+              "entries": [
+                {
+                  "data": {
+                    "Name": "minecraft:mossy_cobblestone"
+                  },
+                  "weight": 2
+                },
+                {
+                  "data": {
+                    "Name": "minecraft:cobblestone"
+                  },
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        ],
+        "body": {
+          "type": "minecraft:weighted_state_provider",
+          "entries": [
+            {
+              "data": {
+                "Name": "minecraft:stone"
+              },
+              "weight": 3
+            },
+            {
+              "data": {
+                "Name": "minecraft:andesite"
+              },
+              "weight": 1
+            },
+            {
+              "data": {
+                "Name": "minecraft:mossy_cobblestone"
+              },
+              "weight": 1
+            }
+          ]
+        },
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:weighted_state_provider",
+                "entries": [
+                  {
+                    "data": {
+                      "Name": "minecraft:mossy_cobblestone"
+                    },
+                    "weight": 2
+                  },
+                  {
+                    "data": {
+                      "Name": "minecraft:moss_block"
+                    },
+                    "weight": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:stone"
+            }
+          }
+        }
+      },
+      "growth": [
+        {
+          "feature": "minecraft:jungle_tree",
+          "every": 45
+        },
+        {
+          "feature": "minecraft:jungle_bush",
+          "every": 30
+        },
+        {
+          "feature": "minecraft:bamboo_no_podzol",
+          "every": 120
+        },
+        {
+          "feature": "minecraft:patch_grass_jungle",
+          "every": 60
+        },
+        {
+          "feature": "minecraft:patch_melon",
+          "every": 900
+        },
+        {
+          "feature": "minecraft:cave_vine",
+          "every": 30,
+          "on": "underside"
+        }
+      ]
+    },
+    {
+      "biome": "overgrown_abyss:disc_mangrove",
+      "weight": 3,
+      "by_height": {
+        "bottom": 2,
+        "top": 0.5
+      },
+      "by_size": {
+        "small": 0.4,
+        "large": 2
+      },
+      "palette": {
+        "top": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:noise_threshold_provider",
+              "seed": 4711,
+              "noise": {
+                "firstOctave": 0,
+                "amplitudes": [
+                  1.0
+                ]
+              },
+              "scale": 0.1,
+              "threshold": -0.3,
+              "high_chance": 0.2,
+              "default_state": {
+                "Name": "minecraft:mud"
+              },
+              "low_states": [
+                {
+                  "Name": "minecraft:moss_block"
+                }
+              ],
+              "high_states": [
+                {
+                  "Name": "minecraft:muddy_mangrove_roots"
+                }
+              ]
+            }
+          },
+          {
+            "thickness": 2,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:mud"
+              }
+            }
+          }
+        ],
+        "underside": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:weighted_state_provider",
+              "entries": [
+                {
+                  "data": {
+                    "Name": "minecraft:muddy_mangrove_roots"
+                  },
+                  "weight": 2
+                },
+                {
+                  "data": {
+                    "Name": "minecraft:mangrove_roots"
+                  },
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        ],
+        "body": {
+          "type": "minecraft:weighted_state_provider",
+          "entries": [
+            {
+              "data": {
+                "Name": "minecraft:packed_mud"
+              },
+              "weight": 2
+            },
+            {
+              "data": {
+                "Name": "minecraft:mud"
+              },
+              "weight": 1
+            },
+            {
+              "data": {
+                "Name": "minecraft:stone"
+              },
+              "weight": 2
+            }
+          ]
+        },
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:weighted_state_provider",
+                "entries": [
+                  {
+                    "data": {
+                      "Name": "minecraft:mangrove_roots"
+                    },
+                    "weight": 2
+                  },
+                  {
+                    "data": {
+                      "Name": "minecraft:muddy_mangrove_roots"
+                    },
+                    "weight": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:packed_mud"
+            }
+          }
+        }
+      },
+      "growth": [
+        {
+          "feature": "minecraft:tall_mangrove",
+          "every": 80
+        },
+        {
+          "feature": "minecraft:mangrove",
+          "every": 30
+        },
+        {
+          "feature": "minecraft:patch_grass",
+          "every": 70
+        },
+        {
+          "feature": "minecraft:cave_vine",
+          "every": 35,
+          "on": "underside"
+        }
+      ]
+    },
+    {
+      "biome": "overgrown_abyss:disc_crystal",
+      "weight": 2,
+      "by_height": {
+        "bottom": 2,
+        "top": 0.5
+      },
+      "only": {
+        "distance": {
+          "min": 0.55
+        },
+        "size": {
+          "max": 0.4
+        }
+      },
+      "palette": {
+        "top": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:weighted_state_provider",
+              "entries": [
+                {
+                  "data": {
+                    "Name": "minecraft:amethyst_block"
+                  },
+                  "weight": 6
+                },
+                {
+                  "data": {
+                    "Name": "minecraft:budding_amethyst"
+                  },
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        ],
+        "underside": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:smooth_basalt"
+              }
+            }
+          }
+        ],
+        "body": {
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:calcite"
+          }
+        },
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:simple_state_provider",
+                "state": {
+                  "Name": "minecraft:smooth_basalt"
+                }
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:calcite"
+            }
+          }
+        }
+      },
+      "growth": [
+        {
+          "feature": "overgrown_abyss:disc/amethyst_cluster",
+          "every": 7
+        },
+        {
+          "feature": "overgrown_abyss:disc/amethyst_cluster_hanging",
+          "every": 12,
+          "on": "underside"
+        }
+      ]
+    }
+  ],
+  "environment": {
+    "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",
+    "cavern_biome": "minecraft:lush_caves"
+  },
+  "cone": {
+    "top_radius": 45,
+    "base_radius": 150,
+    "flare": 1.6,
+    "clear_radius": 8,
+    "layer_spacing": 20,
+    "layer_jitter": 0.3,
+    "spacing": 56,
+    "stack_chance": 0.4,
+    "ceiling_margin": 16,
+    "base_clearance": -16,
+    "hang_chance": 0.35,
+    "outer_radius": 200,
+    "rider_chance": 0.5,
+    "rider_scale": 0.6
+  }
+}

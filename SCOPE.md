@@ -988,6 +988,76 @@ Not verified: nothing was looked at in game, so whether the rare discs are in fa
 open; the unit test only shows that a larger disc stands between each of them and the axis. Larion not run. The ravine packs were
 only loaded by a unit test.
 
+### Biome inheritance for disc themes
+
+Owner: each disc biome should carry the full features of the biome it inherits from, plus our additions and changes, so that
+what another mod adds to that biome (foliage, animals) turns up on our discs too. For now shelve our own densities and additions,
+to see what the unmodified parent looks like on a disc.
+
+Minecraft has no inheritance between biomes; every biome file stands alone. So a theme names a parent (`inherits`) and the disc's
+biome borrows the parent's content when it is used, instead of holding a copy that goes stale:
+
+- **Spawns.** `BiomeMixin` makes an inheriting biome answer `getMobSettings()` with its parent's, read each time. That accessor
+  is where every spawn list, cost and probability comes from, and on NeoForge it is already patched to return the biome as changed
+  by other mods' biome modifiers (checked in the patched jar), so their additions are included. Bound at level load by
+  `RavineDensityHook`, which logs what each disc biome inherits.
+- **Features.** A disc biome lists no features of its own, which is what keeps the surrounding biome's features off the disc, and
+  vanilla never decorates a biome its biome source cannot produce. So `DiscGrower` grows the parent's features itself: for each
+  disc it reads the parent's current list for the stages asked for and runs each placed feature by its own placement rules, with
+  two changes. The rules ask a `DiscPlacementContext` for the ground and get the disc's top instead of the column's (a column
+  not over the disc answers with the bottom of the world, which vanilla takes as no ground). And where a rule asks whether the
+  biome at the place lists the feature, the answer is whether the place belongs to this disc (`DiscPlot.owns`: in its dome or
+  platform, and not in a higher disc's). So features land on the disc at vanilla's own rates, and cave-style features that scan
+  for floors and ceilings fill the dome as they would a cave.
+- **Tags.** Our biomes are added to the vanilla and convention biome tags their parents are in (frog variants, swamp slimes and
+  fog, fire burnout, `is_jungle`, `c:is_lush`, ...), but not to the structure tags, since structures ask the biome source.
+- **Stages.** `inherits.stages` is `vegetal_decoration` unless given, which leaves out lakes, geodes, monster rooms, ores and
+  springs; `inherits.without` leaves out named features.
+
+The shipped themes now inherit and add nothing: lush from `minecraft:lush_caves`, jungle from `minecraft:jungle`, mangrove from
+`minecraft:mangrove_swamp`; crystal inherits nothing and is unchanged. Their growth lists are gone and their palettes are only
+the ground the parent would have had, since no surface rule reaches a disc: grass over dirt for jungle, mud for mangrove, plain
+stone for lush. The hand-tuned versions are kept as `dev-datapacks/tuned-themes` for comparison.
+
+Found on the way:
+
+- **A crash, fixed.** With a fixed height for the ground, a jungle tree could be started inside the trunk of a tree already grown
+  there, which crashes vanilla's cocoa decorator and with it the chunk. The heightmaps that vanilla keeps up to date during
+  decoration now follow the column up through what stands on the disc; the two worldgen heightmaps still answer with the bare top,
+  as in vanilla.
+- **Failures are contained.** These features were written for open ground, some by other mods. If one throws on a disc it is
+  logged and left out of that chunk, since an exception there would stop the chunk generating. None failed in the runs below.
+- **Lush discs need a body.** Left unpainted, the part of a platform inside the wall is the terrain's, cave holes included: 33 of
+  300 sampled top blocks were air. Lush now has a plain stone body, and 0 of 300 are.
+
+What it looks like in numbers (300 points over discs of each theme, Fabric, the mod's own file):
+
+| Theme | Top block | On the ground | 3 blocks up |
+|---|---|---|---|
+| Lush | moss 96, water 92, clay 70, stone 33 | grass 55, moss carpet 25, azaleas 9, dripleaf 10, nothing 201 | nothing 293 |
+| Jungle | grass 281, dirt 19 | bush and tree leaves 200, grass and ferns 42, trunks 19, vines 8, melons 5, nothing 25 | leaves and vines 66, trunks 6, nothing 227 |
+| Mangrove | mud 276, muddy roots 24 | grass 38, roots 25, vines 11, nothing 226 | leaves 24, roots 14, vines 13, trunks 7, nothing 236 |
+
+So: lush discs are over half pool (water and clay), as lush caves are on flat ground; jungle discs are thick with bushes, as
+vanilla jungle is; mangrove discs are thin, because vanilla's mangrove swamp mostly grows tall mangroves and those rarely fit
+under a dome, and its lily pads and seagrass have no water to grow in.
+
+| Check | Result |
+|---|---|
+| Unit tests (107): the `inherits` setting, its default of vegetation only, and that it needs a biome of its own that is not the parent; an inheriting disc as a plot (its ground in each column, none beside it, its own blocks but not a higher disc's, nothing before a level is bound); the shipped themes inherit from the three biomes, add no growth, are only ground, and are tagged as overworld biomes; all earlier tests | pass (`./gradlew build`, both loader jars built) |
+| NeoForge dedicated server, seed 20261003, new world with the `cone` pack and a stand-in for another mod: a datapack of NeoForge biome modifiers that adds one feature (a sponge block on the surface, 24 per chunk) and one spawn (allay) to `minecraft:jungle` | The log shows `disc_jungle inherits from minecraft:jungle: 12 features ... and 19 spawn entries` against 11 and 18 without the pack. Sponges stand on 23 of 300 points sampled over jungle discs. No inherited feature failed. Biome 145 of 150 |
+| Fabric dedicated server with no datapack (seed set to 20261003 for the run) | no errors; the table above. Biome 145 of 150 |
+| Generation time, dedicated server | 77 chunks in 13 s and 80 in 13 s |
+
+Not verified: nothing was looked at in game. Mobs actually spawning on a disc was not checked, only that a disc biome's spawn
+lists are its parent's; vanilla's own spawn rules still apply, so passive animals need light and will not appear under a dark dome.
+A mod adding to a biome in code on Fabric was not tried (Fabric has no datapack biome modifiers; its API changes the parent's
+settings in place, which the same read picks up). Larion not run.
+
+Limits, by design or not yet done: a mod that checks for the exact id `minecraft:jungle` will not see a disc as jungle; a feature
+that looks the surface up itself instead of through its placement rules acts on the real surface or does nothing; stages other
+than vegetation are untried on discs; tags another mod adds to a parent biome are not picked up, only the ones listed in our files.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

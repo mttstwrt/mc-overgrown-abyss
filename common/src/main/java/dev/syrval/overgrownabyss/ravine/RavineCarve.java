@@ -3,6 +3,7 @@ package dev.syrval.overgrownabyss.ravine;
 import com.mojang.serialization.MapCodec;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.KeyDispatchDataCodec;
@@ -134,9 +135,8 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     /**
-     * The biome of the disc a point belongs to, if that disc's theme has one: the point is in the disc's dome or platform, or
-     * within a margin of them. Where the spaces of several discs overlap, the highest disc has it, which is the one a rider
-     * stands on rather than its host's.
+     * The biome of the disc a point belongs to (see {@link CellDiscs#ownerAt}), if there is one: the point is in the disc's
+     * dome or platform, or within a margin of them.
      */
     public Optional<ResourceKey<Biome>> discBiomeAt(int x, int y, int z) {
         if (bounds == null || settings.discThemes().isEmpty()) {
@@ -147,18 +147,55 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
             return Optional.empty();
         }
         CellDiscs cellDiscs = discsOf(cell.get());
-        List<Disc> all = cellDiscs.layout().discs();
-        Optional<ResourceKey<Biome>> found = Optional.empty();
-        double highest = Double.NEGATIVE_INFINITY;
-        for (int i = 0; i < all.size(); i++) {
-            Disc disc = all.get(i);
-            Optional<ResourceKey<Biome>> biome = cellDiscs.themes().get(i).flatMap(DiscTheme::biome);
-            if (biome.isPresent() && disc.floor() > highest && disc.biomeContains(settings.discs(), x, y, z, DISC_BIOME_MARGIN)) {
-                found = biome;
-                highest = disc.floor();
-            }
+        OptionalInt owner = cellDiscs.ownerAt(settings.discs(), x, y, z, DISC_BIOME_MARGIN);
+        return owner.isPresent() ? cellDiscs.themes().get(owner.getAsInt()).flatMap(DiscTheme::biome) : Optional.empty();
+    }
+
+    /**
+     * Calls {@code sink} with every disc whose theme inherits a biome's features and whose space reaches into the chunk whose
+     * lowest corner is {@code (minX, minZ)}, as a plot to grow those features on.
+     */
+    public void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink) {
+        if (bounds == null || settings.discThemes().isEmpty()) {
+            return;
         }
-        return found;
+        cellAt(minX, minZ).ifPresent(cell -> {
+            CellDiscs cellDiscs = discsOf(cell);
+            List<Disc> all = cellDiscs.layout().discs();
+            for (int i = 0; i < all.size(); i++) {
+                Disc disc = all.get(i);
+                double reach = disc.radius() + DISC_BIOME_MARGIN;
+                boolean inChunk = disc.x() + reach >= minX && disc.x() - reach <= minX + 15 && disc.z() + reach >= minZ && disc.z() - reach <= minZ + 15;
+                Optional<DiscTheme.Inherits> inherits = cellDiscs.themes().get(i).flatMap(DiscTheme::inherits);
+                if (inChunk && inherits.isPresent()) {
+                    sink.accept(inherits.get(), new Plot(cellDiscs, i));
+                }
+            }
+        });
+    }
+
+    private final class Plot implements DiscPlot {
+        private final CellDiscs cellDiscs;
+        private final int index;
+        private final Disc disc;
+
+        Plot(CellDiscs cellDiscs, int index) {
+            this.cellDiscs = cellDiscs;
+            this.index = index;
+            this.disc = cellDiscs.layout().discs().get(index);
+        }
+
+        @Override
+        public OptionalInt groundAt(int x, int z) {
+            double fromAxis = Math.hypot(x - disc.x(), z - disc.z());
+            return fromAxis < disc.radius() ? OptionalInt.of((int) Math.ceil(disc.topAt(fromAxis))) : OptionalInt.empty();
+        }
+
+        @Override
+        public boolean owns(int x, int y, int z) {
+            OptionalInt owner = cellDiscs.ownerAt(settings.discs(), x, y, z, DISC_BIOME_MARGIN);
+            return owner.isPresent() && owner.getAsInt() == index;
+        }
     }
 
     private CellDiscs discsOf(RavineCell cell) {

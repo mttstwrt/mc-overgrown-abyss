@@ -40,6 +40,10 @@ The mod's own hole is now the cone: a single round hole, `base_radius` 150 at th
 
 - `biome`: the biome stamped over the disc's dome and platform. It colours grass, leaves and water, decides what spawns, and
   keeps the surrounding biome's features off the disc. The mod's own are in `data/overgrown_abyss/worldgen/biome/`.
+- `inherits`: a biome the disc's biome takes its content from, as that biome is when the level loads, with whatever other mods
+  have added to it. Its spawn lists become the disc's, and its features are grown on the disc by its own placement rules, with
+  the disc's top as the ground. `stages` chooses which stages of decoration are grown (only `vegetal_decoration` unless given,
+  which leaves out lakes, geodes, monster rooms, ores and springs) and `without` names placed features to leave out.
 - `weight`, and three optional ramps that multiply it by where the disc is among the discs of its own hole: `by_height`
   (`bottom` to `top`), `by_distance` (`centre` to `edge`) and `by_size` (`small` to `large`).
 - `only`: optional hard limits on the same three traits, each from 0 to 1, as `min` and `max`. A disc outside them never gets
@@ -47,14 +51,18 @@ The mod's own hole is now the cone: a single round hole, `base_radius` 150 at th
 - `palette`: what the disc is made of. Blocks for the platform's `top` and `underside` (layers counted in from the surface), its
   `body`, and the `stem` (`surface` layers and `core`). Each block is a vanilla block-state provider, so it can be one block, a
   weighted mix or noise patches. A part left out stays the terrain's own rock.
-- `growth`: configured features placed on the platform, each on average once per `every` blocks of its `top` (the default) or
-  `underside`.
+- `growth`: configured features of the theme's own, placed on the platform after what it inherits, each on average once per
+  `every` blocks of its `top` (the default) or `underside`.
 
-The mod's own themes: `disc_lush` (mossy, anywhere), `disc_jungle` (grass, dense jungle trees and bamboo, three times as likely
-in the middle as at the edge), `disc_mangrove` (mud, mangroves; favours the wide low discs) and one rare one, `disc_crystal`
-(amethyst over calcite, with clusters), kept to small discs in the outer half, which the layout puts behind larger discs. With
-no themes every disc is the terrain's own rock in the biome it lies in.
+The mod's own themes inherit and add nothing of their own: `disc_lush` from `minecraft:lush_caves` (a plain stone platform;
+lush caves moss it over itself), `disc_jungle` from `minecraft:jungle` (grass over dirt, since trees need soil and no surface rule reaches a
+disc; three times as likely in the middle as at the edge) and `disc_mangrove` from `minecraft:mangrove_swamp` (mud; favours the
+wide low discs). `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and
+kept to small discs in the outer half, which the layout puts behind larger discs. With no themes every disc is the terrain's
+own rock in the biome it lies in.
 
+- `tuned-themes`: the mod's file as it was before biomes were inherited, with the hand-made palettes and growth lists for lush,
+  jungle and mangrove (denser foliage, mangrove roots on stems). For comparing the two in game.
 - `cone`: the mod's own file plus a fifth theme with no biome, in plain concrete (white top, black underside, light grey body,
   orange stem surface, yellow stem core), that makes each part of a disc easy to tell apart.
 

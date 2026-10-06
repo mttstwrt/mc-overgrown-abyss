@@ -31,6 +31,9 @@ public interface RavineFootprint {
 
         @Override
         public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {}
+
+        @Override
+        public void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink) {}
     };
 
     /** Whether the column is touched by an active ravine, including wall noise and falloff. */
@@ -53,6 +56,12 @@ public interface RavineFootprint {
 
     /** Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachGrowth(int minX, int minZ, DiscGrowthSink sink);
+
+    /**
+     * Calls {@code sink} with every disc whose theme inherits a biome's features and whose space reaches into the chunk whose
+     * lowest corner is {@code (minX, minZ)}.
+     */
+    void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink);
 
     /** One bound carve, the biome (if any) resolved for its cavern, and the biomes of its disc themes that exist in the level. */
     record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome, Map<ResourceKey<Biome>, Holder<Biome>> discBiomes) {
@@ -114,6 +123,13 @@ public interface RavineFootprint {
             public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {
                 for (Region region : copy) {
                     region.carve().forEachGrowth(minX, minZ, sink);
+                }
+            }
+
+            @Override
+            public void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachInheritingDisc(minX, minZ, sink);
                 }
             }
         };

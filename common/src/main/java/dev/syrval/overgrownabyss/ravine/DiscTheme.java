@@ -9,7 +9,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 /**
  * One kind of disc: a small biome of its own. Each disc is given one theme, drawn by weight, and the weight of a theme
@@ -19,6 +21,8 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
  * @param biome      the biome stamped over the disc's dome and platform. It sets the colour of grass, leaves and water there
  *                   and what spawns, and it keeps the surrounding biome's features off the disc. Without one the disc keeps
  *                   the biome it lies in
+ * @param inherits   another biome whose features and spawns the disc's biome takes on, as they are when the level loads,
+ *                   with whatever other mods have added to that biome
  * @param weight     how often a disc gets this theme, against the weights of the others, before the three ramps below
  * @param byHeight   how the weight changes from the hole's lowest disc to its highest
  * @param byDistance from the hole's centre to its outermost disc
@@ -28,8 +32,8 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
  * @param growth     what grows on the disc
  */
 public record DiscTheme(
-        Optional<ResourceKey<Biome>> biome, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize, Limits only,
-        DiscPalette palette, List<Growth> growth) {
+        Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
+        Limits only, DiscPalette palette, List<Growth> growth) {
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -80,6 +84,29 @@ public record DiscTheme(
         }
     }
 
+    /**
+     * What a disc's biome takes from another biome. Its spawn lists are the other biome's. Its features are grown on the disc
+     * by the other biome's own placement rules, which find the disc's top where they would look for the ground.
+     *
+     * @param biome   the biome inherited from
+     * @param stages  the stages of decoration whose features are grown; by default only vegetation, which leaves out lakes,
+     *                geodes, monster rooms, ores and springs
+     * @param without placed features of those stages that are left out
+     */
+    public record Inherits(ResourceKey<Biome> biome, List<GenerationStep.Decoration> stages, List<ResourceKey<PlacedFeature>> without) {
+        static final List<GenerationStep.Decoration> VEGETATION = List.of(GenerationStep.Decoration.VEGETAL_DECORATION);
+        static final Codec<Inherits> CODEC = RecordCodecBuilder.create(i -> i.group(
+                ResourceKey.codec(Registries.BIOME).fieldOf("biome").forGetter(Inherits::biome),
+                GenerationStep.Decoration.CODEC.listOf().optionalFieldOf("stages", VEGETATION).forGetter(Inherits::stages),
+                ResourceKey.codec(Registries.PLACED_FEATURE).listOf().optionalFieldOf("without", List.of()).forGetter(Inherits::without)
+        ).apply(i, Inherits::new));
+
+        public Inherits {
+            stages = List.copyOf(stages);
+            without = List.copyOf(without);
+        }
+    }
+
     /** The surface of a platform that something grows on. */
     public enum Surface implements StringRepresentable {
         TOP("top"),
@@ -110,8 +137,9 @@ public record DiscTheme(
         ).apply(i, Growth::new));
     }
 
-    public static final Codec<DiscTheme> CODEC = RecordCodecBuilder.create(i -> i.group(
+    public static final Codec<DiscTheme> CODEC = RecordCodecBuilder.<DiscTheme>create(i -> i.group(
             ResourceKey.codec(Registries.BIOME).optionalFieldOf("biome").forGetter(DiscTheme::biome),
+            Inherits.CODEC.optionalFieldOf("inherits").forGetter(DiscTheme::inherits),
             Codec.floatRange(0, 1000).fieldOf("weight").forGetter(DiscTheme::weight),
             Ramp.codec("bottom", "top").optionalFieldOf("by_height", Ramp.EVEN).forGetter(DiscTheme::byHeight),
             Ramp.codec("centre", "edge").optionalFieldOf("by_distance", Ramp.EVEN).forGetter(DiscTheme::byDistance),
@@ -119,7 +147,18 @@ public record DiscTheme(
             Limits.CODEC.optionalFieldOf("only", Limits.NONE).forGetter(DiscTheme::only),
             DiscPalette.CODEC.optionalFieldOf("palette", DiscPalette.UNPAINTED).forGetter(DiscTheme::palette),
             Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(DiscTheme::growth)
-    ).apply(i, DiscTheme::new));
+    ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);
+
+    // What is inherited is given to the theme's own biome, and grown where that biome is stamped.
+    private static DataResult<DiscTheme> validate(DiscTheme theme) {
+        if (theme.inherits.isPresent() && theme.biome.isEmpty()) {
+            return DataResult.error(() -> "a theme that inherits from a biome needs a biome of its own");
+        }
+        if (theme.inherits.isPresent() && theme.inherits.get().biome().equals(theme.biome.get())) {
+            return DataResult.error(() -> "a theme's biome cannot inherit from itself");
+        }
+        return DataResult.success(theme);
+    }
 
     public DiscTheme {
         growth = List.copyOf(growth);

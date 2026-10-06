@@ -33,7 +33,7 @@ class DiscBlocksTest {
 
     /** A theme that is only a palette: no biome, nothing growing, the same weight everywhere. */
     static DiscTheme themed(DiscPalette palette) {
-        return new DiscTheme(Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, List.of());
+        return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, List.of());
     }
 
     private record Block(int x, int y, int z) {}
