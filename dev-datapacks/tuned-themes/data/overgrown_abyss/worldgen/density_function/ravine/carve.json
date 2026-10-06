@@ -32,6 +32,10 @@
   "disc_themes": [
     {
       "biome": "overgrown_abyss:disc_lush",
+      "inherits": {
+        "biome": "minecraft:lush_caves",
+        "stages": []
+      },
       "weight": 4,
       "palette": {
         "top": [
@@ -186,6 +190,10 @@
     },
     {
       "biome": "overgrown_abyss:disc_jungle",
+      "inherits": {
+        "biome": "minecraft:jungle",
+        "stages": []
+      },
       "weight": 4,
       "by_distance": {
         "centre": 3,
@@ -318,6 +326,10 @@
     },
     {
       "biome": "overgrown_abyss:disc_mangrove",
+      "inherits": {
+        "biome": "minecraft:mangrove_swamp",
+        "stages": []
+      },
       "weight": 3,
       "by_height": {
         "bottom": 2,

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.GenerationStep;
@@ -85,25 +86,32 @@ public record DiscTheme(
     }
 
     /**
-     * What a disc's biome takes from another biome. Its spawn lists are the other biome's. Its features are grown on the disc
-     * by the other biome's own placement rules, which find the disc's top where they would look for the ground.
+     * What a disc's biome takes from another biome. Its features are grown on the disc by the other biome's own placement
+     * rules, which find the disc's top where they would look for the ground. Its spawns are the other biome's, changed by the
+     * disc biome's own file: what that file lists is added, and replaces the other biome's entry for the same mob.
      *
-     * @param biome   the biome inherited from
-     * @param stages  the stages of decoration whose features are grown; by default only vegetation, which leaves out lakes,
-     *                geodes, monster rooms, ores and springs
-     * @param without placed features of those stages that are left out
+     * @param biome           the biome inherited from
+     * @param stages          the stages of decoration whose features are grown; by default only vegetation, which leaves out
+     *                        lakes, geodes, monster rooms, ores and springs
+     * @param withoutFeatures placed features of those stages that are left out
+     * @param withoutSpawns   mobs that are left out of the spawns inherited, by id
      */
-    public record Inherits(ResourceKey<Biome> biome, List<GenerationStep.Decoration> stages, List<ResourceKey<PlacedFeature>> without) {
+    public record Inherits(
+            ResourceKey<Biome> biome, List<GenerationStep.Decoration> stages, List<ResourceKey<PlacedFeature>> withoutFeatures,
+            List<ResourceLocation> withoutSpawns) {
         static final List<GenerationStep.Decoration> VEGETATION = List.of(GenerationStep.Decoration.VEGETAL_DECORATION);
         static final Codec<Inherits> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ResourceKey.codec(Registries.BIOME).fieldOf("biome").forGetter(Inherits::biome),
                 GenerationStep.Decoration.CODEC.listOf().optionalFieldOf("stages", VEGETATION).forGetter(Inherits::stages),
-                ResourceKey.codec(Registries.PLACED_FEATURE).listOf().optionalFieldOf("without", List.of()).forGetter(Inherits::without)
+                ResourceKey.codec(Registries.PLACED_FEATURE).listOf().optionalFieldOf("without_features", List.of()).forGetter(Inherits::withoutFeatures),
+                // Ids rather than mobs, so that a pack naming another mod's mob still loads without that mod.
+                ResourceLocation.CODEC.listOf().optionalFieldOf("without_spawns", List.of()).forGetter(Inherits::withoutSpawns)
         ).apply(i, Inherits::new));
 
         public Inherits {
             stages = List.copyOf(stages);
-            without = List.copyOf(without);
+            withoutFeatures = List.copyOf(withoutFeatures);
+            withoutSpawns = List.copyOf(withoutSpawns);
         }
     }
 

@@ -1058,6 +1058,35 @@ Limits, by design or not yet done: a mod that checks for the exact id `minecraft
 that looks the surface up itself instead of through its placement rules acts on the real surface or does nothing; stages other
 than vegetation are untried on discs; tags another mod adds to a parent biome are not picked up, only the ones listed in our files.
 
+### A disc biome's own spawns as a change to the inherited ones
+
+Noted after the inheritance round: an inheriting disc biome answered with its parent's spawn settings outright, so the spawn
+lists in our own biome files did nothing, and there was no way to add or remove a mob on a disc. Owner: make our mob list a
+modifier on top of the inherited list.
+
+- **Merge** (`InheritedSpawns`): the parent's entries, then the disc biome's own. An entry of ours for a mob the parent has in the
+  same category replaces the parent's, which is how a weight or group size is changed. Spawn costs follow the same rule; the
+  chance of creatures at chunk generation is the parent's.
+- **Leaving mobs out:** `inherits.without_spawns`, a list of mob ids, taken out of what is inherited in every category but not
+  out of our own entries. Ids, so that a pack naming another mod's mob still loads without that mod (it logs a warning).
+  `inherits.without` is now `without_features`, to tell the two apart.
+- **Still live:** `BiomeMixin` reads the parent's settings and the disc biome's own on each call and remembers the merge until
+  either is a different object, which is how NeoForge's changes to a biome show up. On Fabric, where a biome's settings are
+  changed in place, a change made after the first merge would be missed; those changes are made before a level loads.
+- **Our files start empty.** `disc_lush`, `disc_jungle` and `disc_mangrove` held copies of vanilla's lists. As modifiers those
+  would have pinned every entry and put back anything another mod removed from the parent, so they now list no mobs, and a disc
+  spawns exactly what its parent does until something is added. `disc_crystal` inherits nothing and keeps its list.
+- `dev-datapacks/tuned-themes` now inherits spawns only (`"stages": []`), since its biomes would otherwise spawn nothing.
+
+| Check | Result |
+|---|---|
+| Unit tests (111): nothing of our own gives exactly the parent's lists, probability and costs; our entries are added and replace the parent's for the same mob, costs too; mobs left out go from what is inherited in any category but not from our own; a merge is remembered until either biome hands out other settings; the settings' JSON; the shipped inheriting biomes list no mobs and the crystal one does | pass (`./gradlew build`, both loader jars built) |
+| NeoForge dedicated server with a scratch datapack: `disc_jungle.json` adds a fox and re-weights the parrot, the jungle theme leaves out pig, cow and a mob that does not exist, and a NeoForge biome modifier adds an allay to `minecraft:jungle` | log: `disc_jungle` has 18 spawn entries where the parent has 19 (19 less pig and cow, plus the fox; the parrot replaced in place). Lush 12 where the parent has 12, mangrove 14 where 14. The missing mob is warned about and the pack loads |
+| Fabric dedicated server with the same pack (the biome modifier is NeoForge's and is ignored) | `disc_jungle` 17 where the parent has 18; lush 12 and 12, mangrove 14 and 14 |
+
+Not verified: mobs actually spawning on a disc in game; the server runs only show the merged lists' sizes, and the unit tests
+their contents.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers.

@@ -321,17 +321,20 @@ class DiscThemeTest {
         DiscTheme.Inherits inherits = DiscTheme.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow().inherits().orElseThrow();
         assertEquals(ResourceKey.create(Registries.BIOME, ResourceLocation.parse("minecraft:jungle")), inherits.biome());
         assertEquals(List.of(GenerationStep.Decoration.VEGETAL_DECORATION), inherits.stages(), "vegetation only, which leaves out lakes, ores and springs");
-        assertTrue(inherits.without().isEmpty());
+        assertTrue(inherits.withoutFeatures().isEmpty() && inherits.withoutSpawns().isEmpty());
         assertEquals(json, DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, DiscTheme.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow()).getOrThrow());
         var more = JsonParser.parseString("""
                 {"biome": "overgrown_abyss:disc_lush", "weight": 1, "inherits": {
                   "biome": "minecraft:lush_caves",
                   "stages": ["underground_ores", "vegetal_decoration"],
-                  "without": ["minecraft:lush_caves_clay"]}}
+                  "without_features": ["minecraft:lush_caves_clay"],
+                  "without_spawns": ["minecraft:witch", "othermod:not_installed"]}}
                 """);
         DiscTheme.Inherits picked = DiscTheme.CODEC.parse(JsonOps.INSTANCE, more).getOrThrow().inherits().orElseThrow();
         assertEquals(List.of(GenerationStep.Decoration.UNDERGROUND_ORES, GenerationStep.Decoration.VEGETAL_DECORATION), picked.stages());
-        assertEquals("minecraft:lush_caves_clay", picked.without().get(0).location().toString());
+        assertEquals("minecraft:lush_caves_clay", picked.withoutFeatures().get(0).location().toString());
+        assertEquals(List.of(ResourceLocation.parse("minecraft:witch"), ResourceLocation.parse("othermod:not_installed")), picked.withoutSpawns(),
+                "mobs are named by id, so one from a mod that is not installed still loads");
         var noBiomeOfItsOwn = JsonParser.parseString("{\"weight\": 1, \"inherits\": {\"biome\": \"minecraft:jungle\"}}");
         assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, noBiomeOfItsOwn).isError(), "what is inherited is given to the theme's own biome");
         var fromItself = JsonParser.parseString("{\"biome\": \"minecraft:jungle\", \"weight\": 1, \"inherits\": {\"biome\": \"minecraft:jungle\"}}");
@@ -402,12 +405,20 @@ class DiscThemeTest {
             String overworld = new String(DiscThemeTest.class.getResourceAsStream("/data/minecraft/tags/worldgen/biome/is_overworld.json").readAllBytes(), StandardCharsets.UTF_8);
             assertTrue(overworld.contains("overgrown_abyss:" + name), name + " is not tagged as an overworld biome");
             theme.inherits().ifPresent(inherits -> parents.put(name, inherits.biome().location().toString()));
+            String biomeFile = new String(DiscThemeTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/biome/" + name + ".json").readAllBytes(), StandardCharsets.UTF_8);
+            int ownSpawns = 0;
+            for (var category : JsonParser.parseString(biomeFile).getAsJsonObject().getAsJsonObject("spawners").entrySet()) {
+                ownSpawns += category.getValue().getAsJsonArray().size();
+            }
             if (theme.inherits().isPresent()) {
+                // The file's spawns are added to what is inherited, so a copy of the parent's list there would pin every entry.
+                assertEquals(0, ownSpawns, name + " changes the spawns it inherits");
                 assertTrue(theme.growth().isEmpty(), name + " adds growth of its own to what it inherits");
                 assertTrue(theme.palette().underside().isEmpty() && theme.palette().stem().core().isEmpty() && theme.palette().stem().surface().isEmpty(),
                         name + " is made of more than the ground its parent would have");
                 assertTrue(theme.palette().blockAt(new DiscPoint.Platform(0.5, 3.5)).isPresent(), name + " leaves its platform to the terrain, cave holes and all");
             } else {
+                assertTrue(ownSpawns > 0, name + " inherits nothing and has no spawns of its own");
                 assertTrue(theme.palette().blockAt(new DiscPoint.Platform(0.5, 3.5)).isPresent() && theme.palette().blockAt(new DiscPoint.Platform(20, 20)).isPresent(), name);
                 assertTrue(!theme.growth().isEmpty(), name + " grows nothing");
                 for (DiscTheme.Growth growth : theme.growth()) {

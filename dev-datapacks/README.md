@@ -41,9 +41,14 @@ The mod's own hole is now the cone: a single round hole, `base_radius` 150 at th
 - `biome`: the biome stamped over the disc's dome and platform. It colours grass, leaves and water, decides what spawns, and
   keeps the surrounding biome's features off the disc. The mod's own are in `data/overgrown_abyss/worldgen/biome/`.
 - `inherits`: a biome the disc's biome takes its content from, as that biome is when the level loads, with whatever other mods
-  have added to it. Its spawn lists become the disc's, and its features are grown on the disc by its own placement rules, with
-  the disc's top as the ground. `stages` chooses which stages of decoration are grown (only `vegetal_decoration` unless given,
-  which leaves out lakes, geodes, monster rooms, ores and springs) and `without` names placed features to leave out.
+  have added to it.
+  - Features: the parent's are grown on the disc by its own placement rules, with the disc's top as the ground. `stages` chooses
+    which stages of decoration are grown (only `vegetal_decoration` unless given, which leaves out lakes, geodes, monster rooms,
+    ores and springs; an empty list grows none) and `without_features` names placed features to leave out.
+  - Spawns: the parent's, changed by the disc biome's own file. A mob listed under `spawners` in
+    `data/overgrown_abyss/worldgen/biome/disc_*.json` is added, and replaces the parent's entry for the same mob in the same
+    category (so a new weight or group size). `without_spawns` names mobs to leave out of what is inherited. The mod's own
+    files list no mobs, so by default a disc spawns exactly what its parent does.
 - `weight`, and three optional ramps that multiply it by where the disc is among the discs of its own hole: `by_height`
   (`bottom` to `top`), `by_distance` (`centre` to `edge`) and `by_size` (`small` to `large`).
 - `only`: optional hard limits on the same three traits, each from 0 to 1, as `min` and `max`. A disc outside them never gets
@@ -62,7 +67,8 @@ kept to small discs in the outer half, which the layout puts behind larger discs
 own rock in the biome it lies in.
 
 - `tuned-themes`: the mod's file as it was before biomes were inherited, with the hand-made palettes and growth lists for lush,
-  jungle and mangrove (denser foliage, mangrove roots on stems). For comparing the two in game.
+  jungle and mangrove (denser foliage, mangrove roots on stems). For comparing the two in game. It inherits spawns only
+  (`"stages": []`), so its foliage is all its own.
 - `cone`: the mod's own file plus a fifth theme with no biome, in plain concrete (white top, black underside, light grey body,
   orange stem surface, yellow stem core), that makes each part of a disc easy to tell apart.
 

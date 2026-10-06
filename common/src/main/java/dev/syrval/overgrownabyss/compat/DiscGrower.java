@@ -74,7 +74,7 @@ public final class DiscGrower {
                 int featureIndex = 0;
                 for (Holder<PlacedFeature> feature : byStage.get(stage.ordinal())) {
                     featureIndex++;
-                    if (feature.unwrapKey().filter(inherits.without()::contains).isPresent()) {
+                    if (feature.unwrapKey().filter(inherits.withoutFeatures()::contains).isPresent()) {
                         continue;
                     }
                     draws.setFeatureSeed(decorationSeed, plotIndex * FEATURES_PER_PLOT + featureIndex, stage.ordinal());

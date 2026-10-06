@@ -15,17 +15,22 @@ import dev.syrval.overgrownabyss.ravine.RavineShape;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.biome.Biome;
@@ -162,18 +167,28 @@ public final class RavineDensityHook {
                         parentIsADiscBiome ? "that is a disc biome itself" : "one of the two does not exist");
                 continue;
             }
-            ((InheritingBiome) (Object) child.get().value()).overgrownAbyss$inheritFrom(parent.get());
+            Set<EntityType<?>> withoutSpawns = new HashSet<>();
+            for (ResourceLocation id : inherits.withoutSpawns()) {
+                BuiltInRegistries.ENTITY_TYPE.getOptional(id).ifPresentOrElse(
+                        withoutSpawns::add,
+                        () -> OvergrownAbyss.LOGGER.warn("Mob {} does not exist; a disc theme's leaving it out changes nothing", id));
+            }
+            ((InheritingBiome) (Object) child.get().value()).overgrownAbyss$inheritFrom(parent.get(), withoutSpawns);
             var inherited = parent.get().value().getGenerationSettings().features();
             long grown = inherits.stages().stream().filter(stage -> stage.ordinal() < inherited.size())
-                    .mapToLong(stage -> inherited.get(stage.ordinal()).stream().filter(f -> f.unwrapKey().filter(inherits.without()::contains).isEmpty()).count())
+                    .mapToLong(stage -> inherited.get(stage.ordinal()).stream().filter(f -> f.unwrapKey().filter(inherits.withoutFeatures()::contains).isEmpty()).count())
                     .sum();
-            // Read back through the child, which shows the spawn lists really are the parent's.
-            long spawns = Arrays.stream(MobCategory.values())
-                    .mapToLong(category -> child.get().value().getMobSettings().getMobs(category).unwrap().size()).sum();
+            // Read back through the child, which shows what its spawn lists have become.
             OvergrownAbyss.LOGGER.info(
-                    "Disc biome {} inherits from {}: {} features in {} and {} spawn entries",
-                    theme.biome().get().location(), inherits.biome().location(), grown, inherits.stages(), spawns);
+                    "Disc biome {} inherits from {}: {} features in {}, and {} spawn entries where the parent has {}{}",
+                    theme.biome().get().location(), inherits.biome().location(), grown, inherits.stages(),
+                    spawnEntries(child.get().value()), spawnEntries(parent.get().value()),
+                    inherits.withoutSpawns().isEmpty() ? "" : " (left out: " + inherits.withoutSpawns() + ")");
         }
+    }
+
+    private static long spawnEntries(Biome biome) {
+        return Arrays.stream(MobCategory.values()).mapToLong(category -> biome.getMobSettings().getMobs(category).unwrap().size()).sum();
     }
 
     private static void warnOfMissingGrowth(Registry<ConfiguredFeature<?, ?>> features, List<DiscTheme> themes) {
