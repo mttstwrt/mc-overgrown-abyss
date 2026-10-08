@@ -4,7 +4,6 @@ import com.mojang.serialization.MapCodec;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.biome.Biome;
@@ -22,10 +21,14 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  * <p>Vanilla wiring only hands the world seed to noise holders, so the carve is created unseeded by the codec and
  * re-created with the seed and the level's vertical bounds by the density hook ({@link #bind}); until then it is inert
  * and reads as solid everywhere.
+ *
+ * <p>The level's bounds are the floor every hole shares and the highest a hole's top may be. A cone whose top follows the
+ * ground (see {@link RimSettings}) has a top of its own in each cell, so everything here works with the cell's own bounds
+ * ({@link #boundsOf}).
  */
 public final class RavineCarve implements DensityFunction.SimpleFunction {
     public static final MapCodec<RavineCarve> MAP_CODEC =
-            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null, new LandGate(), new ConcurrentHashMap<>(), Output.OPEN), RavineCarve::settings);
+            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null, new RavineSites(settings, null), Output.OPEN), RavineCarve::settings);
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
     private static final double CAVERN_BIOME_MARGIN = 4;
@@ -36,21 +39,20 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     private final long seed;
     // Null only for the unbound instance the codec produces.
     private final RavineBounds bounds;
-    private final LandGate landGate;
-    // The discs of each cell, built once: they never change, and each sample would otherwise rebuild them from hashes.
-    private final ConcurrentHashMap<RavineCell, CellDiscs> discs;
+    private final RavineSites sites;
     private final Output output;
 
     /** Which of a ravine's two functions an instance computes. */
     private enum Output { OPEN, ROCK }
 
-    private RavineCarve(
-            RavineSettings settings, long seed, RavineBounds bounds, LandGate landGate, ConcurrentHashMap<RavineCell, CellDiscs> discs, Output output) {
+    /** A cell that holds a hole in this level, and the heights that hole lies between. */
+    private record Hole(RavineCell cell, RavineBounds bounds) {}
+
+    private RavineCarve(RavineSettings settings, long seed, RavineBounds bounds, RavineSites sites, Output output) {
         this.settings = settings;
         this.seed = seed;
         this.bounds = bounds;
-        this.landGate = landGate;
-        this.discs = discs;
+        this.sites = sites;
         this.output = output;
     }
 
@@ -63,12 +65,15 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     public RavineCarve bind(long seed, RavineBounds bounds) {
-        return new RavineCarve(settings, seed, bounds, new LandGate(), new ConcurrentHashMap<>(), Output.OPEN);
+        return new RavineCarve(settings, seed, bounds, new RavineSites(settings, bounds), Output.OPEN);
     }
 
-    /** The rock this ravine adds back, which only a cone has: 1 inside its structures, -1 elsewhere. Shares this carve's land check. */
+    /**
+     * The rock this ravine adds back, which only a cone has: 1 inside its structures, -1 elsewhere. Shares what this carve
+     * knows of each cell.
+     */
     public RavineCarve rock() {
-        return new RavineCarve(settings, seed, bounds, landGate, discs, Output.ROCK);
+        return new RavineCarve(settings, seed, bounds, sites, Output.ROCK);
     }
 
     public RavineSettings settings() {
@@ -79,35 +84,52 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         return seed;
     }
 
+    /** The level's bounds: the floor of every hole, and the highest a hole's top may be. */
     public RavineBounds bounds() {
         return bounds;
     }
 
     /** Only cells whose sample columns all pass {@code check} hold a ravine. Called once, before any chunk is built. */
     public void restrictToLand(LandCheck check) {
-        landGate.use(check);
+        sites.restrictToLand(check);
     }
 
-    /** Whether the cell holds a ravine in this level (the hash may place one, but not over an ocean). */
+    /**
+     * A cone whose top follows the ground reads the ground from {@code ground}, and holds no hole where that is too near
+     * {@code seaLevel}. Called once, before any chunk is built.
+     */
+    public void followGround(SurfaceProbe ground, int seaLevel) {
+        sites.followGround(ground, seaLevel);
+    }
+
+    /**
+     * The heights the cell's hole lies between in this level, or empty if it holds none: the hash may place one, but not over
+     * an ocean, nor where the ground is too near sea level for a top that follows it.
+     */
+    public Optional<RavineBounds> boundsOf(RavineCell cell) {
+        return bounds == null ? Optional.empty() : sites.boundsOf(cell);
+    }
+
+    /** Whether the cell holds a ravine in this level. */
     public boolean isActive(RavineCell cell) {
-        return landGate.allows(cell);
+        return boundsOf(cell).isPresent();
     }
 
-    private Optional<RavineCell> cellAt(int x, int z) {
-        return RavineCells.containing(seed, settings, x, z).filter(this::isActive);
+    private Optional<Hole> holeAt(int x, int z) {
+        return RavineCells.containing(seed, settings, x, z).flatMap(cell -> boundsOf(cell).map(own -> new Hole(cell, own)));
     }
 
     /** Whether the column at {@code (x, z)} is within reach of an active ravine's cell centre. */
     public boolean isInFootprint(int x, int z) {
-        return cellAt(x, z)
-                .filter(cell -> cell.distanceToCentre(x, z) <= settings.maxReach())
+        return holeAt(x, z)
+                .filter(hole -> hole.cell().distanceToCentre(x, z) <= settings.maxReach())
                 .isPresent();
     }
 
     /** Whether a point is in the cavern's biome volume: the dome plus a margin around its surfaces. */
     public boolean isCavern(int x, int y, int z) {
-        return bounds != null && cellAt(x, z)
-                .filter(cell -> RavineShape.cavernContains(settings, bounds, cell, x, y, z, CAVERN_BIOME_MARGIN))
+        return holeAt(x, z)
+                .filter(hole -> RavineShape.cavernContains(settings, hole.bounds(), hole.cell(), x, y, z, CAVERN_BIOME_MARGIN))
                 .isPresent();
     }
 
@@ -116,19 +138,19 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
      * between {@code minY} and {@code maxY} (exclusive). See {@link DiscBlocks}.
      */
     public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
-        if (bounds == null || settings.discThemes().isEmpty()) {
+        if (settings.discThemes().isEmpty()) {
             return;
         }
         // A cell is a whole number of chunks, so the chunk's corner is in the same cell as the rest of it.
-        cellAt(minX, minZ).ifPresent(cell -> DiscBlocks.forEach(settings, bounds, cell, discsOf(cell), minX, minZ, minY, maxY, sink));
+        holeAt(minX, minZ).ifPresent(hole -> DiscBlocks.forEach(settings, hole.bounds(), hole.cell(), discsOf(hole), minX, minZ, minY, maxY, sink));
     }
 
     /** Calls {@code sink} with every column where a disc holds water in the chunk whose lowest corner is {@code (minX, minZ)}. */
     public void forEachDiscWater(int minX, int minZ, DiscWaterSink sink) {
-        if (bounds == null || settings.discThemes().isEmpty()) {
+        if (settings.discThemes().isEmpty()) {
             return;
         }
-        cellAt(minX, minZ).ifPresent(cell -> DiscBlocks.forEachWater(cell, discsOf(cell), minX, minZ, sink));
+        holeAt(minX, minZ).ifPresent(hole -> DiscBlocks.forEachWater(hole.cell(), discsOf(hole), minX, minZ, sink));
     }
 
     /**
@@ -136,10 +158,10 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
      * {@code (minX, minZ)}. See {@link DiscGrowth}.
      */
     public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {
-        if (bounds == null || settings.discThemes().isEmpty()) {
+        if (settings.discThemes().isEmpty()) {
             return;
         }
-        cellAt(minX, minZ).ifPresent(cell -> DiscGrowth.forEach(settings, cell, discsOf(cell), minX, minZ, sink));
+        holeAt(minX, minZ).ifPresent(hole -> DiscGrowth.forEach(settings, hole.cell(), discsOf(hole), minX, minZ, sink));
     }
 
     /**
@@ -147,14 +169,14 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
      * dome or platform, or within a margin of them.
      */
     public Optional<ResourceKey<Biome>> discBiomeAt(int x, int y, int z) {
-        if (bounds == null || settings.discThemes().isEmpty()) {
+        if (settings.discThemes().isEmpty()) {
             return Optional.empty();
         }
-        Optional<RavineCell> cell = cellAt(x, z).filter(c -> c.distanceToCentre(x, z) <= settings.maxReach() + DISC_BIOME_MARGIN);
-        if (cell.isEmpty()) {
+        Optional<Hole> hole = holeAt(x, z).filter(h -> h.cell().distanceToCentre(x, z) <= settings.maxReach() + DISC_BIOME_MARGIN);
+        if (hole.isEmpty()) {
             return Optional.empty();
         }
-        CellDiscs cellDiscs = discsOf(cell.get());
+        CellDiscs cellDiscs = discsOf(hole.get());
         OptionalInt owner = cellDiscs.ownerAt(settings.discs(), x, y, z, DISC_BIOME_MARGIN);
         return owner.isPresent() ? cellDiscs.themes().get(owner.getAsInt()).flatMap(DiscTheme::biome) : Optional.empty();
     }
@@ -164,11 +186,11 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
      * lowest corner is {@code (minX, minZ)}, as a plot to grow those features on.
      */
     public void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink) {
-        if (bounds == null || settings.discThemes().isEmpty()) {
+        if (settings.discThemes().isEmpty()) {
             return;
         }
-        cellAt(minX, minZ).ifPresent(cell -> {
-            CellDiscs cellDiscs = discsOf(cell);
+        holeAt(minX, minZ).ifPresent(hole -> {
+            CellDiscs cellDiscs = discsOf(hole);
             List<Disc> all = cellDiscs.layout().discs();
             for (int i = 0; i < all.size(); i++) {
                 Disc disc = all.get(i);
@@ -206,26 +228,24 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         }
     }
 
-    private CellDiscs discsOf(RavineCell cell) {
-        return discs.computeIfAbsent(cell, c -> CellDiscs.of(settings, bounds, c));
+    private CellDiscs discsOf(Hole hole) {
+        return sites.discsOf(hole.cell(), hole.bounds());
     }
 
     @Override
     public double compute(FunctionContext context) {
-        if (bounds == null) {
-            return nothing();
-        }
         int x = context.blockX();
         int y = context.blockY();
         int z = context.blockZ();
-        Optional<RavineCell> found = cellAt(x, z);
+        Optional<Hole> found = holeAt(x, z);
         if (found.isEmpty()) {
             return nothing();
         }
-        DiscLayout layout = discsOf(found.get()).layout();
+        Hole hole = found.get();
+        DiscLayout layout = discsOf(hole).layout();
         double distance = output == Output.ROCK
-                ? RavineShape.rockDistance(settings, bounds, found.get(), layout, x, y, z)
-                : RavineShape.signedDistance(settings, bounds, found.get(), layout, x, y, z);
+                ? RavineShape.rockDistance(settings, hole.bounds(), hole.cell(), layout, x, y, z)
+                : RavineShape.signedDistance(settings, hole.bounds(), hole.cell(), layout, x, y, z);
         return Math.clamp((output == Output.ROCK ? -distance : distance) / settings.edgeFalloff(), minValue(), maxValue());
     }
 

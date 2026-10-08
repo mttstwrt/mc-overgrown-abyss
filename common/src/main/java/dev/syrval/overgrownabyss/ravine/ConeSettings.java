@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Optional;
 
 /**
  * A single round hole shaped like a cone, widest at the bottom where it meets the city cavern ({@code base_radius} at the
@@ -18,7 +19,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  *                       cavern's dome it opens the ground beyond it
  * @param flare          how the radius grows towards the floor: 1 is a straight cone, above 1 the walls stay steep near the
  *                       top and flare out near the bottom
- * @param clearRadius    radius of the cylinder around the axis that is always open
+ * @param clearRadius    radius of the cylinder around the axis that is always open. With {@code upper} it is the radius at
+ *                       the floor, and the clear air widens from there to the top
  * @param layerSpacing   blocks between the platforms of successive layers of discs
  * @param layerJitter    how far a platform may drift from its layer's height, as a fraction of {@code layerSpacing}
  * @param spacing        blocks of the ring's length per disc in a layer
@@ -32,11 +34,15 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param riderChance    chance for each place on top of a disc, outside the cone, that a further disc stands there, inside
  *                       the dome of the disc under it. Larger discs have more such places. 0 keeps every disc in the ring
  * @param riderScale     the most a disc standing on another may be, as a share of that disc's radius
+ * @param rim            how the top follows the ground (see {@link RimSettings}). Without it the top is the level's, the same
+ *                       for every hole
+ * @param upper          how the hole opens to the sky (see {@link UpperSettings}). Without it the clear air round the axis is
+ *                       a cylinder
  */
 public record ConeSettings(
         float topRadius, float baseRadius, float flare, float clearRadius, float layerSpacing, float layerJitter, float spacing,
         float stackChance, float ceilingMargin, float baseClearance, float hangChance, float outerRadius, float riderChance,
-        float riderScale) {
+        float riderScale, Optional<RimSettings> rim, Optional<UpperSettings> upper) {
 
     public static final MapCodec<ConeSettings> MAP_CODEC = RecordCodecBuilder.<ConeSettings>mapCodec(i -> i.group(
             Codec.floatRange(8, 512).fieldOf("top_radius").forGetter(ConeSettings::topRadius),
@@ -52,13 +58,24 @@ public record ConeSettings(
             Codec.floatRange(0, 1).fieldOf("hang_chance").forGetter(ConeSettings::hangChance),
             Codec.floatRange(32, 2048).fieldOf("outer_radius").forGetter(ConeSettings::outerRadius),
             Codec.floatRange(0, 1).fieldOf("rider_chance").forGetter(ConeSettings::riderChance),
-            Codec.floatRange(0.2F, 1).fieldOf("rider_scale").forGetter(ConeSettings::riderScale)
+            Codec.floatRange(0.2F, 1).fieldOf("rider_scale").forGetter(ConeSettings::riderScale),
+            // These two make 16 fields, which is all the codec builder takes: the next cone setting goes inside one of them.
+            RimSettings.CODEC.optionalFieldOf("rim").forGetter(ConeSettings::rim),
+            UpperSettings.CODEC.optionalFieldOf("upper").forGetter(ConeSettings::upper)
     ).apply(i, ConeSettings::new)).validate(ConeSettings::validate);
     public static final Codec<ConeSettings> CODEC = MAP_CODEC.codec();
 
+    /** The widest the clear air round the axis is at any height, which is at the top. */
+    public float widestClearRadius() {
+        return upper.map(UpperSettings::clearRadius).orElse(clearRadius);
+    }
+
     private static DataResult<ConeSettings> validate(ConeSettings c) {
-        if (c.clearRadius >= c.topRadius) {
-            return DataResult.error(() -> "clear_radius must be below top_radius, or there is no room at the top");
+        if (c.upper.isPresent() && c.upper.get().clearRadius() < c.clearRadius) {
+            return DataResult.error(() -> "upper.clear_radius must not be below clear_radius, since the clear air widens towards the top");
+        }
+        if (c.widestClearRadius() >= c.topRadius) {
+            return DataResult.error(() -> "clear_radius and upper.clear_radius must be below top_radius, or there is no room at the top");
         }
         if (c.topRadius > c.baseRadius) {
             return DataResult.error(() -> "top_radius must not exceed base_radius, since the cone widens towards the floor");

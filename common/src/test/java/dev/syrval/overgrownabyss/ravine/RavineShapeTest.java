@@ -148,8 +148,9 @@ class RavineShapeTest {
             json.remove("type");
             assertEquals("minecraft:lush_caves", json.getAsJsonObject("environment").get("cavern_biome").getAsString());
             RavineSettings parsed = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
-            assertEquals(2048, parsed.cellSize());
+            assertEquals(1024, parsed.cellSize());
             assertTrue(parsed.cone().isPresent() && parsed.ravine().isEmpty(), "the mod's own hole is the cone");
+            assertEquals(ConeRimTest.CONE, parsed.cone().get(), "and the cone the rim's tests are run on");
             // Its palettes hold block-state providers, which have no equality of their own, so the round trip is compared as JSON.
             var written = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, parsed).getOrThrow();
             assertEquals(written, RavineSettings.MAP_CODEC.codec()

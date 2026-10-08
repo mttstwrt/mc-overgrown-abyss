@@ -13,8 +13,12 @@ import java.util.OptionalDouble;
  * the room those domes open (see {@link ConeSettings#riderChance()}). Some discs hang from a root instead of standing on a stem
  * (see {@link ConeSettings#hangChance()}).
  *
- * <p>Each disc is a pure function of the hole's hash and its place (layer and slot, or host and place on it), and each is given
- * its stem or root once, here, among all the others.
+ * <p>Without a rim the layers are {@code layer_spacing} apart from the lowest up, as many as fit under the top. With one (see
+ * {@link RimSettings}) the top differs from hole to hole, so they are spread evenly from the lowest to {@code top_room} under
+ * the highest a dome may reach, no closer than {@code layer_spacing}, and each dome also stays under the ground over it.
+ *
+ * <p>Each disc is a pure function of the hole's hash, its place (layer and slot, or host and place on it) and, with a rim, the
+ * ground over it, and each is given its stem or root once, here, among all the others.
  */
 final class ConeDiscLayout implements DiscLayout {
     static final int MAX_LAYERS = 32;
@@ -48,17 +52,26 @@ final class ConeDiscLayout implements DiscLayout {
     private final RavineBounds bounds;
     private final RavineCell cell;
     private final DiscShape shape;
+    private final HoleGround ground;
+    private final double layerGap;
     private final List<Disc> discs;
 
     // A disc as placed, and whether it was drawn to hang, which it does only if it then turns out to have a ceiling.
     private record Drawn(Disc disc, boolean toHang) {}
 
+    /** The discs of a hole whose ground is nowhere lower than its top. */
     ConeDiscLayout(RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell) {
+        this(settings, cone, bounds, cell, SurfaceProbe.SOLID);
+    }
+
+    ConeDiscLayout(RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, SurfaceProbe ground) {
         this.settings = settings;
         this.cone = cone;
         this.bounds = bounds;
         this.cell = cell;
         this.shape = settings.discs();
+        this.ground = new HoleGround(ground, bounds.topY());
+        this.layerGap = layerGap(settings, cone, bounds);
         var drawn = new ArrayList<Drawn>();
         for (int layer = 0; layer < layers(); layer++) {
             for (int slot = 0; slot < slots(layer); slot++) {
@@ -100,12 +113,17 @@ final class ConeDiscLayout implements DiscLayout {
         // A platform's underside curves, so under one the root runs on into it and leaves no gap. The wall slopes away, so
         // there it narrows again above the anchor.
         double top = anchor + (underPlatform ? shape.floorThickness() / 2 : shape.rootRadiusFor(disc.radius()));
+        // The clear air widens upwards, so a root is held to it where the root is highest.
+        if (cell.distanceToCentre(disc.x(), disc.z()) - shape.rootRadiusFor(disc.radius()) < ConeShape.clearAt(cone, bounds, top)) {
+            return Optional.empty();
+        }
         return Optional.of(new Disc.Support.Hanging(anchor, top));
     }
 
     /**
      * Where the wall is over a disc's axis: where the axis meets the cone, or the top of the disc's own dome if the axis is
-     * already inside the wall there. Empty under open sky, and where the wall is too near the top to be sure of rock behind it.
+     * already inside the wall there. Empty under open sky, and where the wall is too near the top, or with a rim too near the
+     * ground over the axis, to be sure of rock behind it.
      */
     private OptionalDouble wallAbove(Disc disc) {
         OptionalDouble meets = ConeShape.heightAt(settings, cone, bounds, cell.distanceToCentre(disc.x(), disc.z()));
@@ -113,30 +131,51 @@ final class ConeDiscLayout implements DiscLayout {
             return OptionalDouble.empty();
         }
         double anchor = Math.max(meets.getAsDouble(), disc.floor() + disc.height());
-        return anchor > bounds.topY() - cone.ceilingMargin() ? OptionalDouble.empty() : OptionalDouble.of(anchor);
+        double over = cone.rim().isPresent() ? ground.heightAt((int) Math.floor(disc.x()), (int) Math.floor(disc.z())) : bounds.topY();
+        return anchor > over - cone.ceilingMargin() ? OptionalDouble.empty() : OptionalDouble.of(anchor);
     }
 
     private static double lowestFloor(RavineSettings settings, ConeSettings cone, RavineBounds bounds) {
         return bounds.floorY() + settings.cavernHeight() + cone.baseClearance();
     }
 
-    /** How many layers of discs fit between the lowest layer and the ceiling margin; the same for every cone of a level. */
+    // The highest a layer may be: with a rim its top_room under the highest a dome may reach, without one the least dome.
+    private static double highestFloor(RavineSettings settings, ConeSettings cone, RavineBounds bounds) {
+        double room = cone.rim().map(RimSettings::topRoom).orElse(settings.discs().minHeight());
+        return bounds.topY() - cone.ceilingMargin() - room;
+    }
+
+    /** How many layers of discs fit between the lowest layer and the highest; with a rim that differs from hole to hole. */
     static int layers(RavineSettings settings, ConeSettings cone, RavineBounds bounds) {
-        double span = bounds.topY() - cone.ceilingMargin() - settings.discs().minHeight() - lowestFloor(settings, cone, bounds);
+        double span = highestFloor(settings, cone, bounds) - lowestFloor(settings, cone, bounds);
         return span < 0 ? 0 : (int) Math.min(MAX_LAYERS, Math.floor(span / cone.layerSpacing()) + 1);
+    }
+
+    // Blocks from one layer to the next: layer_spacing, or with a rim what spreads the layers evenly up to the highest.
+    private static double layerGap(RavineSettings settings, ConeSettings cone, RavineBounds bounds) {
+        int layers = layers(settings, cone, bounds);
+        if (cone.rim().isEmpty() || layers < 2) {
+            return cone.layerSpacing();
+        }
+        return (highestFloor(settings, cone, bounds) - lowestFloor(settings, cone, bounds)) / (layers - 1);
     }
 
     int layers() {
         return layers(settings, cone, bounds);
     }
 
-    private double nominalFloor(int layer) {
-        return lowestFloor(settings, cone, bounds) + layer * cone.layerSpacing();
+    double nominalFloor(int layer) {
+        return lowestFloor(settings, cone, bounds) + layer * layerGap;
+    }
+
+    // The clear air's radius for a platform at this height, taken at the highest its rim may stand, where it is widest.
+    private double clearFor(double floor) {
+        return ConeShape.clearAt(cone, bounds, floor + shape.maxBowlDepth());
     }
 
     int slots(int layer) {
         double wall = ConeShape.radiusAt(settings, cone, bounds, nominalFloor(layer));
-        double ring = (cone.clearRadius() + wall) / 2;
+        double ring = (clearFor(nominalFloor(layer)) + wall) / 2;
         return Math.clamp(Math.round(2 * Math.PI * ring / cone.spacing()), 3, MAX_SLOTS);
     }
 
@@ -148,9 +187,13 @@ final class ConeDiscLayout implements DiscLayout {
         return layer > 0 && slot < slots(layer - 1) && RavineCells.unit(cell.hash(), base(layer, slot) + 4) < cone.stackChance();
     }
 
-    /** The dome over a disc of this radius with its floor at this height, kept under the ceiling margin. */
-    private double domeHeight(double radius, double floor) {
-        return Math.min(shape.heightFor(radius), bounds.topY() - cone.ceilingMargin() - floor);
+    /**
+     * The dome over a disc of this radius with its floor at this height, kept under the ceiling margin: that far under the top,
+     * and with a rim that far under the ground over the disc too, wherever the ground is lower than the top.
+     */
+    private double domeHeight(double x, double z, double radius, double floor) {
+        double height = Math.min(shape.heightFor(radius), bounds.topY() - cone.ceilingMargin() - floor);
+        return cone.rim().isPresent() ? Math.min(height, ground.domeRoom(x, z, radius, floor, cone.ceilingMargin())) : height;
     }
 
     /**
@@ -162,11 +205,11 @@ final class ConeDiscLayout implements DiscLayout {
         int base = base(layer, slot);
         double floor = nominalFloor(layer) + (RavineCells.unit(hash, base) - 0.5) * cone.layerJitter() * cone.layerSpacing();
         double wall = ConeShape.radiusAt(settings, cone, bounds, floor);
+        double clear = clearFor(floor);
         // The cone's width at this height does not limit the disc: what does not fit carves into the rock around the cone.
-        // Only the outer radius holds it, with the disc's inner edge at the clear cylinder.
-        double radius = Math.min(shape.radiusFor(RavineCells.unit(hash, base + 1)), (cone.outerRadius() - cone.clearRadius() - PLACING_SLACK) / 2);
-        double height = domeHeight(radius, floor);
-        if (radius < shape.minRadius() / 2 || height < shape.minHeight()) {
+        // Only the outer radius holds it, with the disc's inner edge at the clear air round the axis.
+        double radius = Math.min(shape.radiusFor(RavineCells.unit(hash, base + 1)), (cone.outerRadius() - clear - PLACING_SLACK) / 2);
+        if (radius < shape.minRadius() / 2) {
             return Optional.empty();
         }
         // A stacked disc keeps the angle and the relative distance out of the disc it sits on.
@@ -177,14 +220,18 @@ final class ConeDiscLayout implements DiscLayout {
         int originBase = base(originLayer, slot);
         double stagger = (originLayer % 2) * 0.5;
         double angle = 2 * Math.PI * (slot + 0.5 + (RavineCells.unit(hash, originBase + 3) - 0.5) * JITTER + stagger) / slots(originLayer);
-        // The inner edge stays outside the clear cylinder. The centre stays within a little of the wall if the disc is small
-        // enough for that; a larger one sits against the clear cylinder and reaches out past the wall.
-        double inner = cone.clearRadius() + radius + PLACING_SLACK;
+        // The inner edge stays outside the clear air. The centre stays within a little of the wall if the disc is small
+        // enough for that; a larger one sits against the clear air and reaches out past the wall.
+        double inner = clear + radius + PLACING_SLACK;
         double furthest = Math.min(wall + EMBED * radius, cone.outerRadius() - radius);
         double distance = inner + RavineCells.unit(hash, originBase + 2) * Math.max(0, furthest - inner);
-        return Optional.of(Disc.placed(
-                cell.centreX() + distance * Math.cos(angle), cell.centreZ() + distance * Math.sin(angle), floor, radius, height,
-                shape.bowlDepthFor(radius, RavineCells.unit(hash, base + 6))));
+        double x = cell.centreX() + distance * Math.cos(angle);
+        double z = cell.centreZ() + distance * Math.sin(angle);
+        double height = domeHeight(x, z, radius, floor);
+        if (height < shape.minHeight()) {
+            return Optional.empty();
+        }
+        return Optional.of(Disc.placed(x, z, floor, radius, height, shape.bowlDepthFor(radius, RavineCells.unit(hash, base + 6))));
     }
 
     /** How many places on top of a disc may each hold a rider: one for every {@code spacing} blocks of the arc they stand on. */
@@ -225,10 +272,10 @@ final class ConeDiscLayout implements DiscLayout {
         }
         double floor = lerp(RavineCells.unit(hash, base + 4), lowest, highest);
         double fromAxis = cell.distanceToCentre(x, z);
-        double height = domeHeight(radius, floor);
+        double height = domeHeight(x, z, radius, floor);
         boolean outsideTheCone = fromAxis > ConeShape.radiusAt(settings, cone, bounds, floor);
         boolean behindItsHost = fromAxis > cell.distanceToCentre(host.x(), host.z());
-        boolean withinBounds = fromAxis - radius >= cone.clearRadius() + PLACING_SLACK && fromAxis + radius <= cone.outerRadius();
+        boolean withinBounds = fromAxis - radius >= clearFor(floor) + PLACING_SLACK && fromAxis + radius <= cone.outerRadius();
         boolean inTheHostsDome = host.domeDistance(x, floor, z) < 0;
         if (!outsideTheCone || !behindItsHost || !withinBounds || !inTheHostsDome || height < shape.minHeight()) {
             return Optional.empty();

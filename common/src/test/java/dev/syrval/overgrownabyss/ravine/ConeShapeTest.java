@@ -17,7 +17,7 @@ class ConeShapeTest {
         MinecraftBootstrap.init();
     }
 
-    static final ConeSettings CONE = new ConeSettings(45, 136, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 0F, 200F, 0F, 0.6F);
+    static final ConeSettings CONE = new ConeSettings(45, 136, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 0F, 200F, 0F, 0.6F, Optional.empty(), Optional.empty());
     static final DiscShape SHAPE = new DiscShape(18, 40, 0.45F, 14, 6, 0.22F, 2.5F, 32F, 1.5F, 3F, 4F, 0F, 0F, 0F);
     static final RavineBounds BOUNDS = new RavineBounds(-104, 80);
 
@@ -33,15 +33,15 @@ class ConeShapeTest {
 
     static final RavineSettings SETTINGS = withCone(CONE);
     /** The cone the mod ships: discs down into the cavern's airspace and out past the cone, riders, thin stems, varied bowls. */
-    static final ConeSettings LOW = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0.6F, 0.6F);
+    static final ConeSettings LOW = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0.6F, 0.6F, Optional.empty(), Optional.empty());
     static final RavineSettings LOW_SETTINGS = withCone(LOW, DiscTest.VARIED);
     /** The same with a rider at every place that can hold one, and with none. */
-    static final ConeSettings RIDDEN = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 1F, 0.6F);
-    static final ConeSettings UNRIDDEN = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0F, 0.6F);
+    static final ConeSettings RIDDEN = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 1F, 0.6F, Optional.empty(), Optional.empty());
+    static final ConeSettings UNRIDDEN = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0F, 0.6F, Optional.empty(), Optional.empty());
     /** A level of vanilla's height, where the cavern is wider than the cone just under its roof. */
     static final RavineBounds VANILLA = new RavineBounds(-40, 80);
     /** The same cone with every disc drawn to hang. */
-    static final ConeSettings HANGING = new ConeSettings(45, 136, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 1F, 200F, 0F, 0.6F);
+    static final ConeSettings HANGING = new ConeSettings(45, 136, 1.6F, 8, 26, 0.3F, 80, 0.4F, 14, 8, 1F, 200F, 0F, 0.6F, Optional.empty(), Optional.empty());
 
     private static RavineCell cell(int cx, int cz) {
         return RavineCells.at(7L, SETTINGS, cx, cz).orElseThrow();
@@ -199,7 +199,7 @@ class ConeShapeTest {
 
     @Test
     void aStackedDiscHasItsStemLandOnThePlatformBelowIt() {
-        ConeSettings stacking = new ConeSettings(45, 136, 1.6F, 8, 26, 0F, 80, 1F, 14, 8, 0F, 200F, 0F, 0.6F);
+        ConeSettings stacking = new ConeSettings(45, 136, 1.6F, 8, 26, 0F, 80, 1F, 14, 8, 0F, 200F, 0F, 0.6F, Optional.empty(), Optional.empty());
         RavineSettings settings = withCone(stacking);
         RavineCell c = RavineCells.at(7L, settings, 2, 2).orElseThrow();
         ConeDiscLayout layout = new ConeDiscLayout(settings, stacking, BOUNDS, c);
@@ -294,7 +294,7 @@ class ConeShapeTest {
 
     @Test
     void discsMayStandBelowTheCavernRoofButStayClearOfItsFloor() {
-        ConeSettings high = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, 4, 0.35F, 200F, 0.6F, 0.6F);
+        ConeSettings high = new ConeSettings(45, 136, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, 4, 0.35F, 200F, 0.6F, 0.6F, Optional.empty(), Optional.empty());
         assertTrue(ConeDiscLayout.layers(LOW_SETTINGS, LOW, VANILLA) > ConeDiscLayout.layers(withCone(high, DiscTest.SLIM), high, VANILLA), "a lower start fits another layer");
         double roof = VANILLA.floorY() + LOW_SETTINGS.cavernHeight();
         int underTheRoof = 0;
@@ -452,7 +452,7 @@ class ConeShapeTest {
 
     @Test
     void theConesBaseHasItsOwnRadiusApartFromTheCaverns() {
-        ConeSettings wide = new ConeSettings(45, 150, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0.8F, 0.6F);
+        ConeSettings wide = new ConeSettings(45, 150, 1.6F, 8, 20, 0.3F, 56, 0.4F, 16, -16, 0.35F, 200F, 0.8F, 0.6F, Optional.empty(), Optional.empty());
         RavineSettings settings = withCone(wide, DiscTest.VARIED);
         assertEquals(150, ConeShape.radiusAt(settings, wide, VANILLA, VANILLA.floorY()), 1e-9);
         assertEquals(45, ConeShape.radiusAt(settings, wide, VANILLA, VANILLA.topY()), 1e-9);

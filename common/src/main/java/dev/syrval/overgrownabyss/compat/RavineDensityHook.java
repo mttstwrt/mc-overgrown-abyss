@@ -1,8 +1,10 @@
 package dev.syrval.overgrownabyss.compat;
 
 import dev.syrval.overgrownabyss.OvergrownAbyss;
+import dev.syrval.overgrownabyss.ravine.ConeSettings;
 import dev.syrval.overgrownabyss.ravine.RavineBounds;
 import dev.syrval.overgrownabyss.ravine.RavineCarve;
+import dev.syrval.overgrownabyss.ravine.RavineCell;
 import dev.syrval.overgrownabyss.ravine.LandCheck;
 import dev.syrval.overgrownabyss.ravine.RavineCells;
 import dev.syrval.overgrownabyss.ravine.DiscShape;
@@ -12,6 +14,8 @@ import dev.syrval.overgrownabyss.ravine.RavineEnvironment;
 import dev.syrval.overgrownabyss.ravine.RavineFootprint;
 import dev.syrval.overgrownabyss.ravine.RavineSettings;
 import dev.syrval.overgrownabyss.ravine.RavineShape;
+import dev.syrval.overgrownabyss.ravine.RimSettings;
+import dev.syrval.overgrownabyss.ravine.SurfaceProbe;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -54,6 +58,8 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 public final class RavineDensityHook {
     private static final TagKey<NoiseGeneratorSettings> CARVED = TagKey.create(Registries.NOISE_SETTINGS, OvergrownAbyss.id("carved"));
     private static final ResourceKey<DensityFunction> CARVE = ResourceKey.create(Registries.DENSITY_FUNCTION, OvergrownAbyss.id("ravine/carve"));
+    // The world-load log covers this many cells from the origin, each way.
+    private static final int LOGGED_CELLS = 3;
 
     private RavineDensityHook() {}
 
@@ -96,8 +102,17 @@ public final class RavineDensityHook {
         // The discs' platforms and stems are rock the terrain may not have (a cave, or above the surface), so they are added with max.
         DensityFunction finalDensity = seededCarve instanceof RavineCarve single ? DensityFunctions.max(carved, single.rock()) : carved;
         RandomState state = factory.apply(withFinalDensity(settings, finalDensity));
-        installLevelBindings(registries, generator, settings, state, seeded);
+        // A top that follows the ground needs the ground as it is without the carve: the level's own settings, wired once more
+        // with the same seed, give exactly that.
+        SurfaceProbe ground = seeded.stream().anyMatch(ravine -> rimOf(ravine).isPresent())
+                ? TerrainSurface.of(settings.noiseSettings(), factory.apply(settings).router().finalDensity())
+                : SurfaceProbe.SOLID;
+        installLevelBindings(registries, generator, settings, state, ground, seeded);
         return state;
+    }
+
+    private static Optional<RimSettings> rimOf(RavineCarve carve) {
+        return carve.settings().cone().flatMap(ConeSettings::rim);
     }
 
     // The land check and the biomes need the finished RandomState (climate sampler) and the level's registries.
@@ -106,6 +121,7 @@ public final class RavineDensityHook {
             ChunkGenerator generator,
             NoiseGeneratorSettings settings,
             RandomState state,
+            SurfaceProbe ground,
             List<RavineCarve> carves) {
         Registry<Biome> biomes = registries.registryOrThrow(Registries.BIOME);
         Registry<ConfiguredFeature<?, ?>> features = registries.registryOrThrow(Registries.CONFIGURED_FEATURE);
@@ -113,11 +129,12 @@ public final class RavineDensityHook {
         for (RavineCarve carve : carves) {
             RavineEnvironment environment = carve.settings().environment();
             carve.restrictToLand(landCheck(generator.getBiomeSource(), state.sampler(), settings.seaLevel(), environment.forbiddenBiomes()));
+            carve.followGround(ground, settings.seaLevel());
             regions.add(new RavineFootprint.Region(carve, cavernBiome(biomes, environment), discBiomes(biomes, carve.settings().discThemes())));
             warnOfMissingGrowth(features, carve.settings().discThemes());
             bindInheritance(biomes, carve.settings().discThemes());
             logSettings(carve.settings());
-            logRavinesNearOrigin(carve);
+            logRavinesNearOrigin(carve, settings.seaLevel());
         }
         ((RavineFootprintHolder) (Object) state).overgrownAbyss$setFootprint(RavineFootprint.of(regions));
     }
@@ -237,16 +254,35 @@ public final class RavineDensityHook {
         s.cone().ifPresent(cone -> OvergrownAbyss.LOGGER.info("Cone: {}", cone));
     }
 
-    // Cells whose hash holds a ravine but whose ground is ocean are skipped, so this lists only what will generate.
-    private static void logRavinesNearOrigin(RavineCarve carve) {
-        for (int cellX = -1; cellX <= 1; cellX++) {
-            for (int cellZ = -1; cellZ <= 1; cellZ++) {
-                RavineCells.at(carve.seed(), carve.settings(), cellX, cellZ).filter(carve::isActive).ifPresent(cell -> OvergrownAbyss.LOGGER.info(
-                        "Ravine centre at x={} z={} (floor y={}, {} long, {} wide, {} rows of discs or layers of structures)",
-                        Math.round(cell.centreX()), Math.round(cell.centreZ()), carve.bounds().floorY(),
-                        Math.round(cell.halfLength() * 2), Math.round(cell.halfWidth() * 2),
-                        RavineShape.discRows(carve.settings(), carve.bounds())));
+    /**
+     * Lists the ravines in the cells nearest the origin, and counts the cells there whose hash holds one that the level does not
+     * allow: how many of those there are is what {@code min_above_sea}, {@code chance} and {@code cell_size} are tuned by.
+     */
+    private static void logRavinesNearOrigin(RavineCarve carve, int seaLevel) {
+        // The ground is not read above the top, so ground that has to stand higher than that is never found.
+        rimOf(carve).filter(rim -> seaLevel + rim.minAboveSea() > carve.bounds().topY()).ifPresent(rim -> OvergrownAbyss.LOGGER.error(
+                "The rim's min_above_sea {} over a sea at {} is above the ravine's top {}; no ravine can generate",
+                rim.minAboveSea(), seaLevel, carve.bounds().topY()));
+        int drawn = 0;
+        int held = 0;
+        for (int cellX = -LOGGED_CELLS; cellX < LOGGED_CELLS; cellX++) {
+            for (int cellZ = -LOGGED_CELLS; cellZ < LOGGED_CELLS; cellZ++) {
+                Optional<RavineCell> cell = RavineCells.at(carve.seed(), carve.settings(), cellX, cellZ);
+                Optional<RavineBounds> bounds = cell.flatMap(carve::boundsOf);
+                drawn += cell.isPresent() ? 1 : 0;
+                if (bounds.isEmpty()) {
+                    continue;
+                }
+                held++;
+                OvergrownAbyss.LOGGER.info(
+                        "Ravine centre at x={} z={} (floor y={}, top y={}, mouth's edge up to y={}, {} long, {} wide, {} rows of discs or layers of structures)",
+                        Math.round(cell.get().centreX()), Math.round(cell.get().centreZ()), bounds.get().floorY(), bounds.get().topY(),
+                        bounds.get().highestEdge(), Math.round(cell.get().halfLength() * 2), Math.round(cell.get().halfWidth() * 2),
+                        RavineShape.discRows(carve.settings(), bounds.get()));
             }
         }
+        OvergrownAbyss.LOGGER.info(
+                "Ravines within {} blocks of the origin each way: {}, in {} cells drawn for one (the rest are ocean, river or beach, or ground too near sea level for the rim's min_above_sea)",
+                LOGGED_CELLS * carve.settings().cellSize(), held, drawn);
     }
 }

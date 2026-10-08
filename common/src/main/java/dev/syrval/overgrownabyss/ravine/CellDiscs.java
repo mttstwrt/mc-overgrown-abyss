@@ -5,13 +5,19 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * The discs of one cell and the theme of each. Both depend only on the settings, the level's bounds and the cell, so they are
- * built once for a cell and then only read, which makes them safe to share between worker threads.
+ * The discs of one cell and the theme of each. Both depend only on the settings, the heights the cell's hole lies between, the
+ * cell and the ground over it, so they are built once for a cell and then only read, which makes them safe to share between
+ * worker threads.
  */
 record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes) {
 
+    /** The discs of a hole whose ground is nowhere lower than its top. */
     static CellDiscs of(RavineSettings settings, RavineBounds bounds, RavineCell cell) {
-        DiscLayout layout = DiscLayouts.of(settings, bounds, cell);
+        return of(settings, bounds, cell, SurfaceProbe.SOLID);
+    }
+
+    static CellDiscs of(RavineSettings settings, RavineBounds bounds, RavineCell cell, SurfaceProbe ground) {
+        DiscLayout layout = DiscLayouts.of(settings, bounds, cell, ground);
         return new CellDiscs(layout, DiscThemes.assign(settings, cell, layout.discs()));
     }
 

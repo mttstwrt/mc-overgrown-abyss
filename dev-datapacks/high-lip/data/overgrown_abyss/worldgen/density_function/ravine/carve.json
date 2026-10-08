@@ -411,7 +411,7 @@
     "rim": {
       "min_above_sea": 20,
       "dip": 3,
-      "low_share": 0.5,
+      "low_share": 1,
       "top_room": 22,
       "collar": {
         "width": 30,

@@ -1,14 +1,14 @@
 {
   "type": "overgrown_abyss:ravine_carve",
   "salt": 1094861636,
-  "cell_size": 1024,
-  "chance": 1,
+  "cell_size": 2048,
+  "chance": 0.5,
   "size_bias": 0.5,
   "floor": {
     "above_bottom": 24
   },
   "top": {
-    "below_top": 64
+    "absolute": 80
   },
   "cavern_radius": 136,
   "cavern_height": 56,
@@ -402,27 +402,11 @@
     "layer_jitter": 0.3,
     "spacing": 56,
     "stack_chance": 0.4,
-    "ceiling_margin": 12,
+    "ceiling_margin": 16,
     "base_clearance": -16,
     "hang_chance": 0.35,
     "outer_radius": 200,
     "rider_chance": 0.5,
-    "rider_scale": 0.6,
-    "rim": {
-      "min_above_sea": 20,
-      "dip": 3,
-      "low_share": 0.5,
-      "top_room": 22,
-      "collar": {
-        "width": 30,
-        "height": 34,
-        "profile": 2,
-        "roughness": 2,
-        "roughness_wavelength": 12
-      }
-    },
-    "upper": {
-      "clear_radius": 20
-    }
+    "rider_scale": 0.6
   }
 }

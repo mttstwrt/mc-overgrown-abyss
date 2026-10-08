@@ -31,6 +31,11 @@ class DiscThemeTest {
     }
 
     static final RavineBounds VANILLA = new RavineBounds(-40, 80);
+    /**
+     * What the mod's own settings resolve to in a level of vanilla's height. Their top follows the ground, and until a level's
+     * ground is installed every hole's top is the level's.
+     */
+    static final RavineBounds LEVEL = new RavineBounds(-40, 160);
 
     static ResourceKey<Biome> biome(String path) {
         return ResourceKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("overgrown_abyss", path));
@@ -207,12 +212,12 @@ class DiscThemeTest {
         RavineCarve carve = RavineCarve.MAP_CODEC.codec()
                 .parse(JsonOps.INSTANCE, RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, settings).getOrThrow()).getOrThrow();
         assertEquals(Optional.empty(), carve.discBiomeAt(0, 0, 0), "nothing before the carve is bound to a level");
-        RavineCarve bound = carve.bind(11L, VANILLA);
+        RavineCarve bound = carve.bind(11L, LEVEL);
         int inDomes = 0;
         int overridden = 0;
         for (int cz = 0; cz < 3; cz++) {
             RavineCell cell = RavineCells.at(11L, settings, 0, cz).orElseThrow();
-            CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
+            CellDiscs cellDiscs = CellDiscs.of(settings, LEVEL, cell);
             List<Disc> all = cellDiscs.layout().discs();
             for (int i = 0; i < all.size(); i++) {
                 Disc d = all.get(i);
@@ -341,6 +346,7 @@ class DiscThemeTest {
         double sum = 0;
         int bare = 0;
         int apart = 0;
+        int ownOnly = 0;
         int all = 0;
         for (int x = 0; x < 800; x++) {
             for (int z = 0; z < 800; z++) {
@@ -350,14 +356,14 @@ class DiscThemeTest {
                 sum += weight;
                 bare += weight == 0 ? 1 : 0;
                 apart += weight > 0 && other.weightAt(77L, 3, x, z) == 0 ? 1 : 0;
+                ownOnly += weight > 0 && groves.weightAt(77L, 4, x, z) == 0 ? 1 : 0;
                 all++;
             }
         }
         assertEquals(1, sum / all, 0.06, "on average as often as asked for");
         assertEquals(0.7, bare / (double) all, 0.03, "and none of it in the seven tenths the patches do not cover");
         assertTrue(apart > 0.5 * 0.3 * 0.7 * all, "patches of another size lie elsewhere");
-        assertTrue(groves.weightAt(77L, 3, 5, 5) != groves.weightAt(77L, 4, 5, 5) || groves.weightAt(77L, 3, 50, 50) != groves.weightAt(77L, 4, 50, 50),
-                "each disc has patches of its own");
+        assertTrue(ownOnly > 0.5 * 0.3 * 0.7 * all, "each disc has patches of its own");
     }
 
     @Test
@@ -495,13 +501,13 @@ class DiscThemeTest {
         int[] unbound = {0};
         carve.forEachInheritingDisc(0, 0, (inherits, plot) -> unbound[0]++);
         assertEquals(0, unbound[0], "nothing before the carve is bound to a level");
-        RavineCarve bound = carve.bind(11L, VANILLA);
+        RavineCarve bound = carve.bind(11L, LEVEL);
         RavineSettings live = bound.settings();
         int plots = 0;
         int yieldedToAHigherDisc = 0;
         for (int cz = 0; cz < 3; cz++) {
             RavineCell cell = RavineCells.at(11L, live, 0, cz).orElseThrow();
-            CellDiscs cellDiscs = CellDiscs.of(live, VANILLA, cell);
+            CellDiscs cellDiscs = CellDiscs.of(live, LEVEL, cell);
             List<Disc> all = cellDiscs.layout().discs();
             for (int i = 0; i < all.size(); i++) {
                 Disc d = all.get(i);

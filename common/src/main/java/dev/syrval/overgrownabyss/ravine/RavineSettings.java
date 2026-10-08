@@ -109,6 +109,11 @@ public record RavineSettings(
         return s.cavernHeight + cone.baseClearance() - cone.layerJitter() * cone.layerSpacing() / 2 - s.discs.floorThickness();
     }
 
+    // Room the highest platform of a cone's top layer needs under the ceiling to still have the least dome.
+    private static double highestDomeNeeds(RavineSettings s, ConeSettings cone) {
+        return s.discs.minHeight() + cone.layerJitter() * cone.layerSpacing() / 2;
+    }
+
     private static DataResult<RavineSettings> validate(RavineSettings s) {
         if (s.ravine.isPresent() == s.cone.isPresent()) {
             return DataResult.error(() -> "exactly one of ravine and cone must be given");
@@ -121,14 +126,18 @@ public record RavineSettings(
         if (s.cellSize < 2 * s.maxReach()) {
             return DataResult.error(() -> "cell_size " + s.cellSize + " is too small for a ravine reaching " + s.maxReach());
         }
-        if (s.cone.isPresent() && s.cone.get().outerRadius() < s.cone.get().clearRadius() + 2 * s.discs.minRadius() + ConeDiscLayout.PLACING_SLACK) {
-            return DataResult.error(() -> "the cone's outer_radius leaves no room for even the smallest disc beside the clear cylinder");
+        if (s.cone.isPresent() && s.cone.get().outerRadius() < s.cone.get().widestClearRadius() + 2 * s.discs.minRadius() + ConeDiscLayout.PLACING_SLACK) {
+            return DataResult.error(() -> "the cone's outer_radius leaves no room for even the smallest disc beside the clear air round the axis");
         }
         if (s.discThemes.stream().anyMatch(theme -> theme.water().isPresent()) && s.discs.floorThickness() <= DiscWater.MAX_DEPTH) {
             return DataResult.error(() -> "floor_thickness must be above " + DiscWater.MAX_DEPTH + " for a disc theme to hold water, or the water has no bed");
         }
         if (s.cone.isPresent() && lowestUnderside(s, s.cone.get()) <= 0) {
             return DataResult.error(() -> "the cone's base_clearance puts its lowest discs at or under the cavern floor");
+        }
+        if (s.cone.flatMap(ConeSettings::rim).isPresent() && s.cone.get().rim().get().topRoom() < highestDomeNeeds(s, s.cone.get())) {
+            return DataResult.error(() -> "the rim's top_room must be at least " + highestDomeNeeds(s, s.cone.get())
+                    + " (min_height and half the layers' jitter), or the top layer's discs have no room for a dome");
         }
         return DataResult.success(s);
     }
