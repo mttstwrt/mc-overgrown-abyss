@@ -9,9 +9,14 @@ import java.util.List;
  */
 interface DiscLayout {
 
-    /**
-     * Every disc, in a fixed order, each with the support it has among the others. A layout has few discs, so a sample looks
-     * at all of them.
-     */
+    /** Every disc, in a fixed order, each with the support it has among the others. */
     List<Disc> discs();
+
+    /**
+     * The discs that can matter to the carve at a column, in the same order: every disc within the carve's falloff of it, and
+     * maybe more. A layout of few discs gives all of them.
+     */
+    default List<Disc> near(double x, double z) {
+        return discs();
+    }
 }

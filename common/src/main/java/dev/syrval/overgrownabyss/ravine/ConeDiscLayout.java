@@ -55,6 +55,7 @@ final class ConeDiscLayout implements DiscLayout {
     private final HoleGround ground;
     private final double layerGap;
     private final List<Disc> discs;
+    private final DiscIndex index;
 
     // A disc as placed, and whether it was drawn to hang, which it does only if it then turns out to have a ceiling.
     private record Drawn(Disc disc, boolean toHang) {}
@@ -93,6 +94,7 @@ final class ConeDiscLayout implements DiscLayout {
             supported.add(disc.withSupport(root.orElseGet(() -> new Disc.Support.Standing(Discs.bottomOf(placed, shape, disc)))));
         }
         this.discs = List.copyOf(supported);
+        this.index = new DiscIndex(discs, settings.edgeFalloff());
     }
 
     /**
@@ -291,5 +293,10 @@ final class ConeDiscLayout implements DiscLayout {
     @Override
     public List<Disc> discs() {
         return discs;
+    }
+
+    @Override
+    public List<Disc> near(double x, double z) {
+        return index.near(x, z);
     }
 }

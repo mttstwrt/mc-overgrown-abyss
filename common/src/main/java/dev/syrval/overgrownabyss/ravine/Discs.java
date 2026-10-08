@@ -14,7 +14,7 @@ final class Discs {
     /** Distance to the nearest dome: negative inside, infinity if none is close. */
     static double domeDistance(DiscLayout layout, double x, double y, double z) {
         double nearest = Double.POSITIVE_INFINITY;
-        for (Disc disc : layout.discs()) {
+        for (Disc disc : layout.near(x, z)) {
             nearest = Math.min(nearest, disc.domeDistance(x, y, z));
         }
         return nearest;
@@ -23,7 +23,7 @@ final class Discs {
     /** Distance to the nearest platform, stem or root: negative inside, infinity if none is close. */
     static double rockDistance(DiscLayout layout, DiscShape shape, double x, double y, double z) {
         double nearest = Double.POSITIVE_INFINITY;
-        for (Disc disc : layout.discs()) {
+        for (Disc disc : layout.near(x, z)) {
             nearest = Math.min(nearest, disc.rockDistance(shape, x, y, z));
         }
         return nearest;
