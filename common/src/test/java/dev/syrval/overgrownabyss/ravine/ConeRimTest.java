@@ -21,7 +21,7 @@ class ConeRimTest {
     static final UpperSettings UPPER = new UpperSettings(20);
     /** The cone the mod ships. */
     static final ConeSettings CONE = new ConeSettings(
-            45, 150, 1.6F, 8, 20, 0.3F, 56, 0.4F, 12, -16, 0.35F, 200F, 0.5F, 0.6F, Optional.of(RIM), Optional.of(UPPER));
+            45, 150, 1.6F, 8, 20, 0.3F, 56, 0.4F, 12, -16, 0F, 200F, 0.5F, 0.6F, Optional.of(RIM), Optional.of(UPPER));
     static final RavineSettings SETTINGS = ConeShapeTest.withCone(CONE, DiscTest.VARIED);
     /** A level of vanilla's height with the shipped floor and the highest a lip may be, 64 under the level's top. */
     static final RavineBounds LEVEL = new RavineBounds(-40, 255);

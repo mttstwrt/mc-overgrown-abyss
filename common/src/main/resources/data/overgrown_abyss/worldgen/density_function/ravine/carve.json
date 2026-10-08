@@ -63,10 +63,80 @@
           {
             "thickness": 1,
             "block": {
-              "type": "minecraft:simple_state_provider",
-              "state": {
-                "Name": "minecraft:grass_block"
-              }
+              "type": "minecraft:noise_provider",
+              "seed": 1094861637,
+              "noise": {
+                "firstOctave": -5,
+                "amplitudes": [
+                  0.7,
+                  1.0,
+                  0.5,
+                  0.3
+                ]
+              },
+              "scale": 1.0,
+              "states": [
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                {
+                  "Name": "minecraft:coarse_dirt"
+                },
+                {
+                  "Name": "minecraft:podzol"
+                },
+                {
+                  "Name": "minecraft:grass_block"
+                },
+                {
+                  "Name": "minecraft:grass_block"
+                },
+                {
+                  "Name": "minecraft:grass_block"
+                },
+                {
+                  "Name": "minecraft:moss_block"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                }
+              ]
             }
           },
           {
@@ -421,7 +491,7 @@
     "stack_chance": 0.4,
     "ceiling_margin": 12,
     "base_clearance": -16,
-    "hang_chance": 0.35,
+    "hang_chance": 0,
     "outer_radius": 200,
     "rider_chance": 0.5,
     "rider_scale": 0.6,
