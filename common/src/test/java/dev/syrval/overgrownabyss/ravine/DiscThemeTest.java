@@ -10,15 +10,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.regex.Pattern;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.VerticalAnchor;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
@@ -589,6 +595,35 @@ class DiscThemeTest {
         }
         assertTrue(themes.get(2).growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.WATER), "no mangrove stands in the water");
         assertTrue(themes.get(2).water().orElseThrow().ponds() > themes.get(1).water().orElseThrow().ponds(), "a swamp is wetter than a jungle");
+    }
+
+    @Test
+    void theJungleDiscsLayersLieInOneOrderAllTheWayRoundARim() throws Exception {
+        DiscPalette jungle = shipped().discThemes().stream()
+                .filter(t -> t.biome().orElseThrow().location().getPath().equals("disc_jungle")).findFirst().orElseThrow().palette();
+        // Soil, then what water left on it, then what was built there: three of these under the ground, never out of this order.
+        List<Block> order = List.of(Blocks.DIRT, Blocks.MUD, Blocks.CLAY, Blocks.MOSSY_STONE_BRICKS, Blocks.MOSSY_COBBLESTONE);
+        var found = new HashSet<Block>();
+        var random = RandomSource.create(0);
+        var pos = new BlockPos.MutableBlockPos();
+        for (int x = -2000; x <= 2000; x += 11) {
+            for (int z = -2000; z <= 2000; z += 11) {
+                for (int ground = -30; ground <= 150; ground += 60) {
+                    int[] places = new int[3];
+                    for (int below = 1; below <= 3; below++) {
+                        // As the painter asks: the layer by how deep the block is, the block by where it is.
+                        Block block = jungle.blockAt(new DiscPoint.Platform(below + 0.5, Double.MAX_VALUE)).orElseThrow()
+                                .getState(random, pos.set(x, ground - below, z)).getBlock();
+                        places[below - 1] = order.indexOf(block);
+                        found.add(block);
+                    }
+                    String where = "under " + x + ", " + ground + ", " + z + ": " + places[0] + ", " + places[1] + ", " + places[2];
+                    assertTrue(places[0] >= 0 && places[0] <= places[1] && places[1] <= places[2], "out of order " + where);
+                    assertTrue(places[0] < places[2], "one block three deep " + where);
+                }
+            }
+        }
+        assertEquals(Set.copyOf(order), found, "every one of the five shows somewhere");
     }
 
     @Test

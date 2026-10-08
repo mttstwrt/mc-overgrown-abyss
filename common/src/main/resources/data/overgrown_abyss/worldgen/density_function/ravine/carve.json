@@ -140,12 +140,162 @@
             }
           },
           {
-            "thickness": 3,
+            "thickness": 1,
             "block": {
-              "type": "minecraft:simple_state_provider",
-              "state": {
-                "Name": "minecraft:dirt"
-              }
+              "type": "minecraft:noise_provider",
+              "seed": 1094861638,
+              "noise": {
+                "firstOctave": -8,
+                "amplitudes": [
+                  1.0,
+                  0.5
+                ]
+              },
+              "scale": 1.0,
+              "states": [
+                {
+                  "Name": "minecraft:dirt"
+                },
+                {
+                  "Name": "minecraft:dirt"
+                },
+                {
+                  "Name": "minecraft:dirt"
+                },
+                {
+                  "Name": "minecraft:dirt"
+                },
+                {
+                  "Name": "minecraft:dirt"
+                },
+                {
+                  "Name": "minecraft:dirt"
+                },
+                {
+                  "Name": "minecraft:dirt"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:clay"
+                }
+              ]
+            }
+          },
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:noise_provider",
+              "seed": 1094861638,
+              "noise": {
+                "firstOctave": -8,
+                "amplitudes": [
+                  1.0,
+                  0.5
+                ]
+              },
+              "scale": 1.0,
+              "states": [
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:mud"
+                },
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                }
+              ]
+            }
+          },
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:noise_provider",
+              "seed": 1094861638,
+              "noise": {
+                "firstOctave": -8,
+                "amplitudes": [
+                  1.0,
+                  0.5
+                ]
+              },
+              "scale": 1.0,
+              "states": [
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:clay"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                {
+                  "Name": "minecraft:mossy_cobblestone"
+                }
+              ]
             }
           }
         ]
