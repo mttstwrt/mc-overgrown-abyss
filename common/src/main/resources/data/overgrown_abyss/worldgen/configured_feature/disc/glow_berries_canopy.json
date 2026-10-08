@@ -1,7 +1,7 @@
 {
   "type": "minecraft:random_patch",
   "config": {
-    "tries": 80,
+    "tries": 96,
     "xz_spread": 7,
     "y_spread": 0,
     "feature": {
@@ -12,8 +12,17 @@
           "xz_spread": 0,
           "y_spread": {
             "type": "minecraft:uniform",
-            "min_inclusive": 3,
+            "min_inclusive": 2,
             "max_inclusive": 16
+          }
+        },
+        {
+          "type": "minecraft:random_offset",
+          "xz_spread": 0,
+          "y_spread": {
+            "type": "minecraft:uniform",
+            "min_inclusive": 0,
+            "max_inclusive": 12
           }
         },
         {
@@ -26,13 +35,27 @@
                 "blocks": "minecraft:air"
               },
               {
-                "type": "minecraft:has_sturdy_face",
-                "offset": [
-                  0,
-                  1,
-                  0
-                ],
-                "direction": "down"
+                "type": "minecraft:any_of",
+                "predicates": [
+                  {
+                    "type": "minecraft:has_sturdy_face",
+                    "offset": [
+                      0,
+                      1,
+                      0
+                    ],
+                    "direction": "down"
+                  },
+                  {
+                    "type": "minecraft:matching_block_tag",
+                    "offset": [
+                      0,
+                      1,
+                      0
+                    ],
+                    "tag": "minecraft:leaves"
+                  }
+                ]
               }
             ]
           }

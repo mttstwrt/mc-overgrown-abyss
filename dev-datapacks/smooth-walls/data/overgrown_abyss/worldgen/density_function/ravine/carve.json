@@ -159,19 +159,31 @@
       "growth": [
         {
           "feature": "overgrown_abyss:disc/jungle_tree_giant",
-          "every": 36
+          "every": 120
         },
         {
           "feature": "overgrown_abyss:disc/jungle_tree",
-          "every": 20
+          "every": 45
         },
         {
           "feature": "overgrown_abyss:disc/jungle_bush",
           "every": 50
         },
         {
+          "feature": "overgrown_abyss:disc/bamboo_clump",
+          "every": 200
+        },
+        {
           "feature": "overgrown_abyss:disc/jungle_undergrowth",
           "every": 25
+        },
+        {
+          "feature": "overgrown_abyss:disc/moss_carpet_patch",
+          "every": 60
+        },
+        {
+          "feature": "overgrown_abyss:disc/jungle_blooms",
+          "every": 90
         },
         {
           "feature": "overgrown_abyss:disc/vines_hanging",
@@ -179,7 +191,7 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_canopy",
-          "every": 30
+          "every": 24
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
@@ -339,8 +351,38 @@
           }
         },
         {
+          "feature": "overgrown_abyss:disc/swamp_undergrowth",
+          "every": 30
+        },
+        {
+          "feature": "overgrown_abyss:disc/big_dripleaf",
+          "every": 90
+        },
+        {
+          "feature": "overgrown_abyss:disc/swamp_flowers",
+          "every": 120
+        },
+        {
+          "feature": "overgrown_abyss:disc/froglight_bulbs",
+          "every": 200
+        },
+        {
+          "feature": "overgrown_abyss:disc/lily_pads",
+          "every": 25,
+          "on": "water"
+        },
+        {
+          "feature": "overgrown_abyss:disc/sea_pickles",
+          "every": 60,
+          "on": "water"
+        },
+        {
           "feature": "overgrown_abyss:disc/vines_hanging",
           "every": 50
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_berries_canopy",
+          "every": 30
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
