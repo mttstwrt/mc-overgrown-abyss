@@ -1287,9 +1287,275 @@ groves; how many more things now hang under jungle and crystal discs.
 Limits: near the stem the flare is steep, so what hangs from it starts well under the platform (about 13 blocks down 0.1 of
 the radius from the axis), below the margin of the disc's biome; vines there take the colour of the biome around the disc.
 
+### A top for each hole, a bowl above it, and an opening
+
+Owner, on the plan in `docs/rim-walls-drape-plan.md`: the goal is grand fantasy visuals of the chasm and a hole that blends
+into the terrain; holes should not open close to sea level, and a higher top gives more room for discs. This builds the
+plan's shape: the ground probe of phase 0 and phases 1 to 3. Wall noise, balconies and the drape (phases 4 to 6) and the
+view-metrics test are not built.
+
+**What changed.**
+
+- **Each hole has a top of its own** (`RavineSites`, which was `LandGate`). For a cone with a `rim`, 24 columns round the
+  mouth (`top_radius` from the axis) are read, each taken as the middle one of its own and its two neighbours' so that one
+  pothole does not count, and the lip is `dip` under the lowest of them, never above `top`. A cell whose lip would be under
+  `min_top` holds no hole, which joins the land check in one answer per cell: either nothing, or the heights the hole lies
+  between. The carve, the painter, the cavern's biome and the city all read those (the city through the footprint, as
+  before). `low_share` (0 as shipped) lets that share of the mouth's edge lie lower than the lip.
+- **The ground is read from the level's own terrain** (`SurfaceProbe`, `compat/TerrainSurface`), not from the preliminary
+  surface the plan named: that is 8 blocks under the real ground at the median but 30 and more in one high column in
+  twenty (table below). The hook makes a second `RandomState` from the level's untouched settings, and the probe walks its
+  final density down a noise cell at a time to the first rock and then up to the air. Whoever asks names the highest ground
+  it cares about, so nothing is spent on a mountain above that.
+- **Layers are spread evenly** from the lowest to `top_room` under the highest a dome may reach, no closer than
+  `layer_spacing`. With `top_room` 24 under a top of 80 and a margin of 16 these are the old floors, and a test holds the two
+  layouts equal.
+- **A dome stays under the ground over it** (`HoleGround`): the ground is read at the disc's centre and on a 16-block grid
+  inside its rim, shared by all the discs of a hole, and the roof keeps `ceiling_margin` under it at each of them (the roof
+  comes down towards the rim, so ground there limits it less). A disc left with less than the least dome is not made. A
+  root is not anchored to the wall higher than the margin under the ground over its axis.
+- **Above the lip the hole is a bowl** (`ConeShape.bowlDistance`): open inside the mouth, and outside it only above
+  `lip + height * (out / width) ^ profile`, uneven by `roughness` (the smooth value the ponds use, from the cell's hash).
+  The surface has no upper end, so there is no headwall; nothing is opened past `outer_radius`, and `maxReach()` is as it was.
+- **The clear air widens upwards** (`upper.clear_radius`, `ConeShape.clearAt`): from `clear_radius` at the floor to the
+  upper one at the lip. Platforms, riders and roots are placed outside it, and the rock function still cuts off anything
+  inside it.
+- **Settings as shipped:** `top` 160 (was 80), `ceiling_margin` 12 (16), `rim` (`min_top` 96, `dip` 3, `low_share` 0,
+  `top_room` 22, `collar` of width 30, height 34, profile 2, roughness 2 over 12), `upper.clear_radius` 20, and `cell_size`
+  1024 with `chance` 1 (2048 and 0.5) because so few cells pass `min_top` (below). `min_top` is a plain height, not an
+  anchor. Without `rim` and `upper` a cone is exactly what it was, which the `fixed-top` testing pack is.
+- **The world-load log** gives each hole near the origin its own top and layers, and counts the cells that held none.
+
+**Measured on vanilla terrain, outside the game.** Vanilla's overworld was built from the 1.21.1 jar
+(`VanillaRegistries.createLookup()`, `RandomState.create`), and the mod's carve bound to it as the hook binds it, with the
+land check taken from the biome names of `#is_ocean`, `#is_river` and `#is_beach`. These are scratch programs, not in the
+repository.
+
+*The probe against what the game builds* (density blended between cell corners; 1,500 columns, seed 20261003):
+
+| Columns | 1% | 5% | median | 95% | 99% |
+|---|---|---|---|---|---|
+| all | -4 | -3 | 0 | +1 | +3 |
+| ground at 90 or more | -6 | -2 | -1 | +1 | +2 |
+
+The preliminary surface (`initial_density_without_jaggedness` against 0.390625, refined to a block) lies under the real
+ground by a median of 8 blocks and by 30 to 34 at the 95th percentile where the ground is above 80, 100 at most.
+
+*How many cells could hold a hole* (seeds 20261003, 1, 2 and 3; 2,304 cells; 60% are land), as the share of all cells whose
+lip would be at least a height, and how much the ground round the mouth differs in those that pass 96:
+
+| `low_share` | 72 | 80 | 88 | 96 | 104 | 112 | Ground round the mouth: quarter, median, 90% |
+|---|---|---|---|---|---|---|---|
+| 0 (lowest ground) | 8.9% | 6.4% | 4.2% | 2.7% | 1.9% | 0.9% | 21, 32, 78 |
+| 0.25 | 12.8% | 9.7% | 6.4% | 4.2% | 2.9% | 1.9% | 25, 39, 79 |
+| 0.5 (middle ground) | 18.9% | 14.1% | 11.0% | 7.6% | 5.4% | 3.3% | 29, 45, 81 |
+
+So high ground in vanilla is steep ground: half the holes that pass have 32 blocks or more between the low and the high side
+of their mouth. And with the old `cell_size` and `chance` only 1 cell in 50 held a hole, the nearest 9,000 blocks from the
+origin on the owner's seed.
+
+*The shipped settings on seed 20261003:* 14 holes within 12,288 blocks of the origin each way, 0.10 for each square of
+2,048 (it was 0.3). The nearest:
+
+| x | z | Lip | Ground round the mouth | Layers | Biome |
+|---|---|---|---|---|---|
+| -3743 | 4870 | 135 | 132 to 175 | 6 | forest |
+| -7568 | -1315 | 97 | 83 to 115 | 4 | forest |
+| 7716 | 4902 | 98 | 99 to 158 | 4 | grove |
+| 1343 | 9938 | 98 | 93 to 154 | 4 | frozen peaks |
+| 8722 | -5796 | 120 | 117 to 170 | 5 | stony peaks |
+| -8845 | 5752 | 96 | 99 to 142 | 4 | plains |
+| 3812 | 10625 | 98 | 101 to 173 | 4 | grove |
+| -6501 | -9514 | 107 | 108 to 129 | 4 | meadow |
+
+(A lip can be over the lowest ground of the mouth by more than the dip where that is a single column, which is not counted.)
+The game runs the same code on the same density, so these should be where `/locate` leads.
+
+*Domes and the ground,* at those eight holes, every second column out to the outer radius where the ground is under the
+lip: of 134,252 columns a dome reaches the surface in 8 and is under less than 4 blocks of ground in 11. Before, 49 of 259
+points probed over domes were air.
+
+*Cost.* The carve and its rock together at one block inside a hole's reach: 384 ns before, 510 ns under a lip at 96, 588 at
+128 and 747 at 160, where there are seven layers. Deciding one cell (land check and lip) takes 5 ms on average; a hole's
+discs with their ground 7 to 29 ms, once.
+
+**What the pictures showed.** Sections and views from above of real holes were drawn from the same carve.
+
+- On a ridge (the hole at -3743, 4870) the old shape is a shaft 90 wide through 95 blocks of mountain with three layers
+  under it; the new one starts under the ridge, with six layers over 175 blocks and a small bowl on the high side.
+- On near-level high ground (the meadow hole) the bowl is an uneven collar 5 to 30 blocks wide and the discs frame an
+  opening instead of covering the mouth.
+- On a steep slope (7716, 4902: 59 blocks across the mouth) the bowl is a slope 50 blocks high and about 40 wide on the
+  uphill side, a large scar. `low_share` 0.25 or 0.5 puts the lip 23 or 50 blocks higher there: the cut shrinks, the hole
+  deepens, and the downhill side of the mouth is the ground itself, with the top layers left out on that side. It also
+  brings the nearest holes on the owner's seed to 1,300 blocks. Which reads better is the owner's call.
+
+**Verification.** Gradle does not run in this session's sandbox, so `./gradlew build` was not run. What was run: `common`'s
+main and test sources compiled with JDK 21 `javac` against the cached jars, with no warnings under `-Xlint:all`, and its
+153 unit tests pass (127 before and 26 new; two theme tests now bind a level whose top is 160). New tests: the lip from the ground (level, sloping, one
+pothole, a valley, `low_share`, the level's top as the highest), once per cell; the layer counts by lip on vanilla height
+and Larion's; no ring disc dropped under level ground; domes under falling ground and a cliff; roots under low ground (it
+fails without the check); the bowl (open over it, solid under it, no step larger than its slope out to the outer radius,
+9 to 12 blocks of cut on level ground, nothing past the outer radius or the reach); the clear air and no rock in it with
+every disc hanging; the settings' limits; a bound carve giving two cells different tops; `TerrainSurface` on a made-up
+density; the shipped file against the tests' cone; the testing packs.
+
+Not verified: the Loom build and both loader modules; anything in game, on a dedicated server or on Larion; the hook's
+second call of the wrapped `RandomState.create` (whether MixinExtras and other mods' wraps of the same call take a second
+call well); the final density being computable at a point under C2ME or with Larion's functions; chunk generation time.
+To measure in game: the probe against the F3 height at 100 columns round three holes; how much of the bowl is grass and how
+much bare stone; the per-sample cost and the time of the first chunk of a hole; the views V1 to V6 of the plan.
+
+Limits: the mouth is still an exact circle and the wall an exact surface of revolution (wall noise is phase 4). A hole's
+place in its cell is drawn from the hash before the ground is known, so a cell can only be taken or left: that is why holes
+are rare and mostly on slopes. Choosing the best place in a cell needs the city's placement to know the level's terrain,
+which `getPotentialStructureChunk(seed, x, z)` does not give it; that is the next thing to design if rarer, steeper holes
+are not what is wanted. Cells of 1024 can put two holes 420 blocks apart. The old reference hole near 956, -499 is gone.
+The log lists holes within 3,072 blocks of the origin, which on vanilla is often none.
+
+### No holes near sea level, a taller cone, a mouth that follows the ground, and uneven walls
+
+Owner (2026-10-07): add some noise to the cavern walls, make the entrance integrate into the landscape better, no chasms at
+sea level, and as much total height for the cone as possible. Their calls on the plan: "20 above sea level for now"; the
+"cavern walls" are the edge of the main cut, not the discs; the floor is good at 24 over the world's bottom.
+
+The jar the owner had been testing was built on 2026-10-06 at 17:08, before the section above was written, so the per-hole
+top, the bowl and the opening had not been seen in game when this was built on them. Still nothing here has.
+
+**What changed.**
+
+- **A hole needs ground 20 over the sea all round its mouth** (`rim.min_above_sea`, in place of `min_top`). It is counted
+  from the level's own sea level and asked of the ground at the mouth's 24 columns, each still taken as the middle one of
+  itself and its neighbours, so one pothole does not count and two next to each other do. It alone decides whether a cell
+  holds a hole; how high the lip is no longer does. A cell on low ground is given up after two columns of ground.
+- **The lip is under the middle ground** (`rim.low_share` 0.5, and it may now go to 1). Half the mouth's edge is then lower
+  than the lip: there the edge is the ground itself and the top layers of discs are left out, by the check that keeps a dome
+  under the ground over it.
+- **`top` is 64 under the level's top** (`below_top`: y=255 on vanilla height, 447 on Larion's) instead of 160, so a lip is
+  as high as its ground. 12 layers fit under a lip at 255 on vanilla height.
+- **The bowl starts from the ground on each side** (`RavineBounds.edge`, `ConeShape.bowlDistance`). A hole keeps the height
+  of its mouth's edge at each of the 24 columns: `dip` under the ground there, nowhere under the lip. The bowl's surface
+  rises from that, blended between columns, where it rose from the lip all round. So on the uphill side the hole's wall runs
+  straight up to the ground, and only the ground right at the mouth is cut back.
+- **The wall is uneven** (`wall_noise`, `WallNoise`). Each layer moves the wall along the line out from the axis by up to its
+  amplitude, differently at each angle and height; the three shipped are lobes (90 blocks apart, 6), runnels (16 apart round
+  the hole and four times that up it, 2.5) and a grain (6, 1): 9.5 blocks at most. It moves the cone's wall, the cavern's
+  wall where that shows, and where the mouth and the bowl start, so the mouth is no longer an exact circle. Discs, domes,
+  stems and roots are exact as before. The values are the cell hash's smooth values in columns that close on themselves round
+  the hole, each column slid up by an amount of its own so that bulges never line up in rows; a hole's wall is its own and
+  nothing is seeded or bound. Further from the wall than the unevenness and the falloff reach, it is not worked out.
+  Settings that would bring the wall into the clear air at the top, or past `outer_radius` at the floor, are rejected, and so
+  is `wall_noise` on a ravine.
+- **What follows the wall.** A root hung from the wall is anchored where the uneven wall is over its axis
+  (`ConeShape.wallOver`: the lowest rock over the column), and the cavern's biome reaches sideways as far as the wall may be
+  moved out.
+- **A hole's discs are looked up by column** (`DiscIndex`: squares of 16 columns, each with the discs within the falloff of
+  it). A hole under a lip at 255 has over a hundred discs, and every block used to look at all of them.
+- **The ground over a hole is read every 8 blocks**, not every 16 (`HoleGround.GRID`), for the domes' ceilings: with the lip
+  higher than the downhill ground more domes lie under steep ground (figures below).
+- **Settings as shipped:** `top` `below_top` 64; `rim.min_above_sea` 20, `rim.low_share` 0.5; `wall_noise` as above. The rest
+  is as it was. Testing packs `low-lip` and `high-lip` (`low_share` 0 and 1) and `smooth-walls` (no `wall_noise`).
+- **The world-load log** gives each hole the highest its mouth's edge stands, and the cone's line gives the wall's layers.
+
+**Measured on vanilla terrain, outside the game,** as in the section above (vanilla's overworld from the 1.21.1 jar, the mod's
+carve bound to it, the land check by the biomes of `#is_ocean`, `#is_river` and `#is_beach`; scratch programs, not in the
+repository).
+
+*How many cells hold a hole, and how high* (seeds 20261003, 1, 2 and 3; 2,304 cells of 1024):
+
+| `low_share` | Cells with a hole | For each square of 2,048 | Lip: 10%, median, 90%, highest | Edge over the lip: median, 90%, most | Layers: median, 90%, most |
+|---|---|---|---|---|---|
+| 0 | 6.7% | 0.27 | 82, 90, 114, 136 | 27, 55, 77 | 3, 5, 6 |
+| 0.5 (shipped) | 6.7% | 0.27 | 90, 108, 138, 158 | 11, 31, 48 | 4, 6, 7 |
+| 1 | 6.7% | 0.27 | 101, 123, 160, 192 | 0, 0, 0 | 5, 7, 8 |
+
+It was 2.7% and 0.11 with `min_top` 96, and 0.3 for each square before the top followed the ground. The cap of 255 is never
+reached on vanilla. Deciding a cell takes 1 ms where it holds no hole and 12 ms where it does.
+
+*The nearest holes on seed 20261003* (30 within 12,288 blocks of the origin each way, 14 before), and what the bowl takes out
+of the ground over the lip, further than 56 blocks from the axis: how deep at most, and about how many blocks. The last
+column is the same hole with the bowl started from the lip all round, as it was.
+
+| x | z | From the origin | Lip | Ground round the mouth | Edge up to | Layers | Bowl: deepest, blocks | From the lip all round |
+|---|---|---|---|---|---|---|---|---|
+| 4878 | 380 | 4,893 | 104 | 84 to 161 | 152 | 4 | 16, 2,900 | 54, 64,800 |
+| 4692 | -3851 | 6,070 | 113 | 93 to 125 | 122 | 4 | 2, 30 | 7, 750 |
+| -3743 | 4870 | 6,142 | 148 | 132 to 175 | 163 | 6 | 41, 10,700 | 46, 18,200 |
+| -7568 | -1315 | 7,681 | 102 | 83 to 115 | 111 | 4 | 5, 260 | 13, 2,100 |
+| -6662 | -5343 | 8,540 | 93 | 83 to 110 | 105 | 3 | 0, 0 | 11, 3,000 |
+| 7716 | 4902 | 9,142 | 141 | 99 to 158 | 154 | 6 | 16, 3,300 | 21, 11,100 |
+| 5429 | -7486 | 9,248 | 98 | 82 to 113 | 109 | 4 | 4, 210 | 16, 3,500 |
+| 6388 | -7706 | 10,010 | 94 | 92 to 107 | 102 | 4 | 4, 270 | 10, 1,600 |
+
+The hole at -3743, 4870 is on a ridge with a peak beside its mouth, which the bowl still cuts back to its slope. The steep one
+at 7716, 4902 had its lip at 98 and four layers; with the lip at 141 the low side of its mouth is 42 blocks under the lip, open
+to the hillside. The nearest hole to the origin on this seed is 4,900 blocks away.
+
+*Domes and the ground,* at those eight holes, every second column out to 200 blocks from the axis (251,336 columns):
+
+| Ground read every | A dome opens the ground's top block | A dome under less than 4 blocks | A disc's rock over the ground | A hole's discs built in |
+|---|---|---|---|---|
+| 16 blocks | 21 | 18 | 40 | 13 to 52 ms |
+| 8 blocks (shipped) | 11 | 7 | 13 | 44 to 164 ms |
+
+All that is left at 8 blocks is at the steep hole at 7716, 4902.
+
+*Cost,* in nanoseconds for the carve and its rock together at one block, taken at random inside a hole's reach from the floor to
+40 over the lip (the shape alone, without finding the cell):
+
+| Lip | Layers | Discs | Before the index | With it, even wall | With it, uneven wall |
+|---|---|---|---|---|---|
+| 96 | 4 | 39 | 595 | 163 | 299 |
+| 128 | 5 | 43 | 639 | 169 | 301 |
+| 160 | 7 | 67 | 969 | 200 | 330 |
+| 200 | 9 | 85 | 1,193 | 218 | 348 |
+| 255 | 12 | 114 | 1,566 | 256 | 388 |
+
+The same through the bound functions, as the game calls them, at a hole with its lip at 147: 709 from the floor to the lip, 655
+in the 40 blocks over it, 700 from there to the sky, 313 under the floor, 444 in the hole's cell past its reach, and 207 in a
+cell without a hole. So more than half of what a block inside a hole costs, and all of what one outside costs, is finding the
+cell and its answers twice (once for the carve, once for the rock), which this round did not touch.
+
+*Pictures.* Sections and plans of the holes at 4878, 380 and 7716, 4902 were drawn from the carve over the real terrain: the
+wall on the uphill side stands from the lip to the ground with the hill behind it, the outline between the discs' domes is
+uneven, the domes themselves are exact arcs, and the rock added where the terrain had air is mostly where a disc crosses a
+cave.
+
+**Verification.** `common`'s main and test sources compiled with JDK 21 `javac` against the cached jars, with no warnings
+under `-Xlint:all`, and its 172 unit tests pass (153 before and 19 new); the same at each of the three commits this went in
+as, as far as each had come (158, 160 and 172 tests). `./gradlew build` was not run by this session: Gradle runs in the
+sandbox now, but three tries each stopped at another Gradle instance holding the lock on `~/.gradle`'s cache. New and
+changed tests: the sea rule (20 over the sea is enough and 19 is not, the
+level's own sea, a shore beside high ground whatever the lip, low ground two columns wide at every place round the mouth,
+read once per cell and given up after two columns); the lip under the lowest, middle and highest ground; the mouth's edge on a
+slope and its blending; a level's top as the highest; layers up to a lip at 255; on a hillside of one in one the wall
+standing on the uphill side, the bowl starting at the edge there, and a cut of 12 blocks where the level bowl cuts 56; the
+wall moved by no more than its amplitudes and by most of them somewhere, closing on itself, changing gradually, stretched
+upwards, different in each hole; air turning to rock once along every line out from the axis up to the lip, and no rock of
+the bowl without rock under or behind it; nothing opened past the reach, and the clear air open; the wall over a column
+being its lowest rock; a root hung from the uneven wall reaching it; the cavern's biome; the settings' limits; smooth values
+round a closed surface; every disc within the falloff of a column being listed for it, and the domes and the rock coming out
+the same as over every disc; the shipped file against the tests' cone and layers; all eleven testing packs.
+
+Not verified by this session: the Loom build and both loader modules (neither refers to anything changed here); anything in game, on a
+dedicated server, on Fabric or on Larion; everything listed as not verified in the section above, which this is built on.
+`below_top` resolving as `genDepth - 1 + minGenY - 64` was read from the 1.21.1 class. To look at in game: the approach to a
+hole on level ground and to one on a slope, and from the air; the wall from the lip and from mid-air (runnels that read,
+no single-block crumbs); whether the bowl's cut is grass or bare stone; where `/locate` leads, and the log's lines for the
+holes near the origin, which on Larion are the first figures there will be.
+
+Limits: a hole on a steep slope is open to the hillside on its low side, by as much as the lip stands over the ground there
+(42 blocks at one of the eight); `low-lip` is the same holes without that, and shallower. Holes are still taken or left
+where the hash puts them, so they are as rare as high ground: about one for every four squares of 2,048 on vanilla. The
+discs' domes cut exact arcs into an uneven wall. On a cliff a dome can still come out through the ground between two
+columns that were read. The cell's answers are still found twice for every block of the world (the 207 ns above); keeping
+them by the cell's coordinates, or once for a column, is the next thing to do for speed.
+
 ## 8. Next steps
 
-1. Review the rim, mid-air and floor views; tune carve and city numbers.
+1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
+   opening and uneven wall in game, settle `min_above_sea`, `low_share`, the wall's layers and how often holes come, then
+   balconies and the drape (phases 5 and 6 of `docs/rim-walls-drape-plan.md`).
 2. Wall styles (Phase 2) and `BiomeInjector`.
 3. Decide whether lush caves features on the city floor suit the look, or whether the city should keep its own ground.
 4. Extract `ravine-core` into a shared source module when Rift starts.

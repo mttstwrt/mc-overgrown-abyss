@@ -16,8 +16,32 @@ the mod's file. The log line `Ravine settings:` at world load shows which values
 ## Packs
 
 The mod's own hole is now the cone: a single round hole, `base_radius` 150 at the floor (a little wider than the city cavern's
-136) and narrowing to `top_radius` 45, with free-standing discs in layers `layer_spacing` 20 apart around a clear cylinder of radius 8. Its numbers:
+136) and narrowing to `top_radius` 45, with free-standing discs in layers at least `layer_spacing` 20 apart around the clear air
+in its middle. Its numbers:
 
+- Where: a hole only opens where the ground all round its mouth stands at least `rim.min_above_sea` 20 blocks over the
+  level's sea level (y=83 where the sea is at 63), so none opens in a plain or on a shore. One low column alone does not
+  count; two next to each other do.
+- Top: each hole has a lip of its own, `rim.dip` 3 blocks under the ground round its mouth and never above `top`, which is 64
+  under the level's top (y=255 on vanilla height). `rim.low_share` 0.5 puts the lip under the middle ground: half the mouth's
+  edge is lower than the lip and is simply the ground there, with the top layers of discs left out on that side. 0 puts it
+  under the lowest ground (a shallower hole, level all round), 1 under the highest (the deepest).
+- Above the lip the hole opens as a bowl (`rim.collar`). The hole's wall runs straight up to the ground on every side, and
+  outside the mouth the ground is removed only above a surface that rises from the mouth's edge on that side, by `height` 34
+  at `width` 30 blocks out and on beyond (`profile` 2 starts it level), uneven by `roughness` 2. So level ground gets a dip
+  about 9 blocks wide, and a slope of one block in one is cut about 12 blocks deep at most, all round.
+- Walls: `wall_noise` makes the hole's own wall uneven, from the city floor to the mouth and the bowl's start, so the hole is
+  not an exact circle. Each layer moves the wall towards or away from the middle by up to `amplitude` blocks; `wavelength`
+  is how far apart its bulges are round the hole (where the hole is of middling width: they are narrower at the mouth and
+  wider at the floor) and `vertical_stretch` how many times further apart they are up the wall. The three layers are wide
+  lobes (90, stretch 3, 6 blocks), runnels down the wall (16, stretch 4, 2.5) and a fine grain (6, stretch 1.5, 1): 9.5
+  blocks at most. Take the list out for an even wall. Discs, their domes, stems and roots are not touched.
+- Layers: spread evenly from the lowest up to `rim.top_room` 22 under the highest a dome may reach (`ceiling_margin` 12 under
+  the lip): 4 layers under a lip at 96, 7 under one at 160, 12 under one at 255. A dome also stays 12 under the ground over
+  it, so a disc under ground that falls away is lowered or left out.
+- Opening: the clear air round the axis is `clear_radius` 8 at the floor and widens to `upper.clear_radius` 20 at the lip.
+- How often: `cell_size` 1024 and `chance` 1, so every cell is tried; on vanilla terrain about 1 cell in 15 has ground high
+  enough all round, which is about one hole for every four squares of 2048 blocks. `/locate structure` finds the nearest.
 - Discs: radius 20 to 64, whatever room the cone has at the disc's height. A disc too large for the cone there sits against
   the clear cylinder and cuts its dome into the rock around the cone. `base_clearance` -16 starts the lowest layer 16 blocks
   under the cavern roof, in the cavern's airspace over the city.
@@ -112,6 +136,17 @@ and whatever other mods add. With no themes every disc is the terrain's own rock
   (`"stages": []`), so its foliage is all its own.
 - `cone`: the mod's own file plus a fifth theme with no biome, in plain concrete (white top, black underside, light grey body,
   orange stem surface, yellow stem core), that makes each part of a disc easy to tell apart.
+- `fixed-top`: the mod's file as it was before the top followed the ground: every hole's top at y=80 whatever the ground, a
+  bore above it, three layers, a clear cylinder, and a hole in half the land cells of 2048. For comparing the two in game.
+
+- `low-lip` and `high-lip`: the mod's file with `rim.low_share` 0 and 1, the lip under the lowest and under the highest
+  ground round the mouth. For choosing between them and the mod's 0.5 on the same seed: the holes are in the same places,
+  only as deep as each lip makes them.
+- `smooth-walls`: the mod's file without `wall_noise`, an exact round hole. For comparing with the uneven wall.
+
+`cone` and `tuned-themes` were made from the file before that change and have no `rim`, `upper` or `wall_noise` either, so
+they also keep the fixed top and the even wall. To try them with the new shape, copy the mod's `top`, `cell_size`, `chance`,
+`ceiling_margin`, `wall_noise`, `rim` and `upper` into them.
 
 ### Ravine packs (set aside for now)
 
