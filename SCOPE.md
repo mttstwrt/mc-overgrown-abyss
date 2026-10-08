@@ -1551,6 +1551,139 @@ discs' domes cut exact arcs into an uneven wall. On a cliff a dome can still com
 columns that were read. The cell's answers are still found twice for every block of the world (the 207 ns above); keeping
 them by the cell's coordinates, or once for a column, is the next thing to do for speed.
 
+### Standing discs only, and a jungle floor of more than dirt
+
+Owner (2026-10-07, after the round above in game): hanging discs "don't read as well in-game, lets only go with stems
+underneath each disc for now"; the jungle disc should be "more than just dirt, something like dirt, silt, mud, and mossy stone
+bricks", and they are open to suggestions. They also said the bottoms of the discs look great, the mangrove's most of all, and
+that the foliage on the jungle and mangrove discs does not: it is dark, and either barren or too dense. For that they asked
+for suggestions, which are not in this section.
+
+**What changed.**
+
+- **Every disc stands on a stem.** `hang_chance` is 0. The roots and what places them are still there, behind the setting.
+- **The jungle disc's top is a patchwork.** Its first `top` layer was grass. It is now one `noise_provider` over the same
+  three blocks of dirt, whose list runs from mossy stone bricks through mossy cobblestone, coarse dirt and podzol to grass,
+  and on through moss to mud. The noise picks a place in the list, so neighbours in the list are neighbours on the ground: a
+  floor of stone bricks has a ring of cobblestone, then bare and dark earth round it, and a patch of mud has moss round it.
+  Vanilla has no silt; coarse dirt and podzol stand in for it.
+- The `low-lip`, `high-lip` and `smooth-walls` packs follow the mod's file in both. `cone`, `tuned-themes` and `fixed-top` are
+  older pictures of it and keep their hanging discs and plain grass.
+
+**Measured outside the game.** The provider's own noise, read through the provider over 12,000 blocks each way, lies under
+-0.4 for 4.5% of blocks and over 0.3 for 10%, evenly either side of 0. From that the list of 20 was laid out, and over four
+squares of 160 blocks it gave: grass 49%, podzol 14%, moss 10%, coarse dirt 10%, mud 9%, mossy cobblestone 5%, mossy stone
+bricks 4%. Drawn from above, the patches are 10 to 30 blocks across.
+
+**Verification.** `common` compiled with JDK 21 `javac` with no warnings and its 172 unit tests pass; the shipped cone the
+rim's tests run on has no hanging discs now, and the tests of roots set their own chance. `./gradlew build` still did not run
+in the sandbox: a live Gradle process outside it holds the lock on `~/.gradle`'s cache, and a build inside the sandbox cannot
+ask it to let go.
+
+Not verified: anything in game. To look at: whether the rings round a stone floor read as an overgrown ruin or as contour
+lines, how the jungle's own grass and ferns sit on the podzol, moss and mud, and whether 10% of the ground as stone is too
+much or too little.
+
+### Light on the jungle and mangrove discs, fewer trees, and ground cover of the mod's own
+
+Owner, the same day, on the foliage of the jungle and mangrove discs being dark and either barren or too dense: asked for
+suggestions, and of those offered chose glow berries from the leaves, shroomlights as fruit on the jungle's trees, froglights
+and sea pickles in the mangrove, fewer and larger jungle trees, and ground cover placed by the mod. They left out an
+invisible fill light and softer mangrove groves.
+
+**What the settings showed.** Nearly all of a disc's light was under it, which is why the undersides looked good: glow berries
+every 8 blocks under a jungle disc, every 16 in patches under a mangrove's. On top the mangrove had no light at all, and the
+jungle's `glow_berries_canopy` asked for a sturdy face over each vine, which a leaf does not have (checked against the 1.21.1
+blocks), so it only ever placed under logs and rock. A jungle disc started a tree for every 13 blocks of ground wherever one
+fitted, and nothing but ferns where the dome was too low for one. The mangrove's trees stand in groves by design, with bare
+mud between.
+
+**What changed,** all of it in data.
+
+- **Glow berries hang from leaves** on both themes: `glow_berries_canopy` takes a leaf over the vine as well as a sturdy face,
+  and reaches from 2 to 28 blocks over the ground instead of 3 to 16. The feature that places the vine does not ask whether it
+  can stay, and a cave vine only asks when the block over it changes; so these hold until their leaf is cut or decays, and
+  then drop.
+- **Shroomlights under the jungle's crowns and froglights under the mangroves'**, hung by each tree's own
+  `attached_to_leaves` decorator as a mangrove hangs its propagules: a chance for each leaf with air under it (0.05 on the
+  giant jungle tree, 0.03 on the ordinary one and the two larger mangroves, 0.02 on the small), and no two within 3 blocks.
+- **Froglights set into the mangrove's mud** in twos and threes, level with the ground (`froglight_bulbs`), and **sea pickles
+  on the beds of its ponds and streams** (`sea_pickles`).
+- **Fewer jungle trees:** a giant for every 120 blocks of ground (36) and an ordinary tree for every 45 (20), which is one
+  tree for every 33 blocks where it was one for every 13. Clumps of bamboo (`bamboo_clump`), which grows as tall as its dome
+  lets it, for the low parts.
+- **Ground cover:** on the jungle, patches of moss carpet (on the stone floors too) and azaleas, with the ferns and grass it
+  had; on the mangrove, which had none of its own, grass, ferns and moss carpet, big dripleaf, blue orchids, and lily pads on
+  the water. What a disc inherits from its parent biome still grows as well, where the pack in use lets it.
+
+**Verification.** `DiscFeatureFilesTest` is new: it loads the mod's 23 feature files beside vanilla's data with the game's own
+registry loader, which is what refuses a world when a file is wrong; the same loader was seen to refuse a copy with one
+number out of range.
+`common` compiles with JDK 21 `javac` with no warnings and its 173 unit tests pass. Read from the 1.21.1 jar: shroomlights and
+froglights give 15 light, a cave vine with berries 14, sea pickles in water 6 to 15 by their number; leaves have no sturdy
+face; mud is in `#minecraft:dirt`. `./gradlew build` did not run, for the reason in the section above.
+
+Not verified: anything in game, so none of the densities. They were set by counting tries for each block of ground, not by
+looking: about one try of moss carpet for every 4 blocks of jungle ground, grass or fern or carpet for every 2 of mangrove
+mud, an azalea for every 25 and a stalk of bamboo for every 17 at most, a cluster of froglights for every 200 blocks of mud.
+How many of each tree's leaves take a light depends on how many have air under them, which was not counted. Blocked ground
+has not been measured again since the trees were thinned; azaleas and bamboo block, the rest does not. On a pack that keeps
+the parent biomes' own plants, lily pads and grass come twice over.
+
+### Layers at the rim of a jungle disc
+
+Owner (2026-10-08, from the game): "the edge of the jungle disc rings look bad when they are 3 layers of dirt, the mangrove
+layers look really good though. Make jungle discs have dirt/mud/silt/mossy-brick/mossy-cobble layers in a logical order (discs
+are generally 3 blocks thick so it would need to pick between those blocks)".
+
+**What the settings showed.** A platform is 4 blocks (`floor_thickness`). The jungle's was its patchwork over three blocks of
+dirt, and the side of a grass block is dirt as well, so its rim was four bands of one brown. The mangrove's is two of mud,
+one of packed mud and one of roots.
+
+**What changed,** all of it in data.
+
+- **Three layers of one block each under the patchwork,** three of the owner's five, always in the order they gave from the
+  top down: dirt, mud, clay, mossy stone bricks, mossy cobblestone. Read as soil, then what water left on it, then what was
+  built there, with the cobblestone as the footing under the bricks.
+- **Clay is the silt,** which vanilla does not have. Packed mud is nearer in name, but beside dirt it is nearly the same
+  brown, which was the complaint, and it would make a jungle rim a mangrove's. Clay is the one pale band of the five. It is
+  one id in three lists to change.
+- **Which three is chosen by one noise, not a draw for each disc.** Each layer is a `noise_provider` with the same seed and
+  noise, so all three read the same place of their own list of 12, and the lists are written place for place. There are six
+  stacks: dirt, mud, clay; dirt, mud, bricks; dirt, clay, bricks; dirt, bricks, cobblestone; mud, bricks, cobblestone; clay,
+  bricks, cobblestone. A theme has one palette, so a draw for each disc needed either six jungle themes with the same growth
+  list or a new part of the palette's schema; this needed neither. What it costs is that a rim is not one stack all the
+  way round. The noise is slow (`firstOctave` -8) to keep that to a few changes.
+- A provider's noise takes the block's height too, so a layer reads nearly but not exactly what the one over it reads. The
+  lists allow for it: no block comes later in the order than the one under it at the same place or the place either side.
+- The `low-lip`, `high-lip` and `smooth-walls` packs follow the mod's file. `cone`, `tuned-themes` and `fixed-top` are older
+  pictures of it and keep plain dirt.
+
+**Measured outside the game,** through the providers as the painter asks them, round the rims of the 1,737 jungle discs in
+64 holes of one seed (vanilla height, tops at 160):
+
+| | `firstOctave` -6 | -7 | -8 (chosen) |
+|---|---|---|---|
+| Stacks that take over 5% of a rim | 4.5 | 3.3 | 2.2 |
+| Changes on the way round a rim | 13.0 | 6.6 | 3.2 |
+| Different main stacks among one hole's jungle discs | 5.9 | 5.5 | 4.7 |
+
+At -8 the six take 15%, 16%, 22%, 22%, 15% and 11% of the rims, in the order above. No block lay over one that comes
+before it in the order. Where bricks under clay change to bricks over cobblestone the two layers change a block apart, so
+0.2% of rim blocks are dirt over two of bricks and another 0.2% dirt, clay, cobblestone: the only cobblestone not under
+bricks.
+
+**Verification.** A new unit test reads the mod's own file and asks the three layers for their blocks under nearly 400,000
+points of ground: never out of order, never one block three deep, and all five found. It was seen to fail with one entry
+of the middle list moved a place. `./gradlew build` ran in the sandbox: 174 unit tests pass and both loaders' jars are
+built. The two sections above say Gradle did not run. When the three rounds were committed, each commit was checked out
+and its unit tests run: 172, 173 and 174 pass.
+
+Not verified: anything in game, on either loader; no server was started this round. To look at: whether a rim that changes
+its stack part of the way round reads as strata or as patches (`firstOctave` -9 should give fewer changes still; it was
+not measured); clay as the silt; whether masonry at the bottom of five rims in six is too much stone for a jungle; and
+the beds of the jungle's ponds, which are now mud, clay or bricks where they were dirt.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,

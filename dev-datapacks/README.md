@@ -55,9 +55,9 @@ in its middle. Its numbers:
 - Bowls: each platform rises from its middle to its rim, top and underside alike, by `min_bowl_depth` 1 (smallest discs) to
   `max_bowl_depth` 4 (largest). `bowl_variation` 0.75 lets each disc come out anywhere from that depth down to a quarter of it,
   so some stay flatter. Depths of 0 and 0 make flat discs; a variation of 0 gives every disc the full depth for its size.
-- Hanging: `hang_chance` 0.35, so about a third of the discs are drawn to hang from a root, and do so where they have a
-  ceiling. `root_spread` 3 and `root_scale` 4 shape the root (3 stem radii wide where it meets the ceiling, half that 4 blocks
-  away).
+- Hanging: none. `hang_chance` is 0, so every disc stands on a stem under it; hanging discs did not read well in game. Above 0
+  it is the share of discs drawn to hang from a root instead, which they do where they have a ceiling. `root_spread` 3 and
+  `root_scale` 4 shape such a root (3 stem radii wide where it meets the ceiling, half that 4 blocks away).
 - Themes: four, see below.
 
 `disc_themes` (optional, see `DiscTheme`) are the kinds of disc. Each disc is given one by a weighted draw, and a theme sets:
@@ -101,20 +101,61 @@ in its middle. Its numbers:
 The mod's own themes:
 
 - `disc_lush` inherits from `minecraft:lush_caves` and adds nothing: a plain stone platform, which lush caves moss over itself.
-- `disc_jungle` inherits from `minecraft:jungle` (three times as likely in the middle of the cone as at its edge). Grass over
-  dirt, a few small ponds and streams, and its own growth: giant and ordinary jungle trees, bushes, ferns, vines, glow berries
-  in the canopy, and under the disc glow berries, tufts of leaves and vines.
+- `disc_jungle` inherits from `minecraft:jungle` (three times as likely in the middle of the cone as at its edge). Its top is
+  a patchwork, in patches 10 to 30 blocks across: about half of it grass, with podzol, moss, coarse dirt and mud, and here
+  and there a floor of mossy stone bricks edged with mossy cobblestone. Under it are three layers, which show at the rim as
+  bands. A few small ponds and streams, and its own growth: a giant jungle tree for about every 120 blocks of ground and an
+  ordinary one for every 45, with bushes, clumps of bamboo, ferns, moss carpet and azaleas between and under them, and
+  vines. Under the disc glow berries, tufts of leaves and vines.
+  - The patchwork is one `noise_provider` in the palette's first `top` layer. Its `states` are an order, not a mix: the noise
+    is turned into a place in the list, low values to its start and high ones to its end, so blocks next to each other in
+    the list lie next to each other on the ground (the stone bricks at one end, ringed by cobblestone, coarse dirt and
+    podzol; the mud at the other, ringed by moss). The noise is mostly near its middle, so the middle of the list takes most
+    of the ground and each end only a little however many times its block is repeated: of the 20 places, the first 6 (stone
+    bricks) take 4% of the ground between them and the last 7 (mud) 9%, while each of the 3 for grass takes 16%. Give a block
+    more ground by moving it towards the middle or widening its run. `firstOctave` -5 with the second amplitude the largest
+    makes the patches about 16 blocks apart; a higher `firstOctave` makes them smaller.
+  - Nothing of the jungle's grows on the stone, since its grass, ferns and flowers want soil, so the stone floors stay
+    clear. A tree that starts on one puts dirt under its trunk as any tree does.
+  - The three layers under the patchwork are one block each, which with it is the whole platform (`floor_thickness` 4).
+    They are three of five blocks, always in this order from the top down: dirt, mud, clay (for silt, which vanilla does not
+    have), mossy stone bricks, mossy cobblestone. Soil, what water left on it, and what was built there. Each layer is a
+    `noise_provider` with the same `seed` and `noise` as the other two, so all three read the same place of their own list
+    of 12, and the lists are written place for place: the first entries of the three lists are one rim (dirt, mud, clay) and
+    the last another (clay, bricks, cobblestone). The six there are, by how much of the rims they take: dirt, mud, clay 15%;
+    dirt, mud, bricks 16%; dirt, clay, bricks 22%; dirt, bricks, cobblestone 22%; mud, bricks, cobblestone 15%; clay, bricks,
+    cobblestone 11%. So cobblestone lies under bricks, and the bottom of a disc is masonry on five rims in six.
+    - `firstOctave` -8 keeps them wide: a rim shows about two of the six and changes about three times on the way round,
+      and the jungle discs of one hole show four or five between them. -7 doubles the changes and -6 doubles them again.
+    - To change what is in a rim, change the same place in all three lists. A layer one block lower reads the noise one
+      block lower, which can be the next place along; so no block may come later in the order than the one under it at the
+      same place or at the place either side. `DiscThemeTest` reads the mod's own file for that.
+    - A pond's bed is the second of the three in its middle, and the first at its edges and under a stream.
 - `disc_mangrove` inherits from `minecraft:mangrove_swamp` (favours the wide low discs). Mud over packed mud, about two fifths of
   it shallow water. Its trees stand in groves about 40 blocks across with clearings between: giant mangroves at the hearts of
   the groves, on mud and in water, raised 5 to 8 blocks on roots a player can walk under; tall mangroves round them; short ones
-  only on the mud, out to the groves' edges. Under the disc, patches of hanging mangrove roots draped with vines, and glow
-  berries in patches of their own; its stem is clad in roots.
+  only on the mud, out to the groves' edges. On the mud everywhere, clearings included: grass, ferns and moss carpet, big
+  dripleaf and blue orchids; on the water lily pads. Under the disc, patches of hanging mangrove roots draped with vines, and
+  glow berries in patches of their own; its stem is clad in roots.
 
-Both are thinned so that a player can walk through: on the jungle discs bushes, trunks, roots and low leaves stand in about a
-quarter of the ground, counting a place as blocked if either of the two blocks a player takes up is. The numbers to change are
-the `every` of the bushes and trees in each theme's `growth` (larger is thinner) and, for the mangrove's groves, their `cover`
-(smaller leaves more clearing); ferns and grass do not block and can stay thick. The mangrove's groves have not been measured
-this way yet.
+Light on top of these two, which have none of the sky's under their domes:
+
+- `glow_berries_canopy` (both): glow berries hanging under leaves and branches, from 2 to 28 blocks over the ground. A cave
+  vine does not hold to a leaf by the game's own rules, so one of these stays until the leaf over it changes (the tree is cut,
+  the leaf decays) and then drops as a vine does when its ceiling is broken.
+- Shroomlights hang under the crowns of the jungle's trees, and froglights of all three colours under the mangroves', as a
+  mangrove hangs its propagules: the `attached_to_leaves` decorator at the end of each tree's file, where `probability` is the
+  chance for each leaf with air under it and the two `exclusion_radius` numbers keep two lights apart.
+- `froglight_bulbs` (mangrove): froglights set into the mud in twos and threes, level with it, so they light the ground
+  without standing in the way.
+- `sea_pickles` (mangrove): on the beds of the ponds and streams, one to four to a block; four are as bright as a froglight.
+
+The numbers to change are each growth's `every` (larger is fewer), and the decorators' `probability`.
+
+Both are thinned so that a player can walk through. The numbers to change are the `every` of the bushes, bamboo and trees in
+each theme's `growth` (larger is thinner) and, for the mangrove's groves, their `cover` (smaller leaves more clearing); ferns,
+grass, carpet and flowers do not block and can stay thick, while an azalea and a stalk of bamboo do. Neither theme has been
+measured for blocked ground since the jungle's trees were thinned and the ground cover added.
 - `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and kept to small discs
   in the outer half, which the layout puts behind larger discs.
 
