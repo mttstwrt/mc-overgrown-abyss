@@ -13,6 +13,9 @@ import java.util.OptionalDouble;
  *
  * <p>Above its top a cone without a rim is a bore of its top radius. With one (see {@link RimSettings}) it opens as a bowl:
  * everything inside the mouth, and outside it only what lies above a surface that rises away from the mouth's edge.
+ *
+ * <p>The cone, the bowl and the cavern are the main cut, and its wall is uneven where the settings say so (see
+ * {@link WallNoise}). The discs' domes are not.
  */
 final class ConeShape {
     // The cell hash's index for the roughness of the bowl round the mouth.
@@ -21,8 +24,9 @@ final class ConeShape {
     private ConeShape() {}
 
     /**
-     * The height at which the wall is {@code radius} from the axis, the inverse of {@link #radiusAt}: the floor if the wall is
-     * never further out than that, empty if it is never that close, which is anywhere inside the top radius.
+     * The height at which the wall is {@code radius} from the axis before any unevenness, the inverse of {@link #radiusAt}: the
+     * floor if the wall is never further out than that, empty if it is never that close, which is anywhere inside the top
+     * radius.
      */
     static OptionalDouble heightAt(RavineSettings settings, ConeSettings cone, RavineBounds bounds, double radius) {
         if (radius >= cone.baseRadius()) {
@@ -33,6 +37,33 @@ final class ConeShape {
         }
         double t = 1 - Math.pow((radius - cone.topRadius()) / (cone.baseRadius() - cone.topRadius()), 1.0 / cone.flare());
         return OptionalDouble.of(bounds.floorY() + t * (bounds.topY() - bounds.floorY()));
+    }
+
+    /**
+     * The height at which a column meets the cone's wall going up, unevenness and all: the lowest rock over it. Empty where
+     * the column is open all the way to the top.
+     */
+    static OptionalDouble wallOver(RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, double x, double z) {
+        double radial = cell.distanceToCentre(x, z);
+        WallNoise noise = settings.wallNoise();
+        double reach = noise.maxDisplacement();
+        if (reach == 0) {
+            return heightAt(settings, cone, bounds, radial);
+        }
+        // The wall is moved by no more than its reach, so it meets the column between where it would if it were that much
+        // further in and that much further out.
+        OptionalDouble lowest = heightAt(settings, cone, bounds, radial + reach);
+        if (lowest.isEmpty()) {
+            return OptionalDouble.empty();
+        }
+        OptionalDouble highest = heightAt(settings, cone, bounds, radial - reach);
+        double turn = turnOf(cell, x, z);
+        for (double y = lowest.getAsDouble(); y < highest.orElse(bounds.topY()); y++) {
+            if (radial - noise.offset(cell.hash(), around(cone), turn, y) >= radiusAt(settings, cone, bounds, y)) {
+                return OptionalDouble.of(y);
+            }
+        }
+        return highest;
     }
 
     static double signedDistance(
@@ -63,15 +94,31 @@ final class ConeShape {
         return Math.max(rock, clearAt(cone, bounds, y) - radial);
     }
 
-    // The hole itself, the discs' domes and the cavern.
+    // The main cut and the discs' domes.
     private static double openDistance(
             RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, DiscLayout layout,
             double radial, double x, double y, double z) {
+        double cut = cutDistance(settings, cone, bounds, cell, radial, radial, x, y, z);
+        WallNoise noise = settings.wallNoise();
+        // Unevenness moves the wall by no more than its reach, so further from the wall than that and the carve's falloff it
+        // changes nothing, and is not worked out.
+        if (!noise.layers().isEmpty() && Math.abs(cut) < settings.edgeFalloff() + noise.maxDisplacement()) {
+            double moved = radial - noise.offset(cell.hash(), around(cone), turnOf(cell, x, z), y);
+            cut = cutDistance(settings, cone, bounds, cell, radial, moved, x, y, z);
+        }
+        return Math.min(cut, domes(settings, cone, bounds, layout, radial, x, y, z));
+    }
+
+    /**
+     * The main cut: the hole itself and the cavern at its foot. {@code moved} is the distance from the axis as the wall's
+     * unevenness makes it count: moving the point inwards by as much as the wall there is moved outwards.
+     */
+    private static double cutDistance(
+            RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, double radial, double moved, double x, double y, double z) {
         double hole = y > bounds.topY() && cone.rim().isPresent()
-                ? bowlDistance(cone, cone.rim().get().collar(), bounds, cell, radial, x, y, z)
-                : coneDistance(settings, cone, bounds, radial, y);
-        double open = Math.min(hole, domes(settings, cone, bounds, layout, radial, x, y, z));
-        return Math.min(open, RavineShape.cavernDistance(settings, bounds, radial, y));
+                ? bowlDistance(cone, cone.rim().get().collar(), bounds, cell, radial, moved, x, y, z)
+                : coneDistance(settings, cone, bounds, moved, y);
+        return Math.min(hole, RavineShape.cavernDistance(settings, bounds, moved, y));
     }
 
     private static double domes(
@@ -81,7 +128,7 @@ final class ConeShape {
         return radial > reach ? Double.POSITIVE_INFINITY : Discs.domeDistance(layout, x, y, z);
     }
 
-    /** Radius of the cone at height {@code y}: the base radius at the floor, narrowing to the top radius. */
+    /** Radius of the cone at height {@code y} before any unevenness: the base radius at the floor, narrowing to the top radius. */
     static double radiusAt(RavineSettings settings, ConeSettings cone, RavineBounds bounds, double y) {
         double t = Math.clamp((y - bounds.floorY()) / (double) (bounds.topY() - bounds.floorY()), 0, 1);
         return cone.topRadius() + (cone.baseRadius() - cone.topRadius()) * Math.pow(1 - t, cone.flare());
@@ -99,14 +146,25 @@ final class ConeShape {
         return cone.clearRadius() + (cone.upper().get().clearRadius() - cone.clearRadius()) * t;
     }
 
+    // The distance round the hole that the wall's unevenness counts its wavelengths along: where the cone is of middling width.
+    private static double around(ConeSettings cone) {
+        return Math.PI * (cone.topRadius() + cone.baseRadius());
+    }
+
+    // How far round the axis a column is, from 0 to 1.
+    private static double turnOf(RavineCell cell, double x, double z) {
+        double turn = Math.atan2(z - cell.centreZ(), x - cell.centreX()) / (2 * Math.PI);
+        return turn - Math.floor(turn);
+    }
+
     /**
      * The bowl above the top: open inside the mouth, and outside it above the collar's surface, which rises from the mouth's
      * edge on that side. The surface has no upper end, so however high the ground stands it is cut back to a slope and never
      * to a wall. Dividing by the slope's length makes this the distance to the surface rather than the vertical gap.
      */
     private static double bowlDistance(
-            ConeSettings cone, RimSettings.Collar collar, RavineBounds bounds, RavineCell cell, double radial, double x, double y, double z) {
-        double out = radial - cone.topRadius();
+            ConeSettings cone, RimSettings.Collar collar, RavineBounds bounds, RavineCell cell, double radial, double moved, double x, double y, double z) {
+        double out = moved - cone.topRadius();
         if (out <= 0) {
             return out;
         }

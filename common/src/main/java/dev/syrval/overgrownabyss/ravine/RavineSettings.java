@@ -15,7 +15,8 @@ import net.minecraft.world.level.levelgen.WorldGenerationContext;
  * curving shaft, see {@link RavineGeometry}) or a {@code cone} (see {@link ConeSettings}); exactly one is given. Both are filled
  * with the same discs, which {@code discs} describes (see {@link DiscShape}). {@code disc_themes} are the kinds of disc there
  * are (see {@link DiscTheme}): each disc is given one, which sets its biome, what it is made of and what grows on it. Without
- * any, every disc is the terrain's own rock in the biome it lies in.
+ * any, every disc is the terrain's own rock in the biome it lies in. {@code wall_noise} makes a cone's own wall uneven (see
+ * {@link WallNoise}); without it the wall is an exact surface of revolution.
  *
  * <p>Each ravine draws one size from 0 to 1 (a uniform draw raised to {@code size_bias}: 1 is even, below 1 favours large
  * ravines, above 1 small ones). The vertical bounds are anchors so the cavern floor follows the world bottom of whatever
@@ -35,6 +36,7 @@ public record RavineSettings(
         DiscShape discs,
         List<DiscTheme> discThemes,
         RavineEnvironment environment,
+        WallNoise wallNoise,
         Optional<RavineGeometry> ravine,
         Optional<ConeSettings> cone) {
 
@@ -51,6 +53,7 @@ public record RavineSettings(
             DiscShape.CODEC.fieldOf("discs").forGetter(RavineSettings::discs),
             DiscTheme.CODEC.listOf().optionalFieldOf("disc_themes", List.of()).forGetter(RavineSettings::discThemes),
             RavineEnvironment.CODEC.fieldOf("environment").forGetter(RavineSettings::environment),
+            WallNoise.CODEC.optionalFieldOf("wall_noise", WallNoise.NONE).forGetter(RavineSettings::wallNoise),
             RavineGeometry.CODEC.optionalFieldOf("ravine").forGetter(RavineSettings::ravine),
             ConeSettings.CODEC.optionalFieldOf("cone").forGetter(RavineSettings::cone)
     ).apply(i, RavineSettings::new)).validate(RavineSettings::validate);
@@ -138,6 +141,16 @@ public record RavineSettings(
         if (s.cone.flatMap(ConeSettings::rim).isPresent() && s.cone.get().rim().get().topRoom() < highestDomeNeeds(s, s.cone.get())) {
             return DataResult.error(() -> "the rim's top_room must be at least " + highestDomeNeeds(s, s.cone.get())
                     + " (min_height and half the layers' jitter), or the top layer's discs have no room for a dome");
+        }
+        double moved = s.wallNoise.maxDisplacement();
+        if (moved > 0 && s.cone.isEmpty()) {
+            return DataResult.error(() -> "wall_noise is only for a cone");
+        }
+        if (moved > 0 && s.cone.get().topRadius() - moved <= s.cone.get().widestClearRadius()) {
+            return DataResult.error(() -> "wall_noise moves the wall by up to " + moved + " blocks, which at the top brings it into the clear air round the axis");
+        }
+        if (moved > 0 && Math.max(s.cone.get().baseRadius(), s.cavernRadius) + moved > s.cone.get().outerRadius()) {
+            return DataResult.error(() -> "wall_noise moves the wall by up to " + moved + " blocks, which at the floor takes it past the cone's outer_radius");
         }
         return DataResult.success(s);
     }

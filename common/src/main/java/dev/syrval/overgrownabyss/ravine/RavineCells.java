@@ -114,6 +114,24 @@ public final class RavineCells {
         return smoothAt(hash, index, (x * cos - z * sin) / size, (x * sin + z * cos) / size);
     }
 
+    /**
+     * The {@code index}-th smooth value in {@code [0, 1)} drawn from a cell hash on a surface that closes on itself one way: it
+     * is the same at {@code around} as at 0, {@code around} being a whole number of columns. Each column is slid along the other
+     * way by an amount of its own (drawn from {@code index + 1}), so the values line up in columns and never in rows.
+     */
+    static double smoothRound(long hash, int index, double round, int around, double along) {
+        int column = (int) Math.floor(round);
+        return lerp(ease(round - column),
+                smoothIn(hash, index, Math.floorMod(column, around), along),
+                smoothIn(hash, index, Math.floorMod(column + 1, around), along));
+    }
+
+    private static double smoothIn(long hash, int index, int column, double along) {
+        double slid = along + unitAt(hash, index + 1, column, 0);
+        int whole = (int) Math.floor(slid);
+        return lerp(ease(slid - whole), unitAt(hash, index, column, whole), unitAt(hash, index, column, whole + 1));
+    }
+
     /** The smooth value that {@code share} of all smooth values lie below. */
     static double levelBelow(double share) {
         double at = Math.clamp(share, 0, 1) * (LEVELS.size() - 1);

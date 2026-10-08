@@ -251,7 +251,7 @@ public final class RavineDensityHook {
                     p.spacing(), p.rowSpacing(), p.rowJitter(), p.largeOffsetBonus(), p.maxOvershoot(), p.sideStagger(),
                     ravine.curvature().maxBend(), ravine.curvature().maxWiggle(), ravine.curvature().maxLean(), ravine.curvature().maxBow());
         });
-        s.cone().ifPresent(cone -> OvergrownAbyss.LOGGER.info("Cone: {}", cone));
+        s.cone().ifPresent(cone -> OvergrownAbyss.LOGGER.info("Cone: {}, wall noise {}", cone, s.wallNoise().layers()));
     }
 
     /**

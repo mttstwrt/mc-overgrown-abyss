@@ -45,7 +45,7 @@ class DiscBlocksTest {
     static RavineSettings painted(ConeSettings cone, List<DiscTheme> themes, DiscShape shape) {
         RavineSettings s = ConeShapeTest.withCone(cone, shape);
         return new RavineSettings(s.salt(), s.cellSize(), s.chance(), s.sizeBias(), s.floor(), s.top(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(),
-                s.discs(), themes, s.environment(), s.ravine(), s.cone());
+                s.discs(), themes, s.environment(), s.wallNoise(), s.ravine(), s.cone());
     }
 
     private static RavineCell cell(RavineSettings settings, int cz) {

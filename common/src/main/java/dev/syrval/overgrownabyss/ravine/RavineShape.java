@@ -72,7 +72,8 @@ public final class RavineShape {
 
     /**
      * Whether a point is inside the cavern dome grown outwards by {@code margin} blocks. The margin reaches the floor,
-     * walls and roof surfaces, so features placed on them are placed in the cavern's biome too.
+     * walls and roof surfaces, so features placed on them are placed in the cavern's biome too. Sideways it also covers as far
+     * as an uneven wall may be moved out.
      */
     public static boolean cavernContains(RavineSettings settings, RavineBounds bounds, RavineCell cell, double x, double y, double z, double margin) {
         double above = y - bounds.floorY();
@@ -80,7 +81,7 @@ public final class RavineShape {
             return false;
         }
         double t = Math.clamp(above / settings.cavernHeight(), 0, 1);
-        return cell.distanceToCentre(x, z) <= settings.cavernRadius() * Math.sqrt(1 - t * t) + margin;
+        return cell.distanceToCentre(x, z) <= settings.cavernRadius() * Math.sqrt(1 - t * t) + margin + settings.wallNoise().maxDisplacement();
     }
 
     /** How many rows of discs (or layers, in a cone) fit between the cavern roof and the ceiling margin in this level. */

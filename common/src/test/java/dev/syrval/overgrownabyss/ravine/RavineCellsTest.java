@@ -35,7 +35,7 @@ class RavineCellsTest {
     static RavineSettings settings(long salt, float chance, float sizeBias) {
         return new RavineSettings(
                 salt, 2048, chance, sizeBias, VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 128, 48, 8F,
-                SHAPE, List.of(), ENVIRONMENT, Optional.of(GEOMETRY), Optional.empty());
+                SHAPE, List.of(), ENVIRONMENT, WallNoise.NONE, Optional.of(GEOMETRY), Optional.empty());
     }
 
     @Test
@@ -173,6 +173,23 @@ class RavineCellsTest {
             }
         }
         assertTrue(RavineCells.smoothAt(hash, 4, 0.4, 0.4) != RavineCells.smoothAt(hash, 5, 0.4, 0.4), "each index is a pattern of its own");
+    }
+
+    @Test
+    void smoothValuesRoundAClosedSurfaceMeetWhereItClosesAndChangeGradually() {
+        long hash = 0x5EEDL;
+        int around = 9;
+        for (double along = -6; along < 6; along += 0.37) {
+            assertEquals(RavineCells.smoothRound(hash, 20, 0, around, along), RavineCells.smoothRound(hash, 20, around, around, along), 1e-12, "the same after one turn");
+            assertEquals(RavineCells.smoothRound(hash, 20, 2.3, around, along), RavineCells.smoothRound(hash, 20, 2.3 - around, around, along), 1e-9, "and one turn back");
+            for (double round = 0; round < around; round += 0.29) {
+                double here = RavineCells.smoothRound(hash, 20, round, around, along);
+                assertTrue(here >= 0 && here < 1, "out of range: " + here);
+                assertTrue(Math.abs(RavineCells.smoothRound(hash, 20, round + 0.013, around, along) - here) <= 1.5 * 0.013 + 1e-9, "a jump round at " + round);
+                assertTrue(Math.abs(RavineCells.smoothRound(hash, 20, round, around, along + 0.013) - here) <= 1.5 * 0.013 + 1e-9, "a jump along at " + along);
+            }
+        }
+        assertTrue(RavineCells.smoothRound(hash, 20, 0.4, around, 0.4) != RavineCells.smoothRound(hash, 22, 0.4, around, 0.4), "each index is a pattern of its own");
     }
 
     @Test

@@ -248,7 +248,7 @@ class DiscThemeTest {
         var under = new DiscTheme.Growth(feature("minecraft:cave_vine"), 20, DiscTheme.Surface.UNDERSIDE, Optional.empty());
         var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(onTop, under));
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
-                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.ravine(), base.cone());
+                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.wallNoise(), base.ravine(), base.cone());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
         CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
         Disc d = cellDiscs.layout().discs().get(0);
@@ -373,7 +373,7 @@ class DiscThemeTest {
         var inPatches = new DiscTheme.Growth(feature("minecraft:mangrove"), 6, DiscTheme.Surface.TOP, Optional.of(patches));
         var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(inPatches));
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
-                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.ravine(), base.cone());
+                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.wallNoise(), base.ravine(), base.cone());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
         CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
         Disc d = cellDiscs.layout().discs().get(0);
@@ -439,7 +439,7 @@ class DiscThemeTest {
         var stone = new DiscPalette(List.of(), List.of(), base.discThemes().get(0).palette().body(), DiscPalette.UNPAINTED.stem());
         var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater));
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
-                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(swamp), base.environment(), base.ravine(), base.cone());
+                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(swamp), base.environment(), base.wallNoise(), base.ravine(), base.cone());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
         CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
         Disc d = cellDiscs.layout().discs().get(0);

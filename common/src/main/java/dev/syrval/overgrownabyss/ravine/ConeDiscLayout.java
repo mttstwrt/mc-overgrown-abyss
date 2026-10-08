@@ -123,12 +123,12 @@ final class ConeDiscLayout implements DiscLayout {
     }
 
     /**
-     * Where the wall is over a disc's axis: where the axis meets the cone, or the top of the disc's own dome if the axis is
-     * already inside the wall there. Empty under open sky, and where the wall is too near the top, or with a rim too near the
-     * ground over the axis, to be sure of rock behind it.
+     * Where the wall is over a disc's axis: where the axis meets the cone's wall as its unevenness leaves it, or the top of the
+     * disc's own dome if the axis is already inside the wall there. Empty under open sky, and where the wall is too near the
+     * top, or with a rim too near the ground over the axis, to be sure of rock behind it.
      */
     private OptionalDouble wallAbove(Disc disc) {
-        OptionalDouble meets = ConeShape.heightAt(settings, cone, bounds, cell.distanceToCentre(disc.x(), disc.z()));
+        OptionalDouble meets = ConeShape.wallOver(settings, cone, bounds, cell, disc.x(), disc.z());
         if (meets.isEmpty()) {
             return OptionalDouble.empty();
         }
