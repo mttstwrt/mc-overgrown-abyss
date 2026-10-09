@@ -51,6 +51,23 @@
           "bottom": 1.8,
           "top": 0.4
         },
+        "loot": {
+          "depth": 2,
+          "distance": 1,
+          "tables": [
+            {
+              "table": "overgrown_abyss:chests/disc/lush_1"
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/lush_2",
+              "from": 0.6
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/lush_3",
+              "from": 0.85
+            }
+          ]
+        },
         "kinds": [
           {
             "pool": "overgrown_abyss:disc_ruins/pillar",
@@ -411,6 +428,23 @@
           "bottom": 1.6,
           "top": 0.4
         },
+        "loot": {
+          "depth": 2,
+          "distance": 1,
+          "tables": [
+            {
+              "table": "overgrown_abyss:chests/disc/jungle_1"
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/jungle_2",
+              "from": 0.6
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/jungle_3",
+              "from": 0.85
+            }
+          ]
+        },
         "kinds": [
           {
             "pool": "overgrown_abyss:disc_ruins/tower",
@@ -699,6 +733,23 @@
         "by_height": {
           "bottom": 1.8,
           "top": 0.4
+        },
+        "loot": {
+          "depth": 2,
+          "distance": 1,
+          "tables": [
+            {
+              "table": "overgrown_abyss:chests/disc/mangrove_1"
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/mangrove_2",
+              "from": 0.6
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/mangrove_3",
+              "from": 0.85
+            }
+          ]
         },
         "kinds": [
           {

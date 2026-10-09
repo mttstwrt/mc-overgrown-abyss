@@ -102,6 +102,15 @@ in its middle. Its numbers:
   has one. `by_height` (`bottom` and `top`, 1 and 1 if left out) makes the ruins more or less frequent with a disc's height
   in its hole, from the lowest disc to the highest: both `chance` (up to 1) and the number on a disc are multiplied by it.
   What a ruin can be is given by `kinds`, by `structures`, or by both:
+  - `loot` (optional): what the chests of the theme's own kinds hold. `tables` lists loot tables from the poorest to the
+    richest, each `{"table": "namespace:path", "from": ...}`. A disc has a rank from 0 to 1 among the discs of its hole,
+    which rises with its depth and with its distance from the hole's centre: `depth` and `distance` (1 and 1 if left out)
+    say how much each counts, so the highest disc at the centre ranks 0 and the lowest at the edge 1. All the chests of a
+    ruin hold the last table whose `from` (0 if left out) its disc's rank reaches; each table after the first must be from
+    a higher rank than the one before. This goes for every container a piece has that came with a loot table, and for a
+    chest the mod puts where a template has a data marker named `chest`, as vanilla's ocean ruins have theirs. Without
+    `loot`, or on a disc whose rank reaches no table, chests keep what their pool's processors gave them and no chest is
+    put at a marker. A borrowed structure's piece always keeps its own loot.
   - `kinds`: template pools.
     - `pool`: a template pool; one of its elements is stood on the disc, turned any of four ways about its middle. Only an
       element that is one template is offered (`single_pool_element`, `legacy_single_pool_element`). Nothing is joined on
@@ -225,11 +234,14 @@ The mod's own pieces are vanilla's templates, named by id and not copied, in two
 
 - Pieces of the Ancient City, through the same reskin as the city at the hole's floor (`processor_list/disc_ruins/outpost`:
   a tenth of the blocks rotted away, stone and mossy stone bricks for deepslate, jungle wood, moss for wool, lanterns), so
-  they read as outposts of that city. Their chests hold vanilla's jungle temple loot (`minecraft:chests/jungle_temple`).
+  they read as outposts of that city. Towers, keeps, the vault and the chambers have a chest or two; camps, pillars, the
+  statue and rubble have none.
 - Vanilla's cold ocean ruins (`processor_list/disc_ruins/overgrown`): their air, gravel and sand are left out, so they stand
   in the disc's own ground with whatever grows there; the three kinds of stone brick are mixed; magma, prismarine and
-  cobblestone become mossy cobblestone, sea lanterns shroomlights, the planks jungle planks, the red bricks mud bricks. They
-  have no chests: vanilla puts those in by code.
+  cobblestone become mossy cobblestone, sea lanterns shroomlights, the planks jungle planks, the red bricks mud bricks.
+  Vanilla puts their chests in by code, at a marker in the template, so the mod does the same: every house and all but one
+  of the huts has a chest. Most markers are in a template's lowest layer, which lies in the ground here, so the chest is
+  set into the floor with its lid level with the ground, and now and then under a block of it.
 
 The kinds, each a pool in `data/overgrown_abyss/worldgen/template_pool/disc_ruins/`. The ground and air are what vanilla's
 templates measure; a pack that replaces a template changes them, and the log's `Disc ruins of ...` line says what they are
@@ -257,8 +269,18 @@ is empty and nothing changes. With it, the 14 pieces of `epic:epic_temple_ruin` 
 temples (`epic:epic_temple`, `epic:epic_temple_large`) are 47 blocks each way and 48 high and fit under no dome as the discs
 are. To lend the discs another mod's ruins, add its structure to the tag in a pack of your own.
 
-To change how many ruins there are, change `chance`, `every` and `by_height`; to change which, the weights. A pool of your
-own is a kind like the mod's: name it and say how many of its pieces' lowest layers lie in the ground.
+What the chests hold is a loot table for each theme and rank, in `data/overgrown_abyss/loot_table/chests/disc/`:
+`jungle_1` to `jungle_3`, `lush_1` to `lush_3` and `mangrove_1` to `mangrove_3`. Each has three pools: valuables, what
+grows or lies on that kind of disc, and a prize that is mostly not there. The first is the table of a theme's discs up to a
+rank of 0.6, the second from there and the third from 0.85, with depth counting twice what distance does. Over 24 holes
+about a third of the ruins with chests held the first table, a half the second and a fifth the third. The tables are drafts
+made from vanilla's items for the owner to edit. They are the mod's own, so a pack can pick the disc ruins out by table or
+by mod id (a loot modifier, or Lootr's list of tables that refill). Without `loot` the city pieces' chests hold vanilla's
+jungle temple loot, which their processors give them.
+
+To change how many ruins there are, change `chance`, `every` and `by_height`; to change which, the weights; to change what
+the chests hold, the tables' files, and which discs hold which, `loot`. A pool of your own is a kind like the mod's: name it
+and say how many of its pieces' lowest layers lie in the ground.
 
 - `many-ruins`: the mod's file with `chance` 1, `every` 1200 and no `by_height` on all three themes or on any kind: ruins on
   every disc that has room for one, up to six on a disc, every kind at every height. For looking at the kinds without
