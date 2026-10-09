@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.ToDoubleFunction;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.storage.loot.LootTable;
 
 /**
  * Where the ruins of a cell's discs stand (see {@link DiscRuins}). Each is a pure function of the cell's hash, its disc's
@@ -23,6 +25,7 @@ import java.util.function.ToDoubleFunction;
  * So a tall piece stands where there is the height for it, and a lower one takes its place where there is not.
  *
  * <p>Ruins are more or less frequent with a disc's height in its hole, and so is each kind: see {@link DiscRuins#byHeight}.
+ * A ruin of one of the theme's own kinds is also given the loot table of its disc: see {@link DiscRuins.Loot}.
  */
 final class DiscRuinSites {
     static final int MAX_PER_DISC = 6;
@@ -77,7 +80,8 @@ final class DiscRuinSites {
             double height = traits.get(i).height();
             List<RuinPieces.Kind> kinds = pieces.of(ruins.get());
             if (!kinds.isEmpty() && RavineCells.unit(cell.hash(), base(i)) < ruins.get().chance() * ruins.get().byHeight().at(height)) {
-                hole.ruinsOn(i, theme.get(), ruins.get(), kinds, height, standing, sites);
+                var host = new Host(i, layout.discs().get(i), theme.get(), ruins.get().loot().tableFor(traits.get(i)));
+                hole.ruinsOn(host, ruins.get(), kinds, height, standing, sites);
             }
         }
         return List.copyOf(sites);
@@ -102,8 +106,14 @@ final class DiscRuinSites {
         return drawn.stream().map(Drawn::thing).toList();
     }
 
-    /** A kind as one disc has it: its place among the level's kinds, its weight at the disc's height, and its pieces the disc is wide enough for. */
-    private record Offered(int index, double weight, List<RuinPieces.Piece> pieces) {}
+    /** A disc that holds ruins: its place in the layout, its theme, and the loot table of the theme's own ruins on it, if it names any. */
+    private record Host(int index, Disc disc, DiscTheme theme, Optional<ResourceKey<LootTable>> loot) {}
+
+    /**
+     * A kind as one disc has it: its place among the level's kinds, its weight at the disc's height, its pieces the disc is wide
+     * enough for, and the loot table a ruin of it is given there, which a borrowed kind has none of.
+     */
+    private record Offered(int index, double weight, List<RuinPieces.Piece> pieces, Optional<ResourceKey<LootTable>> loot) {}
 
     /** The room a piece needs. Pieces of one size have the same room, so a size that found none is not tried again for a ruin. */
     private record Size(double radius, int height, int sink) {
@@ -145,16 +155,15 @@ final class DiscRuinSites {
 
     private record Hole(RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout) {
 
-        void ruinsOn(
-                int index, DiscTheme theme, DiscRuins ruins, List<RuinPieces.Kind> kinds, double height, List<Standing> standing, List<Placed> sites) {
-            Disc disc = layout.discs().get(index);
+        void ruinsOn(Host host, DiscRuins ruins, List<RuinPieces.Kind> kinds, double height, List<Standing> standing, List<Placed> sites) {
+            Disc disc = host.disc();
             var offered = new ArrayList<Offered>(kinds.size());
             for (int i = 0; i < kinds.size(); i++) {
                 RuinPieces.Kind kind = kinds.get(i);
                 double weight = kind.weight() * kind.byHeight().at(height);
                 List<RuinPieces.Piece> fitting = kind.pieces().stream().filter(piece -> piece.radius() + MARGIN <= disc.radius()).toList();
                 if (weight > 0 && !fitting.isEmpty()) {
-                    offered.add(new Offered(i, weight, fitting));
+                    offered.add(new Offered(i, weight, fitting, kind.borrowed() ? Optional.empty() : host.loot()));
                 }
             }
             if (offered.isEmpty()) {
@@ -163,15 +172,15 @@ final class DiscRuinSites {
             double area = Math.PI * disc.radius() * disc.radius();
             int wanted = Math.clamp(Math.round(area / ruins.every() * ruins.byHeight().at(height)), 1, MAX_PER_DISC);
             for (int ruin = 0; ruin < wanted; ruin++) {
-                long draws = RavineCells.bits(cell.hash(), base(index) + 1 + ruin);
+                long draws = RavineCells.bits(cell.hash(), base(host.index()) + 1 + ruin);
                 List<Offered> order = inOrder(offered, Offered::weight, kind -> RavineCells.unit(draws, FIRST_KIND_DRAW + kind.index()));
-                stand(index, disc, theme, order, draws, standing).ifPresent(site -> sites.add(new Placed(index, site)));
+                stand(host, order, draws, standing).ifPresent(site -> sites.add(new Placed(host.index(), site)));
             }
         }
 
         // One ruin: the first piece with room, of the kinds in the order given and of each kind's pieces in an order drawn by
         // their weights in its pool.
-        private Optional<RuinSite> stand(int index, Disc disc, DiscTheme theme, List<Offered> kinds, long draws, List<Standing> standing) {
+        private Optional<RuinSite> stand(Host host, List<Offered> kinds, long draws, List<Standing> standing) {
             var full = new HashSet<Size>();
             for (Offered kind : kinds) {
                 long order = RavineCells.bits(draws, -1 - kind.index());
@@ -179,7 +188,7 @@ final class DiscRuinSites {
                     if (full.contains(Size.of(piece))) {
                         continue;
                     }
-                    Optional<RuinSite> site = place(index, disc, theme, piece, draws, standing);
+                    Optional<RuinSite> site = place(host, piece, kind.loot(), draws, standing);
                     if (site.isPresent()) {
                         return site;
                     }
@@ -190,14 +199,16 @@ final class DiscRuinSites {
         }
 
         // A piece at the first of the places drawn for its ruin where it has room.
-        private Optional<RuinSite> place(int index, Disc disc, DiscTheme theme, RuinPieces.Piece piece, long draws, List<Standing> standing) {
+        private Optional<RuinSite> place(
+                Host host, RuinPieces.Piece piece, Optional<ResourceKey<LootTable>> loot, long draws, List<Standing> standing) {
             for (int attempt = 0; attempt < TRIES; attempt++) {
-                Round round = roundAt(disc, piece, draws, attempt);
-                OptionalInt ground = groundFor(index, disc, theme, piece, round, standing);
+                Round round = roundAt(host.disc(), piece, draws, attempt);
+                OptionalInt ground = groundFor(host, piece, round, standing);
                 if (ground.isPresent()) {
-                    standing.add(new Standing(index, round, ground.getAsInt() - piece.sink(), topOver(ground.getAsInt(), piece)));
+                    standing.add(new Standing(host.index(), round, ground.getAsInt() - piece.sink(), topOver(ground.getAsInt(), piece)));
                     long seed = RavineCells.bits(draws, SEED_DRAW);
-                    return Optional.of(new RuinSite(round.x(), ground.getAsInt() + 1 - piece.sink(), round.z(), piece.pool(), piece.element(), seed));
+                    return Optional.of(new RuinSite(
+                            round.x(), ground.getAsInt() + 1 - piece.sink(), round.z(), piece.pool(), piece.element(), seed, loot));
                 }
             }
             return Optional.empty();
@@ -216,7 +227,8 @@ final class DiscRuinSites {
         }
 
         /** The height of the lowest ground in a round, which the piece stands on, or empty if the round has no room for it. */
-        private OptionalInt groundFor(int index, Disc disc, DiscTheme theme, RuinPieces.Piece piece, Round round, List<Standing> standing) {
+        private OptionalInt groundFor(Host host, RuinPieces.Piece piece, Round round, List<Standing> standing) {
+            Disc disc = host.disc();
             double fromAxis = round.distanceTo(disc.x(), disc.z());
             // Putting the middle on a whole block may have moved the round out past the rim's margin.
             if (fromAxis + round.radius() + MARGIN > disc.radius()) {
@@ -227,10 +239,10 @@ final class DiscRuinSites {
                 return OptionalInt.empty();
             }
             int top = topOver(lowest, piece);
-            if (standing.stream().anyMatch(other -> other.isNear(index, round, lowest - piece.sink(), top))) {
+            if (standing.stream().anyMatch(other -> other.isNear(host.index(), round, lowest - piece.sink(), top))) {
                 return OptionalInt.empty();
             }
-            if (isWet(index, disc, theme, round) || isCrossed(disc, round, lowest, top)
+            if (isWet(host, round) || isCrossed(disc, round, lowest, top)
                     || !isRockUnder(round, lowest, piece.sink()) || !isOpenOver(round, lowest, top)) {
                 return OptionalInt.empty();
             }
@@ -243,11 +255,11 @@ final class DiscRuinSites {
         }
 
         // A stream may run under a ruin, whose floor then bridges it; a pond may not lie under one. Every other column is asked.
-        private boolean isWet(int index, Disc disc, DiscTheme theme, Round round) {
-            if (theme.water().isEmpty()) {
+        private boolean isWet(Host host, Round round) {
+            if (host.theme().water().isEmpty()) {
                 return false;
             }
-            DiscWater water = theme.water().get();
+            DiscWater water = host.theme().water().get();
             int reach = (int) Math.ceil(round.radius());
             int columns = 0;
             int wet = 0;
@@ -255,7 +267,7 @@ final class DiscRuinSites {
                 for (int z = round.z() - reach; z <= round.z() + reach; z += 2) {
                     if (round.distanceTo(x + 0.5, z + 0.5) <= round.radius()) {
                         columns++;
-                        wet += water.depthAt(disc, cell.hash(), index, x, z) > 0 ? 1 : 0;
+                        wet += water.depthAt(host.disc(), cell.hash(), host.index(), x, z) > 0 ? 1 : 0;
                     }
                 }
             }

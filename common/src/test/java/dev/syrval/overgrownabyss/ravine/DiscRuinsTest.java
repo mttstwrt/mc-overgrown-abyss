@@ -22,6 +22,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
+import net.minecraft.world.level.storage.loot.LootTable;
 import org.junit.jupiter.api.Test;
 
 /** The ruins on discs: how they are written, which discs have them, and that each stands where it has the room. */
@@ -44,7 +45,11 @@ class DiscRuinsTest {
     }
 
     private static DiscRuins ruins(float chance, int every, DiscTheme.Ramp byHeight, DiscRuins.Kind... kinds) {
-        return new DiscRuins(chance, every, byHeight, List.of(kinds), List.of());
+        return new DiscRuins(chance, every, byHeight, DiscRuins.Loot.NONE, List.of(kinds), List.of());
+    }
+
+    private static ResourceKey<LootTable> table(String path) {
+        return ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.fromNamespaceAndPath("overgrown_abyss", path));
     }
 
     private static RuinPieces.Piece piece(String pool, int element, int weight, double radius, int height, int sink) {
@@ -56,7 +61,7 @@ class DiscRuinsTest {
     private static RuinPieces pieces(DiscRuins ruins, List<RuinPieces.Piece>... ofKinds) {
         var kinds = new ArrayList<RuinPieces.Kind>();
         for (int i = 0; i < ofKinds.length; i++) {
-            kinds.add(new RuinPieces.Kind(ruins.kinds().get(i).weight(), ruins.kinds().get(i).byHeight(), ofKinds[i]));
+            kinds.add(new RuinPieces.Kind(ruins.kinds().get(i).weight(), ruins.kinds().get(i).byHeight(), false, ofKinds[i]));
         }
         return new RuinPieces(Map.of(ruins, kinds));
     }
@@ -145,6 +150,97 @@ class DiscRuinsTest {
                         + " \"structures\": [{\"tag\": \"#minecraft:village\", \"weight\": 0}]}")).isError(), "nothing with a weight");
         assertTrue(DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
                 "{\"chance\": 2, \"kinds\": [{\"pool\": \"minecraft:empty\", \"weight\": 1}]}")).isError(), "a chance above 1");
+    }
+
+    private static DiscRuins.Loot loot(float depth, float distance, float fair, float rich) {
+        return new DiscRuins.Loot(
+                List.of(new DiscRuins.Loot.Tier(table("poor"), 0), new DiscRuins.Loot.Tier(table("fair"), fair), new DiscRuins.Loot.Tier(table("rich"), rich)),
+                depth, distance);
+    }
+
+    private static boolean readsAsRuins(String json) {
+        return DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).isSuccess();
+    }
+
+    @Test
+    void lootIsWrittenAsTablesFromThePoorestToTheRichest() {
+        DiscRuins ruins = DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("""
+                {"chance": 0.5, "loot": {"depth": 3, "tables": [{"table": "overgrown_abyss:poor"}, {"table": "overgrown_abyss:rich", "from": 0.75}]},
+                 "kinds": [{"pool": "minecraft:empty", "weight": 1}]}""")).getOrThrow();
+        var expected = new DiscRuins.Loot(List.of(new DiscRuins.Loot.Tier(table("poor"), 0), new DiscRuins.Loot.Tier(table("rich"), 0.75F)), 3, 1);
+        assertEquals(expected, ruins.loot(), "the first table is from the lowest rank and distance counts for 1, unless they say otherwise");
+        assertEquals(ruins, DiscRuins.CODEC.parse(JsonOps.INSTANCE, DiscRuins.CODEC.encodeStart(JsonOps.INSTANCE, ruins).getOrThrow()).getOrThrow(),
+                "written and read again");
+
+        String kinds = "\"kinds\": [{\"pool\": \"minecraft:empty\", \"weight\": 1}]}";
+        DiscRuins plain = DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"chance\": 0.5, " + kinds)).getOrThrow();
+        assertEquals(Optional.empty(), plain.loot().tableFor(new DiscTraits(0, 1, 0.5)), "no tables, so a ruin's chests are left as its pool made them");
+        assertFalse(DiscRuins.CODEC.encodeStart(JsonOps.INSTANCE, plain).getOrThrow().getAsJsonObject().has("loot"), "and nothing is written for it");
+        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": []}, " + kinds), "loot with no table");
+        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:empty\"}], \"depth\": 0, \"distance\": 0}, " + kinds),
+                "neither depth nor distance counting");
+        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:a\", \"from\": 0.5}, {\"table\": \"minecraft:b\", \"from\": 0.5}]}, " + kinds),
+                "two tables from the same rank, of which the first would never be held");
+        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:a\", \"from\": 0.5}, {\"table\": \"minecraft:b\"}]}, " + kinds),
+                "tables out of order");
+        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:a\", \"from\": 1.5}]}, " + kinds), "a rank above 1");
+    }
+
+    @Test
+    void aDiscsTableRisesWithItsDepthAndWithItsDistanceFromTheCentre() {
+        DiscRuins.Loot loot = loot(2, 1, 0.4F, 0.8F);
+        assertEquals(0, loot.rank(new DiscTraits(1, 0, 0.5)), 1e-9, "the highest disc, at the centre");
+        assertEquals(1, loot.rank(new DiscTraits(0, 1, 0.5)), 1e-9, "the lowest, at the edge");
+        assertEquals(2 / 3.0, loot.rank(new DiscTraits(0, 0, 0.5)), 1e-9, "depth counts twice what distance does");
+        assertEquals(1 / 3.0, loot.rank(new DiscTraits(1, 1, 0.5)), 1e-9);
+        assertEquals(table("poor"), loot.tableFor(new DiscTraits(1, 0, 0.5)).orElseThrow());
+        assertEquals(table("rich"), loot.tableFor(new DiscTraits(0, 1, 0.5)).orElseThrow());
+        assertEquals(table("fair"), loot.tableFor(new DiscTraits(0, 0, 0.5)).orElseThrow(), "the lowest disc is not the richest at the centre");
+        assertEquals(table("poor"), loot.tableFor(new DiscTraits(1, 1, 0.5)).orElseThrow(), "nor the highest at the edge");
+        assertEquals(table("fair"), loot.tableFor(new DiscTraits(0.7, 0.75, 0.5)).orElseThrow(), "a rank of 0.45 is past where the fair table begins");
+        assertEquals(table("poor"), loot.tableFor(new DiscTraits(0.7, 0.45, 0.5)).orElseThrow(), "and one of 0.35 is not");
+        assertEquals(loot.tableFor(new DiscTraits(0.3, 0.4, 0)), loot.tableFor(new DiscTraits(0.3, 0.4, 1)), "a disc's size does not count");
+
+        DiscRuins.Loot byDepth = loot(1, 0, 0.4F, 0.8F);
+        assertEquals(table("rich"), byDepth.tableFor(new DiscTraits(0.1, 0, 0.5)).orElseThrow(), "depth alone");
+        assertEquals(table("poor"), byDepth.tableFor(new DiscTraits(0.9, 1, 0.5)).orElseThrow());
+        DiscRuins.Loot byDistance = loot(0, 1, 0.4F, 0.8F);
+        assertEquals(table("rich"), byDistance.tableFor(new DiscTraits(1, 0.9, 0.5)).orElseThrow(), "distance alone");
+        assertEquals(table("poor"), byDistance.tableFor(new DiscTraits(0, 0.1, 0.5)).orElseThrow());
+
+        var onlyTheRich = new DiscRuins.Loot(List.of(new DiscRuins.Loot.Tier(table("rich"), 0.8F)), 2, 1);
+        assertEquals(Optional.of(table("rich")), onlyTheRich.tableFor(new DiscTraits(0, 1, 0.5)));
+        assertEquals(Optional.empty(), onlyTheRich.tableFor(new DiscTraits(1, 0, 0.5)), "a disc whose rank reaches no table has none");
+    }
+
+    @Test
+    void aRuinOfTheThemesOwnHoldsItsDiscsTableAndABorrowedOneKeepsItsOwn() throws Exception {
+        DiscRuins.Loot loot = loot(2, 1, 0.5F, 0.8F);
+        DiscRuins ruins = new DiscRuins(1, 1500, EVEN, loot, List.of(kind("own", 1, EVEN)), List.of());
+        var pieces = new RuinPieces(Map.of(ruins, List.of(
+                new RuinPieces.Kind(1, EVEN, false, List.of(piece("own", 0, 1, 5, 6, 0))),
+                new RuinPieces.Kind(1, EVEN, true, List.of(piece("lent", 0, 1, 5, 6, 0))))));
+        RavineSettings settings = with(ruined(Optional.empty(), ruins));
+        var heights = new HashMap<ResourceKey<LootTable>, List<Double>>();
+        int lent = 0;
+        for (int cz = 0; cz < CELLS; cz++) {
+            for (Standing ruin : standing(settings, cz, discs(settings, cz, pieces), pieces)) {
+                if (ruin.site().pool().equals(pool("lent"))) {
+                    assertEquals(Optional.empty(), ruin.site().loot(), "a borrowed ruin is given no table");
+                    lent++;
+                } else {
+                    assertEquals(loot.tableFor(ruin.traits()), ruin.site().loot(), "the table of the disc that " + ruin.site() + " stands on");
+                    heights.computeIfAbsent(ruin.site().loot().orElseThrow(), table -> new ArrayList<>()).add(ruin.traits().height());
+                }
+            }
+        }
+        assertTrue(lent > 20, lent + " borrowed ruins");
+        assertEquals(Set.of(table("poor"), table("fair"), table("rich")), heights.keySet(), "every table is some ruin's");
+        assertTrue(heights.values().stream().allMatch(of -> of.size() > 10), "and each has its share: " + heights.entrySet().stream()
+                .collect(Collectors.toMap(entry -> entry.getKey().location().getPath(), entry -> entry.getValue().size())));
+        double poor = heights.get(table("poor")).stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+        double rich = heights.get(table("rich")).stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+        assertTrue(rich < 0.3 && poor > 0.5, "the rich table lies low (" + rich + ") and the poor one high (" + poor + ")");
     }
 
     @Test

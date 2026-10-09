@@ -19,9 +19,10 @@ public record RuinPieces(Map<DiscRuins, List<Kind>> byRuins) {
      *
      * @param weight   how often a ruin is of this kind where it has room, against the weights of the others
      * @param byHeight how that weight changes from the hole's lowest disc to its highest
+     * @param borrowed whether it is another structure's, which keeps the loot of its own templates
      * @param pieces   the pieces of the kind's pool that could be measured
      */
-    public record Kind(float weight, DiscTheme.Ramp byHeight, List<Piece> pieces) {
+    public record Kind(float weight, DiscTheme.Ramp byHeight, boolean borrowed, List<Piece> pieces) {
         public Kind {
             pieces = List.copyOf(pieces);
         }

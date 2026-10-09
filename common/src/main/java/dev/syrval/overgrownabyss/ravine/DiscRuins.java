@@ -4,11 +4,14 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
+import net.minecraft.world.level.storage.loot.LootTable;
 
 /**
  * The ruins on one kind of disc. Not every disc of the theme has any: {@code chance} is the share that do. On those there is
@@ -23,11 +26,79 @@ import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
  * @param every      blocks of a disc's top for each ruin on it; without it a disc holds one
  * @param byHeight   how many times as frequent the ruins are from the hole's lowest disc to its highest: both the share of
  *                   discs that hold any and how many a disc holds are multiplied by it
+ * @param loot       what the chests of the theme's own kinds hold
  * @param kinds      the kinds of ruin the theme has of its own
  * @param structures other structures whose pieces stand as ruins here, by tag
  */
-public record DiscRuins(float chance, int every, DiscTheme.Ramp byHeight, List<Kind> kinds, List<Borrowed> structures) {
+public record DiscRuins(float chance, int every, DiscTheme.Ramp byHeight, Loot loot, List<Kind> kinds, List<Borrowed> structures) {
     private static final int ONE_A_DISC = 1_000_000;
+
+    /**
+     * The treasure of a theme's own ruins: loot tables from the poorest to the richest, each with the rank a disc must have
+     * for its ruins to hold it. A disc's rank runs from 0 to 1 among the discs of its hole and rises with its depth and with
+     * its distance from the hole's centre. All the chests of a ruin hold the last table whose {@code from} its disc's rank
+     * reaches. A ruin borrowed from another structure keeps the loot its own templates name.
+     *
+     * @param tables   the tables, poorest first; with none, or on a disc whose rank reaches none, a ruin's chests keep what
+     *                 its pool's processors gave them
+     * @param depth    how much a disc's depth in its hole counts toward its rank
+     * @param distance how much its distance from the hole's centre counts
+     */
+    public record Loot(List<Tier> tables, float depth, float distance) {
+        static final Loot NONE = new Loot(List.of(), 1, 1);
+
+        /**
+         * One table and the discs that have it.
+         *
+         * @param table the loot table
+         * @param from  the least rank of a disc whose ruins hold it; they hold the next table instead from that one's
+         */
+        public record Tier(ResourceKey<LootTable> table, float from) {
+            static final Codec<Tier> CODEC = RecordCodecBuilder.create(i -> i.group(
+                    ResourceKey.codec(Registries.LOOT_TABLE).fieldOf("table").forGetter(Tier::table),
+                    Codec.floatRange(0, 1).optionalFieldOf("from", 0F).forGetter(Tier::from)
+            ).apply(i, Tier::new));
+        }
+
+        static final Codec<Loot> CODEC = RecordCodecBuilder.<Loot>create(i -> i.group(
+                ExtraCodecs.nonEmptyList(Tier.CODEC.listOf()).fieldOf("tables").forGetter(Loot::tables),
+                Codec.floatRange(0, 100).optionalFieldOf("depth", 1F).forGetter(Loot::depth),
+                Codec.floatRange(0, 100).optionalFieldOf("distance", 1F).forGetter(Loot::distance)
+        ).apply(i, Loot::new)).validate(Loot::validate);
+
+        private static DataResult<Loot> validate(Loot loot) {
+            if (loot.depth + loot.distance <= 0) {
+                return DataResult.error(() -> "loot needs depth or distance to count for something");
+            }
+            for (int i = 1; i < loot.tables.size(); i++) {
+                if (loot.tables.get(i).from() <= loot.tables.get(i - 1).from()) {
+                    return DataResult.error(() -> "each loot table after the first must be from a higher rank than the one before it");
+                }
+            }
+            return DataResult.success(loot);
+        }
+
+        public Loot {
+            tables = List.copyOf(tables);
+        }
+
+        /** How deep and far out a disc is among its hole's discs, by these weights: 0 for the highest at the centre, 1 for the lowest at the edge. */
+        double rank(DiscTraits traits) {
+            return (depth * (1 - traits.height()) + distance * traits.distance()) / (depth + distance);
+        }
+
+        /** The table for the ruins of a disc; none if its rank reaches no table. */
+        Optional<ResourceKey<LootTable>> tableFor(DiscTraits traits) {
+            double rank = rank(traits);
+            Optional<ResourceKey<LootTable>> reached = Optional.empty();
+            for (Tier tier : tables) {
+                if (rank >= tier.from()) {
+                    reached = Optional.of(tier.table());
+                }
+            }
+            return reached;
+        }
+    }
 
     /**
      * One kind of ruin: a template pool, one of whose pieces is stood on the disc, turned any of four ways about its middle.
@@ -69,6 +140,7 @@ public record DiscRuins(float chance, int every, DiscTheme.Ramp byHeight, List<K
             Codec.floatRange(0, 1).fieldOf("chance").forGetter(DiscRuins::chance),
             Codec.intRange(64, ONE_A_DISC).optionalFieldOf("every", ONE_A_DISC).forGetter(DiscRuins::every),
             DiscTheme.Ramp.BY_HEIGHT.optionalFieldOf("by_height", DiscTheme.Ramp.EVEN).forGetter(DiscRuins::byHeight),
+            Loot.CODEC.optionalFieldOf("loot", Loot.NONE).forGetter(DiscRuins::loot),
             Kind.CODEC.listOf().optionalFieldOf("kinds", List.of()).forGetter(DiscRuins::kinds),
             Borrowed.CODEC.listOf().optionalFieldOf("structures", List.of()).forGetter(DiscRuins::structures)
     ).apply(i, DiscRuins::new)).validate(DiscRuins::validate);

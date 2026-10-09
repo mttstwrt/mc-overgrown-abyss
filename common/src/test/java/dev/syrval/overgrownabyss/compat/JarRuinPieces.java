@@ -97,6 +97,6 @@ public final class JarRuinPieces {
         for (int i = 0; i < elements.size(); i++) {
             pieces.add(piece(kind.pool(), i, elements.get(i), kind.sink()).orElseThrow());
         }
-        return new RuinPieces.Kind(kind.weight(), kind.byHeight(), pieces);
+        return new RuinPieces.Kind(kind.weight(), kind.byHeight(), false, pieces);
     }
 }

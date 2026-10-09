@@ -196,7 +196,7 @@ final class DiscRuinPieces {
     private List<RuinPieces.Kind> kindsOf(DiscRuins ruins) {
         var kinds = new ArrayList<RuinPieces.Kind>();
         for (DiscRuins.Kind kind : ruins.kinds()) {
-            addKind(kinds, kind.weight(), kind.byHeight(), new Source(kind.pool(), kind.sink()));
+            addKind(kinds, kind.weight(), kind.byHeight(), false, new Source(kind.pool(), kind.sink()));
         }
         for (DiscRuins.Borrowed borrowed : ruins.structures()) {
             // By name, so that the kinds do not depend on the order in which packs added to the tag.
@@ -204,7 +204,7 @@ final class DiscRuinPieces {
                     .sorted(Comparator.comparing(Holder::getRegisteredName)).toList();
             for (Holder<Structure> structure : tagged) {
                 starts.computeIfAbsent(structure.getRegisteredName(), name -> lentBy(structure, borrowed.tag()))
-                        .ifPresent(start -> addKind(kinds, borrowed.weight(), borrowed.byHeight(), start));
+                        .ifPresent(start -> addKind(kinds, borrowed.weight(), borrowed.byHeight(), true, start));
             }
         }
         return List.copyOf(kinds);
@@ -219,10 +219,10 @@ final class DiscRuinPieces {
         return start;
     }
 
-    private void addKind(List<RuinPieces.Kind> kinds, float weight, DiscTheme.Ramp byHeight, Source source) {
+    private void addKind(List<RuinPieces.Kind> kinds, float weight, DiscTheme.Ramp byHeight, boolean borrowed, Source source) {
         List<RuinPieces.Piece> pieces = measured.computeIfAbsent(source, this::piecesIn);
         if (!pieces.isEmpty()) {
-            kinds.add(new RuinPieces.Kind(weight, byHeight, pieces));
+            kinds.add(new RuinPieces.Kind(weight, byHeight, borrowed, pieces));
         }
     }
 
