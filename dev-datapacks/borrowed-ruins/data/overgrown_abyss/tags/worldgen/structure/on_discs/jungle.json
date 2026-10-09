@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:village_plains",
+    "minecraft:pillager_outpost",
+    "minecraft:trail_ruins"
+  ]
+}

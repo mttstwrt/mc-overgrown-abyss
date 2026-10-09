@@ -47,37 +47,45 @@
       "ruins": {
         "chance": 0.3,
         "every": 4000,
+        "by_height": {
+          "bottom": 1.8,
+          "top": 0.4
+        },
         "kinds": [
           {
             "pool": "overgrown_abyss:disc_ruins/pillar",
-            "weight": 6,
-            "radius": 5.5,
-            "height": 15
+            "weight": 6
           },
           {
             "pool": "overgrown_abyss:disc_ruins/chamber",
-            "weight": 4,
-            "radius": 8.5,
-            "height": 6
+            "weight": 4
           },
           {
             "pool": "overgrown_abyss:disc_ruins/statue",
-            "weight": 3,
-            "radius": 6.5,
-            "height": 5
+            "weight": 3
           },
           {
             "pool": "overgrown_abyss:disc_ruins/hut",
             "weight": 3,
-            "radius": 5,
-            "height": 6,
+            "by_height": {
+              "bottom": 0.6,
+              "top": 1.6
+            },
             "sink": 1
           },
           {
             "pool": "overgrown_abyss:disc_ruins/rubble",
             "weight": 4,
-            "radius": 10,
-            "height": 3
+            "by_height": {
+              "bottom": 0.5,
+              "top": 2
+            }
+          }
+        ],
+        "structures": [
+          {
+            "tag": "#overgrown_abyss:on_discs/jungle",
+            "weight": 5
           }
         ]
       }
@@ -399,68 +407,86 @@
       "ruins": {
         "chance": 0.6,
         "every": 3000,
+        "by_height": {
+          "bottom": 1.6,
+          "top": 0.4
+        },
         "kinds": [
           {
             "pool": "overgrown_abyss:disc_ruins/tower",
             "weight": 40,
-            "radius": 12.5,
-            "height": 19
+            "by_height": {
+              "bottom": 2,
+              "top": 0.3
+            }
           },
           {
             "pool": "overgrown_abyss:disc_ruins/keep",
             "weight": 20,
-            "radius": 12.5,
-            "height": 13
+            "by_height": {
+              "bottom": 2,
+              "top": 0.3
+            }
           },
           {
             "pool": "overgrown_abyss:disc_ruins/vault",
             "weight": 10,
-            "radius": 12.5,
-            "height": 10
+            "by_height": {
+              "bottom": 1.8,
+              "top": 0.5
+            }
           },
           {
             "pool": "overgrown_abyss:disc_ruins/house",
             "weight": 10,
-            "radius": 11.5,
-            "height": 12,
+            "by_height": {
+              "bottom": 1.5,
+              "top": 0.7
+            },
             "sink": 1
           },
           {
             "pool": "overgrown_abyss:disc_ruins/camp",
             "weight": 8,
-            "radius": 12.5,
-            "height": 5
+            "by_height": {
+              "bottom": 0.7,
+              "top": 1.4
+            }
           },
           {
             "pool": "overgrown_abyss:disc_ruins/chamber",
-            "weight": 6,
-            "radius": 8.5,
-            "height": 6
+            "weight": 6
           },
           {
             "pool": "overgrown_abyss:disc_ruins/pillar",
-            "weight": 5,
-            "radius": 5.5,
-            "height": 15
+            "weight": 5
           },
           {
             "pool": "overgrown_abyss:disc_ruins/statue",
-            "weight": 3,
-            "radius": 6.5,
-            "height": 5
+            "weight": 3
           },
           {
             "pool": "overgrown_abyss:disc_ruins/hut",
             "weight": 3,
-            "radius": 5,
-            "height": 6,
+            "by_height": {
+              "bottom": 0.6,
+              "top": 1.6
+            },
             "sink": 1
           },
           {
             "pool": "overgrown_abyss:disc_ruins/rubble",
             "weight": 3,
-            "radius": 10,
-            "height": 3
+            "by_height": {
+              "bottom": 0.5,
+              "top": 2
+            }
+          }
+        ],
+        "structures": [
+          {
+            "tag": "#overgrown_abyss:on_discs/jungle",
+            "weight": 15
           }
         ]
       }
@@ -670,32 +696,40 @@
       "ruins": {
         "chance": 0.25,
         "every": 4000,
+        "by_height": {
+          "bottom": 1.8,
+          "top": 0.4
+        },
         "kinds": [
           {
             "pool": "overgrown_abyss:disc_ruins/house",
             "weight": 8,
-            "radius": 11.5,
-            "height": 12,
+            "by_height": {
+              "bottom": 1.5,
+              "top": 0.7
+            },
             "sink": 1
           },
           {
             "pool": "overgrown_abyss:disc_ruins/pillar",
-            "weight": 4,
-            "radius": 5.5,
-            "height": 15
+            "weight": 4
           },
           {
             "pool": "overgrown_abyss:disc_ruins/hut",
             "weight": 4,
-            "radius": 5,
-            "height": 6,
+            "by_height": {
+              "bottom": 0.6,
+              "top": 1.6
+            },
             "sink": 1
           },
           {
             "pool": "overgrown_abyss:disc_ruins/rubble",
             "weight": 2,
-            "radius": 10,
-            "height": 3
+            "by_height": {
+              "bottom": 0.5,
+              "top": 2
+            }
           }
         ]
       }

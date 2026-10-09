@@ -99,23 +99,44 @@ in its middle. Its numbers:
     Without `patches` a growth is spread evenly.
 - `ruins`: the ruins on some of the theme's discs (see `DiscRuins`). `chance` is the share of the theme's discs that have any.
   On those there is one ruin for about every `every` blocks of the top, at least one and at most six; without `every` a disc
-  has one. `kinds` (up to 16) are what a ruin can be, each a template pool and the room its pieces need:
-  - `pool`: a template pool; one of its elements is stood on the disc, turned any of four ways about its middle. An
-    `empty_pool_element` in it leaves the place bare. Nothing is joined on to the piece, so jigsaw blocks in it only become
-    their final state. Use `"projection": "rigid"`.
-  - `radius`: blocks from the middle of a piece to its furthest corner (half the diagonal of the largest template in the
-    pool). That round of ground is kept for the ruin, 2 blocks inside the disc's rim and 2 from the next ruin.
-  - `height`: blocks of clear air a piece needs over the ground.
-  - `sink` (default 0): how many of a piece's lowest layers lie in the ground. 0 for a template whose lowest layer is a floor
-    laid on the ground; 1 for one whose lowest layer is the ground itself, as vanilla's ocean ruins are.
-  - `weight`: how often a ruin is of this kind where the kind has room. For each ruin the kinds are put in an order drawn by
-    weight, and the ruin is of the first kind in that order with room at one of eight places drawn for it; if none has, there
+  has one. `by_height` (`bottom` and `top`, 1 and 1 if left out) makes the ruins more or less frequent with a disc's height
+  in its hole, from the lowest disc to the highest: both `chance` (up to 1) and the number on a disc are multiplied by it.
+  What a ruin can be is given by `kinds`, by `structures`, or by both:
+  - `kinds`: template pools.
+    - `pool`: a template pool; one of its elements is stood on the disc, turned any of four ways about its middle. Only an
+      element that is one template is offered (`single_pool_element`, `legacy_single_pool_element`). Nothing is joined on
+      to the piece, so jigsaw blocks in it only become their final state. Use `"projection": "rigid"`.
+    - `sink` (default 0): how many of a piece's lowest layers lie in the ground. 0 for a template whose lowest layer is a
+      floor laid on the ground; 1 for one whose lowest layer is the ground itself, as vanilla's ocean ruins are; more for
+      one with a cellar.
+    - `weight`: how often a ruin is of this kind where the kind has room.
+    - `by_height` (`bottom` and `top`, 1 and 1 if left out): multiplies the weight with the disc's height in its hole, so a
+      kind gathers low down or high up. A kind with no weight at a height is never on a disc there.
+  - `structures`: other structures whose pieces stand as ruins, each entry `{"tag": "#namespace:path", "weight": ...,
+    "by_height": ...}`. The tag is a structure tag (`data/<namespace>/tags/worldgen/structure/`). Every structure in it
+    that starts on the ground from a template pool (`start_pool`, `project_start_to_heightmap`, and a `start_height` that is
+    one fixed number, as vanilla's villages and outposts have) is a kind of that weight: its first piece stands
+    alone, with `1 - start_height` of its layers in the ground, which is where its own file puts it. The log names each
+    structure taken and says why another was not. A tag's entries may be optional (`"required": false`), so a pack can name
+    the structures of mods that may not be installed, and a pack adds to a tag without replacing this file.
+  - The room a piece needs is not written anywhere. It is measured from the piece's own template when a level loads, so it
+    is right for whatever a pack has replaced the template with: a round of ground as wide as the template's diagonal, and
+    air as high as the layers it builds over the ground. Air saved in a template is placed like any block and would empty
+    whatever is there, so a piece needs room up to its highest air as well, unless its pool's processors leave air out (a
+    `block_ignore` that names `minecraft:air`, as the mod's ocean ruins have). The log says what each theme's pieces came
+    to (`Disc ruins of ...`).
+  - For each ruin the kinds are put in an order drawn by weight, and each kind's pieces in an order drawn by their weights
+    in its pool; the ruin is the first piece in that order with room at one of eight places drawn for it; if none has, there
     is no ruin. So a tall kind with a large weight stands wherever a disc has the height for it and lower kinds take the
     rest, which is why the mod's tower has the largest weight and is still the rarest.
   - A place has room when the round is inside the rim, its ground steps by at most one block (a piece stands on the lower
     ground), at most a fifth of it is water (a stream may run under a ruin, a pond may not lie under one), no stem of
-    another disc comes down through it, and the air over it is open to `height`: under the dome's roof where the disc is in
-    the rock, and under whatever disc is above.
+    another disc comes down through it, no other ruin is within 2 blocks of the round (of its own disc, or of a
+    neighbouring disc whose platform runs into this one), the air over it is open to the piece's height (under the dome's
+    roof where the disc is in the rock, and under whatever disc is above), and the piece's layers in the ground lie in
+    rock. A platform is `floor_thickness` thick, so one or two layers always do; a piece with more only finds rock over
+    the flare of the disc's stem, where it is tried first, or where the disc lies in the hole's wall. Nothing of a piece
+    shows under a disc.
 
 The mod's own themes:
 
@@ -125,7 +146,7 @@ The mod's own themes:
   and there a floor of mossy stone bricks edged with mossy cobblestone. Under it are three layers, which show at the rim as
   bands. A few small ponds and streams, and its own growth: a giant jungle tree for about every 120 blocks of ground and an
   ordinary one for every 45, with bushes, clumps of bamboo, ferns, moss carpet and azaleas between and under them, and
-  vines. Under the disc glow berries, tufts of leaves and vines. Ruins on three discs in five (see Ruins below).
+  vines. Under the disc glow berries, tufts of leaves and vines. Ruins on three discs in five half way up a hole, on more below and fewer above (see Ruins below).
   - The patchwork is one `noise_provider` in the palette's first `top` layer. Its `states` are an order, not a mix: the noise
     is turned into a place in the list, low values to its start and high ones to its end, so blocks next to each other in
     the list lie next to each other on the ground (the stone bricks at one end, ringed by cobblestone, coarse dirt and
@@ -193,12 +214,14 @@ and whatever other mods add. With no themes every disc is the terrain's own rock
 
 ### Ruins
 
-Ruins stand on some discs: on three jungle discs in five, with a ruin for about every 3000 blocks of top (two on a disc of
-radius 40, four on the largest); on three lush discs in ten and one mangrove disc in four, with one for every 4000. A crystal
-disc has none. They are one structure, `overgrown_abyss:disc_ruins`, so `/locate structure overgrown_abyss:disc_ruins` finds
-the nearest disc with one (it looks 100 chunks each way).
+Ruins stand on some discs, and on more of them the lower in a hole the disc is. A jungle disc has them three times in five
+at the middle of the hole's height, nearly always at the bottom and one time in four at the top (`chance` 0.6, `by_height`
+1.6 to 0.4), with a ruin for about every 3000 blocks of top, by the same measure more at the bottom and fewer at the top. A
+lush disc has them three times in ten and a mangrove disc one time in four, both with `by_height` 1.8 to 0.4 and a ruin for
+every 4000. A crystal disc has none. They are one structure, `overgrown_abyss:disc_ruins`, so
+`/locate structure overgrown_abyss:disc_ruins` finds the nearest disc with one (it looks 100 chunks each way).
 
-Every piece is one of vanilla's own templates, named by id and not copied, in two families:
+The mod's own pieces are vanilla's templates, named by id and not copied, in two families:
 
 - Pieces of the Ancient City, through the same reskin as the city at the hole's floor (`processor_list/disc_ruins/outpost`:
   a tenth of the blocks rotted away, stone and mossy stone bricks for deepslate, jungle wood, moss for wool, lanterns), so
@@ -208,30 +231,43 @@ Every piece is one of vanilla's own templates, named by id and not copied, in tw
   cobblestone become mossy cobblestone, sea lanterns shroomlights, the planks jungle planks, the red bricks mud bricks. They
   have no chests: vanilla puts those in by code.
 
-The kinds, each a pool in `data/overgrown_abyss/worldgen/template_pool/disc_ruins/`:
+The kinds, each a pool in `data/overgrown_abyss/worldgen/template_pool/disc_ruins/`. The ground and air are what vanilla's
+templates measure; a pack that replaces a template changes them, and the log's `Disc ruins of ...` line says what they are
+in a level.
 
-| Kind | Pieces | Ground (`radius`) | Air (`height`) | Weight on jungle |
-|---|---|---|---|---|
-| `tower` | `tall_ruin_1`, `tall_ruin_3` | 12.5 | 19 | 40 |
-| `keep` | `tall_ruin_2`, `tall_ruin_4` | 12.5 | 13 | 20 |
-| `vault` | `chamber_1` | 12.5 | 10 | 10 |
-| `house` | the 12 large cold ocean ruins | 11.5 | 12 | 10 |
-| `camp` | `camp_1` to `camp_3`, `large_ruin_1` | 12.5 | 5 | 8 |
-| `chamber` | `chamber_2`, `chamber_3` | 8.5 | 6 | 6 |
-| `pillar` | `medium_pillar_1`, `large_pillar_1` | 5.5 | 15 | 5 |
-| `statue` | `small_statue` | 6.5 | 5 | 3 |
-| `hut` | the 24 small cold ocean ruins | 5 | 6 | 3 |
-| `rubble` | the two small and two medium ruins | 10 | 3 | 3 |
+| Kind | Pieces | Round of ground, across | Air | Weight on jungle | By height, bottom to top |
+|---|---|---|---|---|---|
+| `tower` | `tall_ruin_1`, `tall_ruin_3` | 24 | 19 | 40 | 2 to 0.3 |
+| `keep` | `tall_ruin_2`, `tall_ruin_4` | 24 | 13 | 20 | 2 to 0.3 |
+| `vault` | `chamber_1` | 24 | 10 | 10 | 1.8 to 0.5 |
+| `house` | the 12 large cold ocean ruins | 23 | 4 to 12 | 10 | 1.5 to 0.7 |
+| `camp` | `camp_1` to `camp_3`, `large_ruin_1` | 24 | 3 or 5 | 8 | 0.7 to 1.4 |
+| `chamber` | `chamber_2`, `chamber_3` | 15 or 16 | 6 | 6 | even |
+| `pillar` | `medium_pillar_1`, `large_pillar_1` | 11 or 8 | 11 or 15 | 5 | even |
+| `statue` | `small_statue` | 13 | 5 | 3 | even |
+| `hut` | the 24 small cold ocean ruins | 9 | 2 to 6 | 3 | 0.6 to 1.6 |
+| `rubble` | the two small and two medium ruins | 9 to 19 | 3 | 3 | 0.5 to 2 |
 
-Lush discs have pillars, chambers, statues, huts and rubble; mangrove discs houses, pillars, huts and rubble, on what dry
-ground they have. `DiscRuinFilesTest` reads the mod's own file and checks every template against its kind's `radius`,
-`height` and `sink`.
+So the grand kinds gather low in a hole and the camps, huts and rubble of whoever came later high in it. Lush discs have
+pillars, chambers, statues, huts and rubble; mangrove discs houses, pillars, huts and rubble, on what dry ground they have.
 
-To change how many there are, change `chance` and `every`; to change which, the weights. A pool of your own works the same
-way: give its `radius` and `height` honestly, since a place is found by those numbers and not by the templates.
+Jungle and lush discs also borrow the structures of the tag `#overgrown_abyss:on_discs/jungle` (weight 15 on jungle, 5 on
+lush). The mod's own tag holds the three structures of Epic Structures: Jungle Temples, all optional, so without that mod it
+is empty and nothing changes. With it, the 14 pieces of `epic:epic_temple_ruin` stand on discs wherever one fits; the two
+temples (`epic:epic_temple`, `epic:epic_temple_large`) are 47 blocks each way and 48 high and fit under no dome as the discs
+are. To lend the discs another mod's ruins, add its structure to the tag in a pack of your own.
 
-- `many-ruins`: the mod's file with `chance` 1 and `every` 1200 on all three themes: ruins on every disc that has room for
-  one, up to six on a disc. For looking at the kinds without searching for them.
+To change how many ruins there are, change `chance`, `every` and `by_height`; to change which, the weights. A pool of your
+own is a kind like the mod's: name it and say how many of its pieces' lowest layers lie in the ground.
+
+- `many-ruins`: the mod's file with `chance` 1, `every` 1200 and no `by_height` on all three themes or on any kind: ruins on
+  every disc that has room for one, up to six on a disc, every kind at every height. For looking at the kinds without
+  searching for them.
+- `borrowed-ruins`: the mod's file with ruins on every jungle and lush disc that has room, most of them borrowed (the tag's
+  weight is 200), and a tag that lends the discs three of vanilla's structures: the centres of plains villages, the plate a
+  pillager outpost stands on, and trail ruins. For seeing borrowed ruins work without another mod. The plate builds two
+  layers and is saved with the air of a box 30 high, so it only stands where 29 blocks over it are clear; the trail ruins
+  start 15 under the ground and none of their towers is taller than that, so the log says none of them is offered.
 - `tall-rings`: the mod's file with `layer_spacing` 28 in place of 20. It was measured for the ruins and left out of the
   mod's own file: a hole 200 blocks deep goes from 7 layers and about 65 discs to 5 layers and about 43, and what it gains
   is towers, about 1.4 to a hole in place of 0.7. The lower kinds lose more discs than they gain room. For judging the look.
