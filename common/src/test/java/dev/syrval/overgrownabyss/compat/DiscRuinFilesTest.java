@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.compat;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,26 +15,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtAccounter;
-import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 /**
- * The ruins the mod's own disc themes name, against the files they rest on. A kind says how much ground and air its pieces
- * need, and a place is found for it by those numbers alone; the pieces are vanilla's templates, read here from the game's
- * jar, so a number that no longer covers a template shows up here and not as a ruin through a disc's rim or a stem.
+ * The ruins the mod's own disc themes name, against the files they rest on. How much ground and air a piece needs is measured
+ * from its template when a level loads; the templates are vanilla's, read here from the game's jar, so this is where the
+ * measure itself is checked and where a pool that could not be measured shows up.
  */
 class DiscRuinFilesTest {
     private static final String CARVE = "/data/overgrown_abyss/worldgen/density_function/ravine/carve.json";
     private static final String POOLS = "/data/overgrown_abyss/worldgen/template_pool/";
-    // What a template holds that is never built: gaps, and the marker blocks a pool element leaves out.
-    private static final Set<String> NOT_BUILT = Set.of("minecraft:air", "minecraft:structure_void", "minecraft:structure_block");
+    private static final String BORROWED = "/data/overgrown_abyss/tags/worldgen/structure/on_discs/jungle.json";
 
     private static JsonObject json(String resource) throws IOException {
         try (var in = DiscRuinFilesTest.class.getResourceAsStream(resource)) {
@@ -42,29 +41,97 @@ class DiscRuinFilesTest {
         }
     }
 
-    private static CompoundTag template(ResourceLocation id) throws IOException {
-        String resource = "/data/" + id.getNamespace() + "/structure/" + id.getPath() + ".nbt";
-        try (var in = DiscRuinFilesTest.class.getResourceAsStream(resource)) {
-            assertNotNull(in, resource + " is missing");
-            return NbtIo.readCompressed(in, NbtAccounter.unlimitedHeap());
-        }
-    }
-
-    // The highest layer of a template that holds a block which is built.
-    private static int highestLayer(CompoundTag template) {
-        ListTag palette = template.getList("palette", Tag.TAG_COMPOUND);
-        int highest = -1;
-        for (Tag each : template.getList("blocks", Tag.TAG_COMPOUND)) {
-            CompoundTag block = (CompoundTag) each;
-            if (!NOT_BUILT.contains(palette.getCompound(block.getInt("state")).getString("Name"))) {
-                highest = Math.max(highest, block.getList("pos", Tag.TAG_INT).getInt(1));
-            }
-        }
-        return highest;
+    private static DiscRuinPieces.Measure measure(String template) {
+        return JarRuinPieces.template(ResourceLocation.parse(template)).flatMap(DiscRuinPieces.Measure::of).orElseThrow();
     }
 
     @Test
-    void everyPieceFitsTheGroundAndAirItsKindAsksFor() throws IOException {
+    void aTemplateIsMeasuredByItsFootprintAndTheLayersItBuildsAndEmpties() {
+        // Each of the city's tall ruins is saved in a box 23 high, whatever is left standing in it, with no air in it.
+        assertEquals(new DiscRuinPieces.Measure(17, 17, 19, 0), measure("minecraft:ancient_city/structures/tall_ruin_1"));
+        assertEquals(new DiscRuinPieces.Measure(17, 17, 13, 0), measure("minecraft:ancient_city/structures/tall_ruin_2"));
+        assertEquals(new DiscRuinPieces.Measure(17, 17, 3, 0), measure("minecraft:ancient_city/structures/camp_3"));
+        assertEquals(new DiscRuinPieces.Measure(19, 15, 10, 0), measure("minecraft:ancient_city/structures/chamber_1"));
+        // The ocean's ruins and an outpost's plate are saved with the air of their whole box.
+        assertEquals(new DiscRuinPieces.Measure(6, 7, 6, 7), measure("minecraft:underwater_ruin/brick_1"));
+        assertEquals(new DiscRuinPieces.Measure(16, 16, 7, 16), measure("minecraft:underwater_ruin/big_mossy_1"));
+        DiscRuinPieces.Measure plate = measure("minecraft:pillager_outpost/base_plate");
+        assertEquals(new DiscRuinPieces.Measure(16, 16, 2, 30), plate);
+        assertEquals(30, plate.layers(true), "placed with its air, a piece needs the room it empties");
+        assertEquals(2, plate.layers(false), "placed without, only what it builds");
+        assertEquals(19, measure("minecraft:ancient_city/structures/tall_ruin_1").layers(true), "and never less than that");
+        // A piece is turned about its middle, so its furthest corner may come to lie anywhere on this round.
+        assertEquals(Math.hypot(19, 15) / 2, measure("minecraft:ancient_city/structures/chamber_1").radius(), 1e-9);
+    }
+
+    @Test
+    void aPoolsProcessorsSayWhetherItsPiecesPlaceTheirAir() {
+        assertTrue(DiscRuinPieces.leavesAirOut(JarRuinPieces.processors(ResourceLocation.parse("overgrown_abyss:disc_ruins/overgrown"))),
+                "the mod's ocean ruins stand in the disc's own ground and air");
+        assertFalse(DiscRuinPieces.leavesAirOut(JarRuinPieces.processors(ResourceLocation.parse("overgrown_abyss:disc_ruins/outpost"))));
+        assertFalse(DiscRuinPieces.leavesAirOut(JarRuinPieces.processors(ResourceLocation.parse("minecraft:mossify_20_percent"))));
+        assertTrue(DiscRuinPieces.leavesAirOut(JsonParser.parseString("""
+                [{"processor_type": "minecraft:block_rot", "integrity": 0.9},
+                 {"processor_type": "overgrown_abyss:processor_list", "processors": {"processors": [
+                   {"processor_type": "minecraft:block_ignore", "blocks": [{"Name": "minecraft:stone"}, {"Name": "minecraft:air"}]}]}}]""")),
+                "in a list within a list");
+        assertFalse(DiscRuinPieces.leavesAirOut(JsonParser.parseString("""
+                {"processors": [{"processor_type": "minecraft:block_ignore", "blocks": [{"Name": "minecraft:gravel"}]}]}""")), "leaving out something else");
+        assertFalse(DiscRuinPieces.leavesAirOut(JsonParser.parseString("\"minecraft:empty\"")), "a list that is only named says nothing by itself");
+    }
+
+    private static CompoundTag block(int state, int y) {
+        var block = new CompoundTag();
+        block.putInt("state", state);
+        var pos = new ListTag();
+        pos.add(IntTag.valueOf(0));
+        pos.add(IntTag.valueOf(y));
+        pos.add(IntTag.valueOf(0));
+        block.put("pos", pos);
+        return block;
+    }
+
+    private static CompoundTag template(String paletteField, ListTag palette, CompoundTag... blocks) {
+        var template = new CompoundTag();
+        var size = new ListTag();
+        size.add(IntTag.valueOf(3));
+        size.add(IntTag.valueOf(9));
+        size.add(IntTag.valueOf(5));
+        template.put("size", size);
+        template.put(paletteField, palette);
+        var list = new ListTag();
+        list.addAll(List.of(blocks));
+        template.put("blocks", list);
+        return template;
+    }
+
+    private static ListTag palette(String... names) {
+        var palette = new ListTag();
+        for (String name : names) {
+            var state = new CompoundTag();
+            state.putString("Name", name);
+            palette.add(state);
+        }
+        return palette;
+    }
+
+    @Test
+    void whatATemplateNeverBuildsIsNotMeasured() {
+        ListTag palette = palette("minecraft:stone", "minecraft:air", "minecraft:structure_void", "minecraft:structure_block");
+        assertEquals(Optional.of(new DiscRuinPieces.Measure(3, 5, 3, 5)),
+                DiscRuinPieces.Measure.of(template("palette", palette, block(0, 0), block(0, 2), block(1, 4), block(2, 6), block(3, 8))),
+                "gaps and marker blocks are never placed, and air is counted apart from what is built");
+        assertEquals(Optional.empty(), DiscRuinPieces.Measure.of(template("palette", palette, block(1, 0), block(3, 1))), "a template that builds nothing");
+        var several = new ListTag();
+        several.add(palette);
+        several.add(palette("minecraft:cobblestone", "minecraft:air", "minecraft:structure_void", "minecraft:structure_block"));
+        assertEquals(Optional.of(new DiscRuinPieces.Measure(3, 5, 6, 8)),
+                DiscRuinPieces.Measure.of(template("palettes", several, block(0, 5), block(1, 7))), "a template with several palettes");
+        assertEquals(Optional.empty(), DiscRuinPieces.Measure.of(new CompoundTag()), "not a template at all");
+    }
+
+    @Test
+    void everyPieceOfTheModsOwnPoolsCanBeMeasuredAndStandsOverTheGround() throws IOException {
         Set<String> named = new HashSet<>();
         int pieces = 0;
         for (JsonElement theme : json(CARVE).getAsJsonArray("disc_themes")) {
@@ -73,31 +140,47 @@ class DiscRuinFilesTest {
             }
             for (JsonElement each : theme.getAsJsonObject().getAsJsonObject("ruins").getAsJsonArray("kinds")) {
                 JsonObject kind = each.getAsJsonObject();
+                assertFalse(kind.has("radius") || kind.has("height"), "the room a piece needs is measured, not written: " + kind);
                 ResourceLocation pool = ResourceLocation.parse(kind.get("pool").getAsString());
-                assertEquals("overgrown_abyss", pool.getNamespace(), "the mod's themes use the mod's own pools");
+                assertEquals("overgrown_abyss", pool.getNamespace(), "the mod's themes name the mod's own pools as kinds");
                 named.add(pool.getPath());
-                double radius = kind.get("radius").getAsDouble();
-                int height = kind.get("height").getAsInt();
                 int sink = kind.has("sink") ? kind.get("sink").getAsInt() : 0;
-                for (JsonElement entry : json(POOLS + pool.getPath() + ".json").getAsJsonArray("elements")) {
-                    JsonObject element = entry.getAsJsonObject().getAsJsonObject("element");
+                for (JsonObject entry : JarRuinPieces.elements(pool)) {
+                    JsonObject element = entry.getAsJsonObject("element");
                     assertEquals("minecraft:single_pool_element", element.get("element_type").getAsString(), pool + " holds single templates");
                     assertEquals("rigid", element.get("projection").getAsString(), "a piece stands where its site is, not on the level's surface");
-                    ResourceLocation location = ResourceLocation.parse(element.get("location").getAsString());
-                    CompoundTag template = template(location);
-                    ListTag size = template.getList("size", Tag.TAG_INT);
-                    // A piece is turned about its middle, so its furthest corner may come to lie anywhere on this round.
-                    double corner = Math.hypot(size.getInt(0), size.getInt(2)) / 2;
-                    assertTrue(corner <= radius, location + " reaches " + corner + " from its middle, and " + pool + " keeps " + radius);
-                    int over = highestLayer(template) + 1 - sink;
-                    assertTrue(over <= height, location + " stands " + over + " over the ground, and " + pool + " keeps " + height);
-                    assertTrue(over >= 1, location + " would be wholly in the ground");
+                    String location = element.get("location").getAsString();
+                    Optional<DiscRuinPieces.Measure> measure = JarRuinPieces.template(ResourceLocation.parse(location)).flatMap(DiscRuinPieces.Measure::of);
+                    assertTrue(measure.isPresent(), location + " is missing or builds nothing");
+                    assertTrue(measure.get().built() > sink, location + " would be wholly in the ground");
+                    assertEquals(measure.get().built(), JarRuinPieces.piece(null, 0, entry, 0).orElseThrow().height(),
+                            location + " empties nothing above what it builds: its template has no air, or its processors leave air out");
                     pieces++;
                 }
             }
         }
         assertTrue(pieces >= 50, pieces + " pieces looked at");
         assertEquals(poolFiles(), named, "every pool of ruins is named by a theme");
+    }
+
+    @Test
+    void theStructuresTheModBorrowsFromOtherModsAreAllOptional() throws IOException {
+        JsonObject tag = json(BORROWED);
+        assertFalse(tag.has("replace") && tag.get("replace").getAsBoolean(), "packs add to the tag");
+        assertFalse(tag.getAsJsonArray("values").isEmpty());
+        for (JsonElement value : tag.getAsJsonArray("values")) {
+            assertTrue(value.isJsonObject() && !value.getAsJsonObject().get("required").getAsBoolean(),
+                    value + " must be optional: the mod loads without the mods whose structures it borrows");
+            assertFalse(value.getAsJsonObject().get("id").getAsString().startsWith("minecraft:"), value + " is not another mod's");
+        }
+        Set<String> tags = new HashSet<>();
+        for (JsonElement theme : json(CARVE).getAsJsonArray("disc_themes")) {
+            JsonObject ruins = theme.getAsJsonObject().getAsJsonObject("ruins");
+            if (ruins != null && ruins.has("structures")) {
+                ruins.getAsJsonArray("structures").forEach(entry -> tags.add(entry.getAsJsonObject().get("tag").getAsString()));
+            }
+        }
+        assertEquals(Set.of("#overgrown_abyss:on_discs/jungle"), tags, "the tags the mod's themes borrow from");
     }
 
     private static Set<String> poolFiles() throws IOException {

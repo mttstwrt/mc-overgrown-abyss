@@ -11,12 +11,14 @@ final class DiscThemes {
 
     private DiscThemes() {}
 
-    /** The theme of each disc, in the layout's order; empty for a disc no theme has any weight for, which stays plain rock. */
-    static List<Optional<DiscTheme>> assign(RavineSettings settings, RavineCell cell, List<Disc> discs) {
+    /**
+     * The theme of each disc, given each disc's traits in the layout's order; empty for a disc no theme has any weight for,
+     * which stays plain rock.
+     */
+    static List<Optional<DiscTheme>> assign(RavineSettings settings, RavineCell cell, List<DiscTraits> traits) {
         List<DiscTheme> themes = settings.discThemes();
-        List<DiscTraits> traits = DiscTraits.of(settings, cell, discs);
-        var assigned = new ArrayList<Optional<DiscTheme>>(discs.size());
-        for (int i = 0; i < discs.size(); i++) {
+        var assigned = new ArrayList<Optional<DiscTheme>>(traits.size());
+        for (int i = 0; i < traits.size(); i++) {
             OptionalInt picked = pick(themes, traits.get(i), RavineCells.unit(cell.hash(), THEME_HASH_BASE + i));
             assigned.add(picked.isPresent() ? Optional.of(themes.get(picked.getAsInt())) : Optional.empty());
         }

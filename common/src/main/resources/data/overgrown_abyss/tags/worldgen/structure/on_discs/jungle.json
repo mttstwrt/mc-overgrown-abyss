@@ -1,0 +1,16 @@
+{
+  "values": [
+    {
+      "id": "epic:epic_temple_ruin",
+      "required": false
+    },
+    {
+      "id": "epic:epic_temple",
+      "required": false
+    },
+    {
+      "id": "epic:epic_temple_large",
+      "required": false
+    }
+  ]
+}

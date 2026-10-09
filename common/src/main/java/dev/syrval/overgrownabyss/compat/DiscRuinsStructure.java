@@ -15,7 +15,6 @@ import net.minecraft.world.level.levelgen.structure.PoolElementStructurePiece;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructurePiece;
 import net.minecraft.world.level.levelgen.structure.StructureType;
-import net.minecraft.world.level.levelgen.structure.pools.EmptyPoolElement;
 import net.minecraft.world.level.levelgen.structure.pools.StructurePoolElement;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 import net.minecraft.world.level.levelgen.structure.structures.JigsawStructure;
@@ -23,9 +22,9 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 
 /**
  * The ruins on a level's discs. A chunk's start holds one piece for every ruin whose middle is in that chunk. Which ruins
- * those are, where they stand and of what kind is decided with the discs themselves (see {@code DiscRuinSites}); this only
- * turns each site into a piece of its pool: one element, turned any of four ways, with the middle of its lowest layer on
- * the site. Nothing is joined on to a piece, so a jigsaw block in it is left as its final state.
+ * those are, where they stand and which element of which pool each is, is decided with the discs themselves (see
+ * {@code DiscRuinSites}); this only turns each site into that piece, turned any of four ways, with the middle of its lowest
+ * layer on the site. Nothing is joined on to a piece, so a jigsaw block in it is left as its final state.
  *
  * <p>Vanilla's jigsaw placement is not used: it turns the first piece about its corner, or about a jigsaw block that the
  * vanilla templates used here do not have, and a ruin has to stay inside the round of ground found for it.
@@ -58,15 +57,15 @@ public final class DiscRuinsStructure extends Structure {
         return Optional.of(new GenerationStub(new BlockPos(first.x(), first.y(), first.z()), builder -> pieces.forEach(builder::addPiece)));
     }
 
-    // A pool that does not exist was warned of when the level loaded (see RavineDensityHook).
+    // A site names an element the level's pool was found to have when the level loaded (see DiscRuinPieces), so both are there.
     private static Optional<StructurePiece> pieceAt(RuinSite site, Registry<StructureTemplatePool> pools, StructureTemplateManager templates) {
         return pools.getHolder(site.pool()).flatMap(pool -> {
-            RandomSource draws = RandomSource.create(site.seed());
-            StructurePoolElement element = pool.value().getRandomTemplate(draws);
-            if (element == EmptyPoolElement.INSTANCE) {
+            List<DiscRuinPieces.Weighted> elements = DiscRuinPieces.elementsOf(pool.value());
+            if (site.element() >= elements.size()) {
                 return Optional.empty();
             }
-            Rotation rotation = Rotation.getRandom(draws);
+            StructurePoolElement element = elements.get(site.element()).element();
+            Rotation rotation = Rotation.getRandom(RandomSource.create(site.seed()));
             // A template is turned about its corner, so where the turned piece lies is found first and its corner then put
             // where that brings the middle of the piece onto the site.
             BoundingBox turned = element.getBoundingBox(templates, BlockPos.ZERO, rotation);

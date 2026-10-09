@@ -104,6 +104,14 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     /**
+     * The ruins on this ravine's discs are made of {@code pieces}; until then there are none. Called once, before any chunk is
+     * built.
+     */
+    public void furnishRuins(RuinPieces pieces) {
+        sites.furnishRuins(pieces);
+    }
+
+    /**
      * The heights the cell's hole lies between in this level, or empty if it holds none: the hash may place one, but not over
      * an ocean, nor where the ground is too near sea level for a top that follows it.
      */

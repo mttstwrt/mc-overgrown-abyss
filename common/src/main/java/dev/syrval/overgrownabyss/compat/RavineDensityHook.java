@@ -7,7 +7,6 @@ import dev.syrval.overgrownabyss.ravine.RavineCarve;
 import dev.syrval.overgrownabyss.ravine.RavineCell;
 import dev.syrval.overgrownabyss.ravine.LandCheck;
 import dev.syrval.overgrownabyss.ravine.RavineCells;
-import dev.syrval.overgrownabyss.ravine.DiscRuins;
 import dev.syrval.overgrownabyss.ravine.DiscShape;
 import dev.syrval.overgrownabyss.ravine.DiscTheme;
 import dev.syrval.overgrownabyss.ravine.RavinePlacement;
@@ -32,6 +31,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -50,7 +50,7 @@ import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.WorldGenerationContext;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
-import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
 /**
  * Wraps the final density of every noise-settings in {@code #overgrown_abyss:carved} with
@@ -69,6 +69,7 @@ public final class RavineDensityHook {
             RegistryAccess registries,
             ChunkGenerator generator,
             LevelHeightAccessor level,
+            StructureTemplateManager templates,
             NoiseGeneratorSettings settings,
             long seed,
             Function<NoiseGeneratorSettings, RandomState> factory) {
@@ -109,7 +110,7 @@ public final class RavineDensityHook {
         SurfaceProbe ground = seeded.stream().anyMatch(ravine -> rimOf(ravine).isPresent())
                 ? TerrainSurface.of(settings.noiseSettings(), factory.apply(settings).router().finalDensity())
                 : SurfaceProbe.SOLID;
-        installLevelBindings(registries, generator, settings, state, ground, seeded);
+        installLevelBindings(registries, generator, templates, settings, state, ground, seeded);
         return state;
     }
 
@@ -117,17 +118,18 @@ public final class RavineDensityHook {
         return carve.settings().cone().flatMap(ConeSettings::rim);
     }
 
-    // The land check and the biomes need the finished RandomState (climate sampler) and the level's registries.
+    // The land check and the biomes need the finished RandomState (climate sampler) and the level's registries; the ruins need
+    // its templates as well.
     private static void installLevelBindings(
             RegistryAccess registries,
             ChunkGenerator generator,
+            StructureTemplateManager templates,
             NoiseGeneratorSettings settings,
             RandomState state,
             SurfaceProbe ground,
             List<RavineCarve> carves) {
         Registry<Biome> biomes = registries.registryOrThrow(Registries.BIOME);
         Registry<ConfiguredFeature<?, ?>> features = registries.registryOrThrow(Registries.CONFIGURED_FEATURE);
-        Registry<StructureTemplatePool> pools = registries.registryOrThrow(Registries.TEMPLATE_POOL);
         List<RavineFootprint.Region> regions = new ArrayList<>();
         for (RavineCarve carve : carves) {
             RavineEnvironment environment = carve.settings().environment();
@@ -135,7 +137,8 @@ public final class RavineDensityHook {
             carve.followGround(ground, settings.seaLevel());
             regions.add(new RavineFootprint.Region(carve, cavernBiome(biomes, environment), discBiomes(biomes, carve.settings().discThemes())));
             warnOfMissingGrowth(features, carve.settings().discThemes());
-            warnOfMissingRuins(pools, carve.settings().discThemes());
+            carve.furnishRuins(DiscRuinPieces.of(
+                    registries, id -> templates.get(id).map(template -> template.save(new CompoundTag())), carve.settings().discThemes()));
             bindInheritance(biomes, carve.settings().discThemes());
             logSettings(carve.settings());
             logRavinesNearOrigin(carve, settings.seaLevel());
@@ -220,12 +223,6 @@ public final class RavineDensityHook {
                 }
             }
         }
-    }
-
-    private static void warnOfMissingRuins(Registry<StructureTemplatePool> pools, List<DiscTheme> themes) {
-        themes.stream().flatMap(theme -> theme.ruins().stream()).flatMap(ruins -> ruins.kinds().stream()).map(DiscRuins.Kind::pool).distinct()
-                .filter(pool -> pools.getHolder(pool).isEmpty())
-                .forEach(pool -> OvergrownAbyss.LOGGER.warn("Template pool {} does not exist; a disc theme's ruins of that kind are left out", pool.location()));
     }
 
     // disableMobGeneration() is deprecated by Mojang but still a record component, so copying the record needs it.

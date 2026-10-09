@@ -10,7 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * hole where one of its sample columns is ocean or river, or, for a cone whose top follows the ground (see
  * {@link RimSettings}), where the ground round its mouth is too near sea level. Both questions need things that only exist
  * once the level's noise is wired (its biome source and climate sampler, its terrain), so the answers to them are installed
- * afterwards by the density hook, before any chunk is generated.
+ * afterwards by the density hook, before any chunk is generated. So are the pieces the level has for ruins, which are
+ * measured from its templates.
  */
 final class RavineSites {
     // Columns round a cone's mouth where the ground is read for its lip and its edge.
@@ -25,6 +26,7 @@ final class RavineSites {
     private final ConcurrentHashMap<RavineCell, CellDiscs> discs = new ConcurrentHashMap<>();
     private volatile LandCheck land = LandCheck.EVERYWHERE;
     private volatile Ground ground = new Ground(SurfaceProbe.SOLID, 0);
+    private volatile RuinPieces ruinPieces = RuinPieces.NONE;
 
     /** A level's terrain and the height of its sea, which are installed together. */
     private record Ground(SurfaceProbe probe, int seaLevel) {}
@@ -44,6 +46,11 @@ final class RavineSites {
         forget();
     }
 
+    void furnishRuins(RuinPieces pieces) {
+        this.ruinPieces = pieces;
+        forget();
+    }
+
     private void forget() {
         bounds.clear();
         discs.clear();
@@ -59,7 +66,7 @@ final class RavineSites {
 
     /** The discs of a cell that holds a hole between {@code bounds}, which is what {@link #boundsOf} gave for it. */
     CellDiscs discsOf(RavineCell cell, RavineBounds bounds) {
-        return discs.computeIfAbsent(cell, c -> CellDiscs.of(settings, bounds, c, ground.probe()));
+        return discs.computeIfAbsent(cell, c -> CellDiscs.of(settings, bounds, c, ground.probe(), ruinPieces));
     }
 
     private Optional<RavineBounds> survey(RavineCell cell) {

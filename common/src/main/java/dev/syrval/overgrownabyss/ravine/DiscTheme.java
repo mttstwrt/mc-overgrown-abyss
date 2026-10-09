@@ -41,6 +41,8 @@ public record DiscTheme(
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
         static final Ramp EVEN = new Ramp(1, 1);
+        // Kept here and not with its users: a theme and its ruins both ramp by height.
+        static final Codec<Ramp> BY_HEIGHT = codec("bottom", "top");
 
         // Each trait names its two ends in its own words, such as "bottom" and "top".
         static Codec<Ramp> codec(String fromName, String toName) {
@@ -183,7 +185,7 @@ public record DiscTheme(
             ResourceKey.codec(Registries.BIOME).optionalFieldOf("biome").forGetter(DiscTheme::biome),
             Inherits.CODEC.optionalFieldOf("inherits").forGetter(DiscTheme::inherits),
             Codec.floatRange(0, 1000).fieldOf("weight").forGetter(DiscTheme::weight),
-            Ramp.codec("bottom", "top").optionalFieldOf("by_height", Ramp.EVEN).forGetter(DiscTheme::byHeight),
+            Ramp.BY_HEIGHT.optionalFieldOf("by_height", Ramp.EVEN).forGetter(DiscTheme::byHeight),
             Ramp.codec("centre", "edge").optionalFieldOf("by_distance", Ramp.EVEN).forGetter(DiscTheme::byDistance),
             Ramp.codec("small", "large").optionalFieldOf("by_size", Ramp.EVEN).forGetter(DiscTheme::bySize),
             Limits.CODEC.optionalFieldOf("only", Limits.NONE).forGetter(DiscTheme::only),
