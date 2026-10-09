@@ -1928,6 +1928,89 @@ own (the dome's height, or a disc made for a temple). Only a structure's first p
 its joined pieces lends little (an outpost lends its plate). The ground the carve never opened is taken for rock, and may
 hold a cave of the terrain's.
 
+### Treasure by a disc's theme, depth and distance
+
+Owner (2026-10-09), on what the mod is for now: "the goal is making it look cool and provide loot/resources players would
+want", and "I am trying to make sure there is a reason to explore the discs instead of just heading straight to the
+bottom." Then: "Can we make different loot tables for each disc biome? My general idea is that you find better loot further
+down, and further from the center of the hole", and "draft the loot tables".
+
+**What looking first turned up.**
+
+- **The treasure pointed straight down.** The city on the hole's floor has a table of the mod's own
+  (`overgrown_abyss:chests/city`, of the Ancient City's grade), and every chest of a ruin on a disc held vanilla's jungle
+  temple loot.
+- **Few ruins had a chest at all.** Of the city pieces the towers, keeps, the vault and the chambers have one or two; camps,
+  pillars, the statue and rubble have none. Vanilla's ocean ruins have theirs only as a data marker (a structure block
+  whose `metadata` is `chest`), which the game fills from code that a template pool does not run, and a pool element drops
+  structure blocks before its processors see them. So huts and houses had no chest, and a mangrove disc, whose ruins are
+  houses, pillars, huts and rubble, had none at all. The test hole's 26 ruins held 8 chests.
+- **The owner's pack can make use of tables of the mod's own.** It has Lootr, which refills chests by loot table or by the
+  table's mod id (both lists are empty there today), and Artifacts, which adds its items to vanilla's tables by name.
+
+**What was built.**
+
+- **`loot` in a theme's ruins**: tables from the poorest to the richest, each with the rank a disc must have to hold it
+  (`from`). A disc's rank runs from 0 to 1 among the discs of its hole and rises with its depth and with its distance from
+  the hole's centre, by the weights `depth` and `distance`; both are the traits a theme is already chosen by. All the chests
+  of a ruin hold the last table its disc's rank reaches. The table is found with the site, in the pure code, and is part of
+  the site.
+- **The structure sets it** (`DiscRuinsStructure.afterPlace`), once the pieces that meet a chunk are placed in it: every
+  container of the ruin that came with a loot table is given the site's instead, and a chest with it is put at each `chest`
+  marker of the piece's template, where vanilla puts one. A piece read back from a saved chunk is vanilla's own class and
+  remembers nothing, so its site is found again by where the piece lies.
+- **Only the theme's own kinds.** A piece borrowed from another structure keeps the loot its templates name, and a theme
+  without `loot` is as before: jungle temple loot in the city pieces, no chest at a marker.
+- **Nine tables**, `chests/disc/jungle_1` to `_3`, `lush_1` to `_3`, `mangrove_1` to `_3`: drafts from vanilla's items for
+  the owner to edit. Each has valuables, what grows or lies on that kind of disc, and a prize that is mostly not there.
+  Jungle is gold, emeralds and the jungle temple's trim; lush is copper, amethyst and a trail ruins trim; mangrove is what a
+  swamp and the sea leave, froglights and the shipwrecks' trim. The third of each has diamonds, enchanted diamond gear and,
+  rarely, an enchanted golden apple, which is about the city's grade.
+
+**Choices that were mine**, for the owner to judge:
+
+- **The mod picks the table, not the table itself.** A loot table's own conditions can ask a chest's biome and its height,
+  but not its distance from the centre, and the height is a number of the world's, which differs between vanilla's heights
+  and Larion's.
+- **Where a table begins is written, not divided evenly.** With three equal shares of the rank the richest table had half
+  the chests (168 of 342 on jungle discs over 24 holes), because ruins and the kinds with chests both gather low. With
+  `depth` 2, `distance` 1 and tables from 0, 0.6 and 0.85, of 550 ruins with chests in 24 holes 180 held the first table,
+  265 the second and 105 the third.
+- **A chest stands exactly where its marker is.** Most markers are in a template's lowest layer, which lies in the ground
+  here, so most hut and house chests are set into the floor with the lid level with the ground. One of the nine in the test
+  hole is under a block of grass, as vanilla's are under gravel.
+- **One table for all the chests of a ruin**, and no step up for a grander kind.
+
+**Verification.**
+
+- Unit tests, 201, pass, and both loaders' jars build. New in `DiscRuinsTest`: the schema of `loot`, the rank and the table
+  it comes to, and over four holes that every ruin of a theme's own kind has its disc's table and no borrowed one has any.
+  `DiscLootFilesTest` reads each table the mod's file names with the game's own codec and vanilla's enchantments and tags.
+- Each rule was switched off in turn and seen to fail a test: a borrowed ruin given a table, distance not counting, depth
+  not counting, the first table reached held in place of the last, tables out of order let through, a table naming an item
+  the game has not, one naming a tag of enchantments it has not, and the settings naming a table that is no file.
+- The ruins themselves did not move: a checksum over the place, pool, element and seed of all 995 ruins in 24 holes is the
+  same as the committed code's, built from a worktree of it.
+- Dedicated dev servers in the sandbox, seed 11, the hole at x=-1572 z=2594, generated by `forceload` and read back:
+
+| | NeoForge 21.1.252 | Fabric 0.19.5 |
+|---|---|---|
+| Pieces in the hole | 26, the same templates, turns and boxes as the committed build's world | 26, the same |
+| Chests in ruins (were 8) | 17: 8 in city pieces, 9 at markers in huts and houses | the same places, tables and seeds |
+| By table | `jungle_1` 1, `jungle_2` 10, `jungle_3` 2, `lush_2` 1, `mangrove_2` 2, `mangrove_3` 1 | the same |
+| `/loot spawn` of each of the nine tables | each drops items; one that does not exist is refused | the same |
+| `/locate structure overgrown_abyss:disc_ruins` from the hole's centre | 26 blocks away | the same |
+
+  `afterPlace` has no unit test; the read-back is what shows it. The first run showed its one mistake: markers were asked
+  for as places in the template, not in the level, so no hut had a chest.
+
+Not verified: nothing was looked at in game, no chest was opened, Lootr was not run, and neither the owner's pack nor a
+client. Seen and not looked into: between two worlds of one seed (two builds on NeoForge, and NeoForge against Fabric)
+about a tenth of the blocks inside the ruins' boxes differ, all of them vines, leaves, ground cover and moss; pieces,
+masonry and chests do not. One city piece's chest in the test hole has a dripstone block of the terrain's on it.
+Known and left: camps, pillars, the statue and rubble have no chest; Artifacts' items no longer reach the disc ruins'
+chests through the jungle temple's table, so a pack that wants them there adds a modifier for the mod's tables.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -1940,7 +2023,10 @@ hold a cave of the terrain's.
    borrowed ones without another mod), settle the ramps by height, how many and which kinds, and the weight of other mods'
    ruins. Then pieces of our own, built for a disc rather than borrowed from the city: the placement takes any template
    pool and measures it, so that is templates and JSON only.
-6. Room for a temple: Epic's are 48 high and the tallest dome is about 29.
+6. Room for a temple: Epic's are 48 high and the tallest dome is about 29. The owner's answer (2026-10-09) is a disc made
+   for ruins, section 9.
+7. Treasure: the owner edits the nine draft tables; look at where the hut and house chests sit; then, in the owner's pack,
+   Lootr's `refresh_modids` for chests that refill.
 
 ## 9. Future additions (owner wishlist)
 
@@ -2043,6 +2129,34 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
   between discs (like Streams Reflowed) come after the shape is settled. Reference mood: Made in Abyss, Hell's Paradise.
 - **Notes:** the Phase 1 sketch shapes (stacked tiers, fluted faces) are the first step; discs would be a new carve
   or placed-rock term alongside bridges and ledges, in the same analytic style so they stay seed-stable.
+
+### Reasons to explore the discs, and to come back (owner's goals, 2026-10-09)
+
+- **The goals.** "I am trying to make sure there is a reason to explore the discs instead of just heading straight to the
+  bottom", and "a repeated reason to come back". The pack the mod is meant for is "focused on create aeronautics and
+  adventure, with cool biomes, dimensions, and bosses to fight", and has artifacts and levelling, "so players can get quite
+  a bit stronger that in vanilla". Treasure by rank (section 7) is the first step.
+- **A disc made for ruins.** "A dedicated disc that would have an extra high dome and would not spawn more discs on top of
+  it", "filled with connected ruins", of "the reskinned ancient city pieces and optionally other pieces from mods like
+  Epic's". Measured for Epic's temples (47 by 48 across, 47 high): the widest disc (radius 64) with a dome of about 58 where
+  the tallest is 29 now. It would be the first disc that keeps others away. The city's pieces are already joined by
+  vanilla's own assembly (`RavineCityStructure`), which would have to be held to the disc; of the 36 pieces Epic's large
+  temple joins on, 20 settle onto the height of the whole column and would land on the ground above the hole.
+- **A penalty for going up or down too fast** (from the show the mod is drawn from): "a stacking penalty for ascending or
+  descending too fast", wither as the easiest form, so that an elevator can be tuned to the speed that costs nothing, a
+  pitfall is worse than its fall, and "we don't want to risk the effect being applied to unsuspecting players outside the
+  reaches of the chasm". Decided so far: the same limit up and down "for now", each adjustable on its own; "tentatively"
+  stricter with depth; "tentatively" an ender pearl counts as travel. Suggested and not yet agreed: a depth the player is
+  adjusted to, which follows them at a fixed rate, with the penalty set by the gap. Artifacts' antidote vessel cancels
+  wither, so a penalty that is only the effect has a counter in that pack.
+- **Danger.** "Fights that reset, exploring the chasm should be dangerous and should feel dangerous - even as players get
+  good equipment". Trial spawners and mobs that knock players off a disc were suggested; and "something we haven't
+  considered yet: traps".
+- **Airships.** Flying between discs "was the original intended method of travel, it just shouldn't be super easy and
+  probably require a unique smaller craft"; reaching the bottom should take building ("bridges, elevators, and transport
+  systems").
+- **Far off.** "A custom boss fight to the bottom of the chasm", and perhaps a dimension behind it, with nothing yet for
+  the other side "besides more discs". A boss would be the first thing here that needs the mod on the client.
 
 ### When this is picked up
 
