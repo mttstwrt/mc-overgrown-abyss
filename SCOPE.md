@@ -45,6 +45,7 @@ Layers, mapped to code:
 | Bottom city | Custom `overgrown_abyss:city` jigsaw structure, vanilla pool copies, rule processors, `append_loot` | JSON + one structure type in `common` | Yes |
 | City placement | Custom structure-placement type at the ravine cell centre | `ravine-core` in `common` | Yes |
 | Wall ruins (later) | Jigsaw structures anchored on ledges | JSON in `common` | Yes |
+| Disc ruins | Custom `overgrown_abyss:disc_ruins` structure and placement: one piece of a template pool at each place the discs' own code finds for a ruin | Sites in `common/…/ravine`, structure and placement in `common/…/compat`, pools and processors in JSON | Yes |
 
 Custom Java is limited to: density-function type(s), a structure-placement type, the fluid-override mixin, the
 density-wrap mixin, and the `BiomeInjector` glue. Everything else is data.
@@ -1684,6 +1685,104 @@ its stack part of the way round reads as strata or as patches (`firstOctave` -9 
 not measured); clay as the silt; whether masonry at the bottom of five rims in six is too much stone for a jungle; and
 the beds of the jungle's ponds, which are now mud, clay or bricks where they were dirt.
 
+### Ruins on discs
+
+Owner (2026-10-08): "Lets add structure generation and ruins to the discs. Not every disc gets ruins, ruins should generally be
+jungle themed, we might want to consider increasing the average vertical distance between rings to help accomadate structure
+placement."
+
+**What was built.**
+
+- **`ruins` in a disc theme** (`DiscRuins`): the share of the theme's discs that have any (`chance`), how many a disc has
+  (one for every `every` blocks of its top, at least one, at most six), and the `kinds` a ruin can be. A kind is a template
+  pool and the room its pieces need: a round of ground (`radius`), clear air over it (`height`), and how many of a piece's
+  lowest layers lie in the ground (`sink`). Jungle discs have ruins on three in five, lush on three in ten, mangrove on one in
+  four, crystal none. `dev-datapacks/README.md` has the fields and the mod's ten kinds.
+- **Where they stand is decided with the discs** (`DiscRuinSites`, pure code in `ravine`, kept with the cell's discs and so
+  found once for a hole). For each ruin eight places are drawn on the disc and the kinds are put in an order drawn by weight;
+  the ruin is of the first kind in that order with room at one of the places, and is left out if none has. A place has room
+  when the round is 2 blocks inside the rim and 2 from another ruin, its ground steps by at most a block, at most a fifth of
+  it is water, no stem or root of another disc comes through it, and the air over it is open to the kind's height. The air is
+  asked of the carve itself, at the middle of the round and on two rings of eight columns, at least a block from any rock:
+  that covers the dome's roof where the disc is in the wall, the hole's own wall, and the platform and flare of whatever disc
+  is above, without a rule for each. Stems are thinner than the gaps between those columns, so they are looked for by name.
+- **A weight is a preference, not a share.** A tall kind only has room on few discs, so it is given a large weight and
+  stands wherever there is the height for it; where there is not, the next kind in the order takes the place. The tower has
+  the largest weight on jungle discs and is still the rarest ruin.
+- **A real structure** (`overgrown_abyss:disc_ruins`, `DiscRuinsStructure` and `DiscRuinsPlacement` in `compat`): a chunk's
+  start holds one piece for every ruin whose middle is in the chunk, since the game makes one start of a structure in a
+  chunk and discs lie over one another. Each piece is one element of its kind's pool, drawn and turned by the site's own
+  seed and put with the middle of its lowest layer on the site. Vanilla's jigsaw placement is not used: it turns the first
+  piece about its corner, or about a named jigsaw block the vanilla templates do not have, and a ruin has to stay in the
+  round found for it. So a ruin is one piece and nothing is joined on to it. The placement extends vanilla's random-spread
+  one, as the city's does and for the same reason: `/locate structure overgrown_abyss:disc_ruins` works.
+- **The pieces are vanilla's own templates, by id,** as the city's are (`03-abyss.md`: do not redistribute vanilla templates).
+  Two families: the free-standing pieces of the Ancient City, through the city's own reskin, which makes them outposts of
+  the city below (camps, chambers, statues, pillars, rubble, and the four tall ruins as keeps and towers); and vanilla's cold
+  ocean ruins as huts and houses, with their air, gravel and sand left out so that they stand in the disc's own ground.
+  City chests on discs hold vanilla's jungle temple loot, not the city's. Left out: the barracks (a solid block 21 by 17),
+  the sauna (29 by 37, with water) and the ice box.
+- **Nothing about growth changed.** Structures are placed at `surface_structures`, before the mod's own growth at the end of
+  decoration, so vines, leaves and ground cover grow round and over a ruin. A growth starts in the block over the disc's
+  top, which a city piece's floor fills, so nothing of the theme's own starts on those floors. An ocean ruin's floor is level
+  with the ground, and a tree may start on one.
+
+**The distance between rings: measured, and left at 20.** With a rim the layers are already spread evenly up to the top, so
+they are 21 to 25 apart in most holes. Over 24 holes outside the game (vanilla height, the mod's themes and ruins):
+
+| Top at 160 | `layer_spacing` 20 (kept) | 24 | 28 |
+|---|---|---|---|
+| Layers, discs to a hole | 7, 65 | 6, 55 | 5, 43 |
+| Ruins to a hole | 30.8 | 26.3 | 22.0 |
+| Towers (19 high) | 0.7 | 0.6 | 1.4 |
+| Keeps (13) and vaults (10) | 1.6 and 1.8 | 1.3 and 1.2 | 1.5 and 1.0 |
+| Camps (5 high, 25 across) | 3.3 | 2.9 | 2.1 |
+
+Under a top at 110 the 20 and the 24 give the same four layers. What ends the clear air over a disc is about as often its own
+dome's roof as a disc above it (a round 25 across, the best of twelve places on each disc: at 20 a tenth of discs have 19
+blocks clear, three in ten have 13, half have 10; at 28 a quarter, four in ten and six in ten, of a third fewer discs). So
+28 doubles the towers, from 0.7 to 1.4 a hole, for 22 of the hole's 65 discs, and the lower kinds lose more discs than they
+gain room. What did limit the wide ruins was water: asked for wholly dry ground, fewer than half as many camps found room
+(1.4 a hole), because a round 25 across mostly meets one of the jungle's streams. A stream may now run under a ruin. The
+`tall-rings` pack is the mod's file with 28, for judging the look. If larger buildings come (the temples of section 9), the
+number to look at first is the dome's height (`height_ratio`, `min_height`), not the spacing.
+
+**Verification.**
+
+- Unit tests, 183, pass (`./gradlew build` in the sandbox, both loaders' jars built). New: `DiscRuinsTest` (the schema; the
+  order of kinds; over four holes of the mod's own settings every ruin inside its rim, on ground that steps at most a block,
+  apart from the others, clear of stems, and with open air at every block over its middle and its edge; the same with half
+  the discs hanging from roots; the shares of discs with ruins; streams and ponds; every ruin handed to exactly the chunk
+  its middle is in) and `DiscRuinFilesTest` (each of the 54 templates the mod's pools name, read from the game's jar,
+  against its kind's `radius`, `height` and `sink`). Each rule was switched off in turn and seen to fail a test.
+- Dedicated dev servers, in the sandbox for the first time (`runServer` works there; typed commands reach it), seed 11, the
+  mod's own settings, the whole hole at x=-1572 z=2594 (top y=134, six layers) generated by `forceload` and the saved region
+  files read back:
+
+| | NeoForge 21.1.252 | Fabric 0.19.5 |
+|---|---|---|
+| Boots; pools, processor lists, structure and set load | no errors | no errors |
+| `/locate structure overgrown_abyss:disc_ruins` from the centre | [-1552, ~, 2560], 39 blocks | the same |
+| Starts and pieces in the hole | 11 and 11 | 11 and 11, the same templates, turns and places |
+| Pieces with their blocks built, of those | 11 | 11 |
+| Ground right under a piece, of its columns | 81% at least, 98% in the middle one | the same |
+| Chests, all with `minecraft:chests/jungle_temple` | 4 | 4 |
+| Deepslate, sculk, gravel, magma, sea lanterns, jigsaw blocks left | none | none |
+
+  The eleven: four chambers, a vault, a camp, a pillar, two heaps of rubble, a house and two huts, from y=-2 to y=90. Their
+  masonry is the same block for block on the two loaders (2,088 blocks); the leaves and vines round them are not, as before
+  this round.
+  `/locate` from the origin, with no hole within its 100 chunks, answers in under a second; `/locate` for the city still
+  works.
+
+Not verified: anything by eye, in game. To look at: whether the reskinned city pieces read as jungle ruins on a disc or as
+pieces of the city out of place; ruins a block deep in the higher ground of a strongly bowled disc; a floor bridging a
+stream; a pillar that just reaches the disc above it; how many ruins is right (a real hole of six layers had 11, where the
+count outside the game, which has no ground to keep domes under, gives 18 for a hole of four layers and 31 for one of
+seven); trees on the floors of ocean ruins.
+Not run: Larion, the owner's pack, any hole but one, a client. A pack that replaces vanilla's templates changes these ruins
+too (section 5, risk 5).
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -1692,6 +1791,9 @@ the beds of the jungle's ponds, which are now mud, clay or bricks where they wer
 2. Wall styles (Phase 2) and `BiomeInjector`.
 3. Decide whether lush caves features on the city floor suit the look, or whether the city should keep its own ground.
 4. Extract `ravine-core` into a shared source module when Rift starts.
+5. Disc ruins: look at them in game (the `many-ruins` pack puts them on every disc that has room), settle how many and which
+   kinds. Then pieces of our own, built for a disc rather than borrowed from the city: the placement takes any template
+   pool, so that is templates and JSON only.
 
 ## 9. Future additions (owner wishlist)
 
@@ -1741,8 +1843,9 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
 - **Idea:** the honeycomb disc theme was removed (2026-10-05); the owner wants honeycomb back as a structure that can spawn on
   lush or jungle discs.
 - **What exists:** nothing of it. The removed theme was honeycomb blocks with honey patches and bee nests placed as single blocks.
-- **What it needs:** the structure-on-discs placement that ruins by theme also need (a start per disc, read from the cell's
-  discs, since structures test the biome source and not a disc's stamped biome), and the honeycomb pieces themselves.
+- **What it needs:** the honeycomb pieces themselves, as templates in a pool. The placement exists since the ruins round
+  (section 7, Ruins on discs): a kind in a theme's `ruins` naming that pool, with the room it needs, puts it on lush and
+  jungle discs.
 
 ### Hanging temples (built into the mod)
 
