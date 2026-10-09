@@ -14,9 +14,9 @@ import net.minecraft.world.level.levelgen.WorldGenerationContext;
  * Datapack tunables for one hole in the ground and the city cavern at its floor. The hole is either a {@code ravine} (a long
  * curving shaft, see {@link RavineGeometry}) or a {@code cone} (see {@link ConeSettings}); exactly one is given. Both are filled
  * with the same discs, which {@code discs} describes (see {@link DiscShape}). {@code disc_themes} are the kinds of disc there
- * are (see {@link DiscTheme}): each disc is given one, which sets its biome, what it is made of and what grows on it. Without
- * any, every disc is the terrain's own rock in the biome it lies in. {@code wall_noise} makes a cone's own wall uneven (see
- * {@link WallNoise}); without it the wall is an exact surface of revolution.
+ * are (see {@link DiscTheme}): each disc is given one, which sets its biome, what it is made of, what grows on it and what
+ * ruins stand on it. Without any, every disc is the terrain's own rock in the biome it lies in. {@code wall_noise} makes a
+ * cone's own wall uneven (see {@link WallNoise}); without it the wall is an exact surface of revolution.
  *
  * <p>Each ravine draws one size from 0 to 1 (a uniform draw raised to {@code size_bias}: 1 is even, below 1 favours large
  * ravines, above 1 small ones). The vertical bounds are anchors so the cavern floor follows the world bottom of whatever

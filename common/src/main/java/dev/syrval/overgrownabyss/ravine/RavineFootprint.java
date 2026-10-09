@@ -1,5 +1,6 @@
 package dev.syrval.overgrownabyss.ravine;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -8,7 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
-/** What a level's ravines do to the world around them, as seen by noise fill, biome assignment, disc materials and structures. */
+/** What a level's ravines do to the world around them, as seen by noise fill, biome assignment, disc materials, growth and structures. */
 public interface RavineFootprint {
     RavineFootprint NONE = new RavineFootprint() {
         @Override
@@ -37,6 +38,11 @@ public interface RavineFootprint {
 
         @Override
         public void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink) {}
+
+        @Override
+        public List<RuinSite> ruinsIn(int minX, int minZ) {
+            return List.of();
+        }
     };
 
     /** Whether the column is touched by an active ravine, including wall noise and falloff. */
@@ -68,6 +74,9 @@ public interface RavineFootprint {
      * lowest corner is {@code (minX, minZ)}.
      */
     void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink);
+
+    /** The ruins that stand on discs with their middle in the chunk whose lowest corner is {@code (minX, minZ)}. */
+    List<RuinSite> ruinsIn(int minX, int minZ);
 
     /** One bound carve, the biome (if any) resolved for its cavern, and the biomes of its disc themes that exist in the level. */
     record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome, Map<ResourceKey<Biome>, Holder<Biome>> discBiomes) {
@@ -144,6 +153,15 @@ public interface RavineFootprint {
                 for (Region region : copy) {
                     region.carve().forEachInheritingDisc(minX, minZ, sink);
                 }
+            }
+
+            @Override
+            public List<RuinSite> ruinsIn(int minX, int minZ) {
+                var found = new ArrayList<RuinSite>();
+                for (Region region : copy) {
+                    found.addAll(region.carve().ruinsIn(minX, minZ));
+                }
+                return found;
             }
         };
     }

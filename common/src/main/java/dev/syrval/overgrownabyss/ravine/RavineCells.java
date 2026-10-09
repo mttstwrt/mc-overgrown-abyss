@@ -80,7 +80,12 @@ public final class RavineCells {
 
     /** The {@code index}-th uniform value in {@code [0, 1)} drawn from a cell hash. */
     static double unit(long hash, int index) {
-        return (mix(hash + index * GOLDEN) >>> 11) * 0x1.0p-53;
+        return (bits(hash, index) >>> 11) * 0x1.0p-53;
+    }
+
+    /** The {@code index}-th draw from a cell hash as it comes, for seeding a sequence of further draws. */
+    static long bits(long hash, int index) {
+        return mix(hash + index * GOLDEN);
     }
 
     /** The {@code index}-th uniform value in {@code [0, 1)} drawn from a cell hash for one block column. */

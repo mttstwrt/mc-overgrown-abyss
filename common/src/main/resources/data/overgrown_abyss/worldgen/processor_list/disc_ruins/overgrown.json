@@ -1,0 +1,176 @@
+{
+  "processors": [
+    {
+      "processor_type": "minecraft:block_ignore",
+      "blocks": [
+        {
+          "Name": "minecraft:air"
+        },
+        {
+          "Name": "minecraft:gravel"
+        },
+        {
+          "Name": "minecraft:sand"
+        }
+      ]
+    },
+    {
+      "integrity": 0.9,
+      "processor_type": "minecraft:block_rot"
+    },
+    {
+      "processor_type": "overgrown_abyss:swap_blocks",
+      "swaps": [
+        {
+          "from": "minecraft:stone_bricks",
+          "to": [
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 4
+            },
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 2
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cracked_stone_bricks",
+          "to": [
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 4
+            },
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 2
+            }
+          ]
+        },
+        {
+          "from": "minecraft:mossy_stone_bricks",
+          "to": [
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 7
+            },
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 2
+            }
+          ]
+        },
+        {
+          "from": "minecraft:stone_brick_stairs",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_stairs",
+              "weight": 5
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_stairs",
+              "weight": 4
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cobblestone",
+          "to": [
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:magma_block",
+          "to": [
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:prismarine",
+          "to": [
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:polished_granite",
+          "to": [
+            {
+              "block": "minecraft:polished_andesite",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:purple_glazed_terracotta",
+          "to": [
+            {
+              "block": "minecraft:chiseled_stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:bricks",
+          "to": [
+            {
+              "block": "minecraft:mud_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:sea_lantern",
+          "to": [
+            {
+              "block": "minecraft:shroomlight",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:dark_oak_planks",
+          "to": [
+            {
+              "block": "minecraft:jungle_planks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:spruce_planks",
+          "to": [
+            {
+              "block": "minecraft:jungle_planks",
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "processor_type": "minecraft:protected_blocks",
+      "value": "#minecraft:features_cannot_replace"
+    }
+  ]
+}

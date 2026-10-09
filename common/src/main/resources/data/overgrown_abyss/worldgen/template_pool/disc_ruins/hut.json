@@ -1,0 +1,221 @@
+{
+  "elements": [
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_1",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_2",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_3",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_4",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_5",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_6",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_7",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/brick_8",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_1",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_2",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_3",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_4",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_5",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_6",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_7",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/cracked_8",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_1",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_2",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_3",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_4",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_5",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_6",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_7",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:underwater_ruin/mossy_8",
+        "processors": "overgrown_abyss:disc_ruins/overgrown",
+        "projection": "rigid"
+      },
+      "weight": 1
+    }
+  ],
+  "fallback": "minecraft:empty"
+}

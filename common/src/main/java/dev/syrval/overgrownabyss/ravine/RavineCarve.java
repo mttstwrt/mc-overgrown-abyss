@@ -34,6 +34,7 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     private static final double CAVERN_BIOME_MARGIN = 4;
     // One biome cell: enough for what stands on a disc's rim or hangs under it to be in the disc's biome.
     private static final double DISC_BIOME_MARGIN = 4;
+    private static final int CHUNK_SIZE = 16;
 
     private final RavineSettings settings;
     private final long seed;
@@ -162,6 +163,23 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
             return;
         }
         holeAt(minX, minZ).ifPresent(hole -> DiscGrowth.forEach(settings, hole.cell(), discsOf(hole), minX, minZ, sink));
+    }
+
+    /**
+     * The ruins whose middle is in the chunk whose lowest corner is {@code (minX, minZ)}. See {@link DiscRuinSites}. Structure
+     * starts are asked for in every chunk of a level, so a chunk out of the hole's reach is answered without building the
+     * hole's discs.
+     */
+    public List<RuinSite> ruinsIn(int minX, int minZ) {
+        if (settings.discThemes().stream().allMatch(theme -> theme.ruins().isEmpty())) {
+            return List.of();
+        }
+        return holeAt(minX, minZ)
+                .filter(hole -> hole.cell().distanceToCentre(minX + CHUNK_SIZE / 2.0, minZ + CHUNK_SIZE / 2.0) <= settings.maxReach() + CHUNK_SIZE)
+                .map(hole -> discsOf(hole).ruins().stream()
+                        .filter(site -> site.x() >= minX && site.x() < minX + CHUNK_SIZE && site.z() >= minZ && site.z() < minZ + CHUNK_SIZE)
+                        .toList())
+                .orElse(List.of());
     }
 
     /**

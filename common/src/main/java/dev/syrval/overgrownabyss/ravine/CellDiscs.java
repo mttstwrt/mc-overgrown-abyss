@@ -5,11 +5,11 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * The discs of one cell and the theme of each. Both depend only on the settings, the heights the cell's hole lies between, the
- * cell and the ground over it, so they are built once for a cell and then only read, which makes them safe to share between
- * worker threads.
+ * The discs of one cell, the theme of each, and the ruins that stand on them. All depend only on the settings, the heights the
+ * cell's hole lies between, the cell and the ground over it, so they are built once for a cell and then only read, which makes
+ * them safe to share between worker threads.
  */
-record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes) {
+record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes, List<RuinSite> ruins) {
 
     /** The discs of a hole whose ground is nowhere lower than its top. */
     static CellDiscs of(RavineSettings settings, RavineBounds bounds, RavineCell cell) {
@@ -18,7 +18,8 @@ record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes) {
 
     static CellDiscs of(RavineSettings settings, RavineBounds bounds, RavineCell cell, SurfaceProbe ground) {
         DiscLayout layout = DiscLayouts.of(settings, bounds, cell, ground);
-        return new CellDiscs(layout, DiscThemes.assign(settings, cell, layout.discs()));
+        List<Optional<DiscTheme>> themes = DiscThemes.assign(settings, cell, layout.discs());
+        return new CellDiscs(layout, themes, DiscRuinSites.of(settings, bounds, cell, layout, themes));
     }
 
     /**

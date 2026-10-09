@@ -32,10 +32,11 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * @param palette    what the disc is made of; a part it leaves out keeps the terrain's own rock
  * @param water      ponds and streams in the disc's top
  * @param growth     what grows on the disc, in the order listed and before what it inherits
+ * @param ruins      the ruins that stand on some of the theme's discs
  */
 public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
-        Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth) {
+        Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Optional<DiscRuins> ruins) {
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -188,7 +189,8 @@ public record DiscTheme(
             Limits.CODEC.optionalFieldOf("only", Limits.NONE).forGetter(DiscTheme::only),
             DiscPalette.CODEC.optionalFieldOf("palette", DiscPalette.UNPAINTED).forGetter(DiscTheme::palette),
             DiscWater.CODEC.optionalFieldOf("water").forGetter(DiscTheme::water),
-            Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(DiscTheme::growth)
+            Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(DiscTheme::growth),
+            DiscRuins.CODEC.optionalFieldOf("ruins").forGetter(DiscTheme::ruins)
     ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);
 
     // What is inherited is given to the theme's own biome, and grown where that biome is stamped.

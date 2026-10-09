@@ -33,7 +33,7 @@ class DiscBlocksTest {
 
     /** A theme that is only a palette: no biome, nothing growing, the same weight everywhere. */
     static DiscTheme themed(DiscPalette palette) {
-        return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, Optional.empty(), List.of());
+        return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, Optional.empty(), List.of(), Optional.empty());
     }
 
     private record Block(int x, int y, int z) {}
@@ -184,7 +184,7 @@ class DiscBlocksTest {
     void aChunksWaterIsItsShareOfEachDiscsPondsAndStreams() {
         var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
         var wet = new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
-                PALETTE, Optional.of(water), List.of());
+                PALETTE, Optional.of(water), List.of(), Optional.empty());
         RavineSettings settings = painted(ConeShapeTest.LOW, List.of(wet), DiscTest.SLIM);
         RavineCell cell = cell(settings, 1);
         CellDiscs discs = CellDiscs.of(settings, BOUNDS, cell);

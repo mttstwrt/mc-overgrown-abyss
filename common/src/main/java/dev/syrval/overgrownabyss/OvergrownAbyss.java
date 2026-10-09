@@ -3,6 +3,8 @@ package dev.syrval.overgrownabyss;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
 import dev.architectury.registry.registries.DeferredRegister;
+import dev.syrval.overgrownabyss.compat.DiscRuinsPlacement;
+import dev.syrval.overgrownabyss.compat.DiscRuinsStructure;
 import dev.syrval.overgrownabyss.compat.NestedProcessorListProcessor;
 import dev.syrval.overgrownabyss.compat.RavineCentrePlacement;
 import dev.syrval.overgrownabyss.compat.RavineCityStructure;
@@ -34,10 +36,12 @@ public final class OvergrownAbyss {
 
         DeferredRegister<StructureType<?>> structureTypes = DeferredRegister.create(MOD_ID, Registries.STRUCTURE_TYPE);
         structureTypes.register("city", () -> RavineCityStructure.TYPE);
+        structureTypes.register("disc_ruins", () -> DiscRuinsStructure.TYPE);
         structureTypes.register();
 
         DeferredRegister<StructurePlacementType<?>> placementTypes = DeferredRegister.create(MOD_ID, Registries.STRUCTURE_PLACEMENT);
         placementTypes.register("ravine_centre", () -> RavineCentrePlacement.TYPE);
+        placementTypes.register("disc_ruins", () -> DiscRuinsPlacement.TYPE);
         placementTypes.register();
         DeferredRegister<StructureProcessorType<?>> processorTypes = DeferredRegister.create(MOD_ID, Registries.STRUCTURE_PROCESSOR);
         processorTypes.register("swap_blocks", () -> SwapBlocksProcessor.TYPE);

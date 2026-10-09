@@ -1,0 +1,12 @@
+{
+  "placement": {
+    "type": "overgrown_abyss:disc_ruins",
+    "salt": 1094861640
+  },
+  "structures": [
+    {
+      "structure": "overgrown_abyss:disc_ruins",
+      "weight": 1
+    }
+  ]
+}
