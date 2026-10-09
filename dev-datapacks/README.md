@@ -97,6 +97,25 @@ in its middle. Its numbers:
     middles `2 / cover` times the average. Growths given patches of the same `size` share them, so trees with covers of 0.4,
     0.6 and 0.8 stand in one grove, the first at its heart and the last out to its edges. Each disc has patches of its own.
     Without `patches` a growth is spread evenly.
+- `ruins`: the ruins on some of the theme's discs (see `DiscRuins`). `chance` is the share of the theme's discs that have any.
+  On those there is one ruin for about every `every` blocks of the top, at least one and at most six; without `every` a disc
+  has one. `kinds` (up to 16) are what a ruin can be, each a template pool and the room its pieces need:
+  - `pool`: a template pool; one of its elements is stood on the disc, turned any of four ways about its middle. An
+    `empty_pool_element` in it leaves the place bare. Nothing is joined on to the piece, so jigsaw blocks in it only become
+    their final state. Use `"projection": "rigid"`.
+  - `radius`: blocks from the middle of a piece to its furthest corner (half the diagonal of the largest template in the
+    pool). That round of ground is kept for the ruin, 2 blocks inside the disc's rim and 2 from the next ruin.
+  - `height`: blocks of clear air a piece needs over the ground.
+  - `sink` (default 0): how many of a piece's lowest layers lie in the ground. 0 for a template whose lowest layer is a floor
+    laid on the ground; 1 for one whose lowest layer is the ground itself, as vanilla's ocean ruins are.
+  - `weight`: how often a ruin is of this kind where the kind has room. For each ruin the kinds are put in an order drawn by
+    weight, and the ruin is of the first kind in that order with room at one of eight places drawn for it; if none has, there
+    is no ruin. So a tall kind with a large weight stands wherever a disc has the height for it and lower kinds take the
+    rest, which is why the mod's tower has the largest weight and is still the rarest.
+  - A place has room when the round is inside the rim, its ground steps by at most one block (a piece stands on the lower
+    ground), at most a fifth of it is water (a stream may run under a ruin, a pond may not lie under one), no stem of
+    another disc comes down through it, and the air over it is open to `height`: under the dome's roof where the disc is in
+    the rock, and under whatever disc is above.
 
 The mod's own themes:
 
@@ -106,7 +125,7 @@ The mod's own themes:
   and there a floor of mossy stone bricks edged with mossy cobblestone. Under it are three layers, which show at the rim as
   bands. A few small ponds and streams, and its own growth: a giant jungle tree for about every 120 blocks of ground and an
   ordinary one for every 45, with bushes, clumps of bamboo, ferns, moss carpet and azaleas between and under them, and
-  vines. Under the disc glow berries, tufts of leaves and vines.
+  vines. Under the disc glow berries, tufts of leaves and vines. Ruins on three discs in five (see Ruins below).
   - The patchwork is one `noise_provider` in the palette's first `top` layer. Its `states` are an order, not a mix: the noise
     is turned into a place in the list, low values to its start and high ones to its end, so blocks next to each other in
     the list lie next to each other on the ground (the stone bricks at one end, ringed by cobblestone, coarse dirt and
@@ -171,6 +190,51 @@ trunk raised 5 to 8 blocks, root arms that spread wider (`max_root_width` 10) an
 larger crown. It needs room for a trunk of at least 6 over its roots, so it grows under the higher parts of a dome. Vanilla's own tree feature is left out of what is inherited (`without_features`), or a disc would be
 twice as thick with trees without such a pack as with it. Everything else is still inherited: grass, flowers, melons, lily pads
 and whatever other mods add. With no themes every disc is the terrain's own rock in the biome it lies in.
+
+### Ruins
+
+Ruins stand on some discs: on three jungle discs in five, with a ruin for about every 3000 blocks of top (two on a disc of
+radius 40, four on the largest); on three lush discs in ten and one mangrove disc in four, with one for every 4000. A crystal
+disc has none. They are one structure, `overgrown_abyss:disc_ruins`, so `/locate structure overgrown_abyss:disc_ruins` finds
+the nearest disc with one (it looks 100 chunks each way).
+
+Every piece is one of vanilla's own templates, named by id and not copied, in two families:
+
+- Pieces of the Ancient City, through the same reskin as the city at the hole's floor (`processor_list/disc_ruins/outpost`:
+  a tenth of the blocks rotted away, stone and mossy stone bricks for deepslate, jungle wood, moss for wool, lanterns), so
+  they read as outposts of that city. Their chests hold vanilla's jungle temple loot (`minecraft:chests/jungle_temple`).
+- Vanilla's cold ocean ruins (`processor_list/disc_ruins/overgrown`): their air, gravel and sand are left out, so they stand
+  in the disc's own ground with whatever grows there; the three kinds of stone brick are mixed; magma, prismarine and
+  cobblestone become mossy cobblestone, sea lanterns shroomlights, the planks jungle planks, the red bricks mud bricks. They
+  have no chests: vanilla puts those in by code.
+
+The kinds, each a pool in `data/overgrown_abyss/worldgen/template_pool/disc_ruins/`:
+
+| Kind | Pieces | Ground (`radius`) | Air (`height`) | Weight on jungle |
+|---|---|---|---|---|
+| `tower` | `tall_ruin_1`, `tall_ruin_3` | 12.5 | 19 | 40 |
+| `keep` | `tall_ruin_2`, `tall_ruin_4` | 12.5 | 13 | 20 |
+| `vault` | `chamber_1` | 12.5 | 10 | 10 |
+| `house` | the 12 large cold ocean ruins | 11.5 | 12 | 10 |
+| `camp` | `camp_1` to `camp_3`, `large_ruin_1` | 12.5 | 5 | 8 |
+| `chamber` | `chamber_2`, `chamber_3` | 8.5 | 6 | 6 |
+| `pillar` | `medium_pillar_1`, `large_pillar_1` | 5.5 | 15 | 5 |
+| `statue` | `small_statue` | 6.5 | 5 | 3 |
+| `hut` | the 24 small cold ocean ruins | 5 | 6 | 3 |
+| `rubble` | the two small and two medium ruins | 10 | 3 | 3 |
+
+Lush discs have pillars, chambers, statues, huts and rubble; mangrove discs houses, pillars, huts and rubble, on what dry
+ground they have. `DiscRuinFilesTest` reads the mod's own file and checks every template against its kind's `radius`,
+`height` and `sink`.
+
+To change how many there are, change `chance` and `every`; to change which, the weights. A pool of your own works the same
+way: give its `radius` and `height` honestly, since a place is found by those numbers and not by the templates.
+
+- `many-ruins`: the mod's file with `chance` 1 and `every` 1200 on all three themes: ruins on every disc that has room for
+  one, up to six on a disc. For looking at the kinds without searching for them.
+- `tall-rings`: the mod's file with `layer_spacing` 28 in place of 20. It was measured for the ruins and left out of the
+  mod's own file: a hole 200 blocks deep goes from 7 layers and about 65 discs to 5 layers and about 43, and what it gains
+  is towers, about 1.4 to a hole in place of 0.7. The lower kinds lose more discs than they gain room. For judging the look.
 
 - `tuned-themes`: the mod's file as it was before biomes were inherited, with the hand-made palettes and growth lists for lush,
   jungle and mangrove (denser foliage, mangrove roots on stems). For comparing the two in game. It inherits spawns only

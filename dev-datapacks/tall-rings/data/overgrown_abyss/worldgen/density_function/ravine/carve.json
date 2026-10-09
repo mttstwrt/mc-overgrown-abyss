@@ -792,12 +792,29 @@
     "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",
     "cavern_biome": "minecraft:lush_caves"
   },
+  "wall_noise": [
+    {
+      "wavelength": 90,
+      "vertical_stretch": 3,
+      "amplitude": 6
+    },
+    {
+      "wavelength": 16,
+      "vertical_stretch": 4,
+      "amplitude": 2.5
+    },
+    {
+      "wavelength": 6,
+      "vertical_stretch": 1.5,
+      "amplitude": 1
+    }
+  ],
   "cone": {
     "top_radius": 45,
     "base_radius": 150,
     "flare": 1.6,
     "clear_radius": 8,
-    "layer_spacing": 20,
+    "layer_spacing": 28,
     "layer_jitter": 0.3,
     "spacing": 56,
     "stack_chance": 0.4,
