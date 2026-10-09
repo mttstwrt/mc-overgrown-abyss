@@ -103,6 +103,10 @@ for 1.21.1 on Fabric before Phase 1.
 5. **Other mods overriding vanilla Ancient City templates.** Our pools and processor lists are copies in the `overgrown_abyss` namespace, so overrides of vanilla *pool* or *processor* JSON do not affect us. Vanilla *template* files (NBT) are referenced by ID, so a pack or mod that replaces one (same path) wins by pack priority and Overgrown Abyss would use its version. **[recall; verify in 1.21.1 source that template lookup follows pack priority.]** Effects: (a) the look changes and our reskin table may not map the other mod's blocks, so Deep Dark blocks could leak through; (b) different jigsaw blocks can break the connections our pool wiring expects, leaving gaps or generation errors. Responses:
    - *Iteration 1:* accept as a known limit and document it. Add a startup check that compares each referenced template's jigsaw layout (or hash) with the expected vanilla one and logs a loud warning on mismatch.
    - *Later:* each piece we author ourselves under the `overgrown_abyss` namespace removes the exposure for that piece. Full isolation arrives when all pieces are our own.
+   - *Seen 2026-10-09:* the owner's pack has Dungeons and Taverns' Ancient City overhaul, which replaces all 18 city
+     templates the disc ruins use and the city's own. Template lookup does follow pack priority. Since that day the disc
+     ruins measure each template as the level has it (section 7, Ruins by depth), so (a) remains and a replaced piece no
+     longer reaches past the room found for it. The city at the floor is as it was: not looked at with that pack.
    - *Open decision (owner):* whether Overgrown Abyss should deliberately honour mod-added or overridden Ancient City pieces. Not decided. Default until decided: do not promise support, and do not block it. If wanted later, the cheap route is Lithostitched-style pool injection or documenting how packs can extend our pools (see library notes).
 6. Existing spec risks stand (fluid override fragility, still reads as Deep Dark, footprint/cavern alignment).
 
@@ -1783,6 +1787,147 @@ seven); trees on the floors of ocean ruins.
 Not run: Larion, the owner's pack, any hole but one, a client. A pack that replaces vanilla's templates changes these ruins
 too (section 5, risk 5).
 
+### Ruins by depth, measured pieces, and other mods' ruins
+
+Owner (2026-10-09), after seeing the ruins: "This looks good so far. Today I want to explore making ruins more frequent the
+towards the bottom, as well as allowing mod-added jungle-style ruins to spawn where there is space. One concern for spawning
+ruins is that since the discs are only a few blocks thick we can't spawn anything that goes underground like the vanilla
+jungle ruins."
+
+**What looking first turned up.**
+
+- **Ruins thinned toward the bottom, not the other way.** A theme's `chance` was the same at every height, and mangrove
+  (0.25) and crystal (none) gather low. Over 24 holes outside the game the share of discs with ruins was 0.35 in the lowest
+  third of a hole's height, 0.34 in the middle and 0.40 in the highest.
+- **The owner's pack had already replaced the pieces** (section 5, risk 5, now seen). Dungeons and Taverns' Ancient City
+  overhaul replaces all 18 city templates the disc ruins borrow. By yesterday's typed numbers 14 of them are taller than
+  the air their kind kept, most by a layer; its small, medium and large "ruin" are buildings 10 high with a cellar of 4
+  layers where vanilla's are heaps 3 high. So what the owner saw on discs was not what the dev servers and the tests
+  built, and numbers typed for vanilla's templates do not hold in a pack.
+- **Other mods' ruins in the pack.** Epic Structures: Jungle Temples is plain datapack jigsaw: `epic:epic_temple_ruin` is a
+  pool of 14 standalone ruins, 11 to 41 blocks across and 7 to 27 high, each with a floor as its lowest layer; its two
+  temples are 47 by 47 and 48 high. YUNG's Better Jungle Temples (`yungsapi:yung_jigsaw`) starts 25 to 30 blocks under the
+  ground and cannot stand on a disc by any rule.
+- **A jigsaw structure's own file says how deep it sits.** Read from the 1.21.1 bytecode of `JigsawPlacement.addPieces`:
+  with `project_start_to_heightmap` the first piece's lowest layer is at the ground's highest block plus `start_height`
+  (`getGroundLevelDelta()` is 1), so it has `1 - start_height` layers in the ground. A cellar's depth cannot be read from
+  a template; it can from this.
+
+**The owner's decisions**, asked before anything was built: the share of discs with ruins and the number on a disc both
+grow toward the bottom, and grander kinds gather deeper; other mods' ruins come in through a structure tag that packs can
+add to (not everything the jungle biome allows, and not named one by one in `carve.json`); a piece with layers meant to be
+underground stands only where the rock is that deep (not on rock grown under it, which would change the undersides); every
+template is measured, yesterday's kinds included.
+
+**What was built.**
+
+- **Pieces are measured when the level loads** (`DiscRuinPieces` in `compat`, handed to the pure code as `RuinPieces`). A kind
+  in a theme is now a pool, a weight and a `sink`; `radius` and `height` are gone from `carve.json`. For each element of a
+  kind's pool that is one template, the template is saved to its NBT form and read: its footprint gives the round of ground
+  (half the diagonal, since a piece is turned about its middle), and the layers up to its highest block give the air. So a
+  pool whose pieces differ in size, as Epic's 14 do, is tried piece by piece, and a replaced template is measured as it is.
+  The kinds are still put in an order drawn by weight; within a kind the pieces are put in an order drawn by their weights in
+  the pool, and the ruin is the first piece with room. A site names its pool and which element of it the piece is.
+- **No new mixin for it.** The level's template manager is an argument the `ChunkMap` constructor already has, taken by the
+  mixin that was there. What the game has no accessor for is read through its own codecs, as the files would say it: which
+  template an element is (`location`), a pool's elements and weights (counted in a copy shuffled with a fixed seed, since a
+  pool keeps an element once for each of its weight), and where a structure starts.
+- **Room below is asked of the carve, like room above.** The layers of a piece that lie in the ground must lie in rock at the
+  middle of its round and on the same two rings of eight columns: rock the mod puts back for a disc (its platform, the flare
+  of its stem) or ground the carve never opened (where the disc lies in the hole's wall). The carve is worked out for each
+  block, so this needs no margin. With a platform 4 thick, one layer always has rock under it and two nearly always; more
+  only over the flare or in the wall. A piece with more than the platform holds is tried in the middle of its disc first,
+  where the flare is. Nothing was added to the carve, and no underside changed.
+- **`by_height` on a theme's ruins and on each kind** (`bottom` and `top`, reusing the theme's own ramp and a disc's height
+  among its hole's discs). On the ruins it multiplies both the share of discs and the number on a disc; on a kind, its
+  weight. The mod's numbers, all first guesses: ruins 1.6 to 0.4 on jungle and 1.8 to 0.4 on lush and mangrove; tower and
+  keep 2 to 0.3, vault 1.8 to 0.5, house 1.5 to 0.7; camp 0.7 to 1.4, hut 0.6 to 1.6, rubble 0.5 to 2.
+- **`structures` in a theme's ruins: a tag of other structures.** Each structure in the tag that starts on the ground from a
+  template pool at one fixed depth is a kind: its first piece, alone, `1 - start_height` layers in the ground. Others are
+  left out with the reason in the log. The mod's tag `#overgrown_abyss:on_discs/jungle` holds Epic's three structures, all
+  optional, and is named by the jungle theme (weight 15) and the lush one (5). The pieces keep their own processors and loot.
+
+**Two things that were not in the plan, found while building it.**
+
+- **Ruins of neighbouring discs were not kept apart.** Discs of one layer run into one another (two of the lowest layer in the
+  first test hole are 57 blocks apart with radii of 51 and 37), and yesterday's code only kept a ruin clear of the others on
+  its own disc. Once the tests knew which disc each ruin stands on, they showed a house and a pillar of two such discs with
+  a block and a half between their rounds, where 2 are kept between the ruins of one disc; larger pieces could have met. A
+  ruin now keeps clear of every ruin of its hole whose piece shares a height with it.
+- **Air in a template is placed, and empties what is there.** Vanilla's city pieces hold no air and the mod's ocean ruins
+  leave theirs out, so yesterday's measure (the highest block that is not air) was right for both. It is not for other
+  mods' pieces: Epic's are saved with the air of their whole box, and the plate of a pillager outpost builds two layers
+  under a box of air 30 high, which stood on a dev server's disc as if it needed 1 block of room. A piece now needs room up
+  to its highest air, unless its pool's processors leave air out (a `block_ignore` naming air, read from the pool's file).
+
+**Where the plan's account was off.** Places with deep rock are not rare. In the tests, of 607 places where a small piece
+found room on the ground, 404 still had room for the same piece with five layers in the ground: the middle of most discs,
+and 250 places away from it, since much of many discs lies in the wall. The rule is as the owner chose it; it bites less
+often than "only over the stem's flare or in the wall" sounded. And vanilla's trail ruins, put in the testing pack to be
+kept off by that rule, never reach it: none of their five towers is taller than the 16 layers their structure buries, so
+they are refused when measured.
+
+**Measured outside the game**, the same 24 holes each time (seed 11, vanilla height, the mod's themes, vanilla's templates):
+
+| | Yesterday | Measured pieces, no ramps | With the ramps (shipped) |
+|---|---|---|---|
+| Ruins to a hole | 35.5 | 36.9 | 43.9 |
+| Share of discs with ruins: lowest, middle, highest third | 0.35, 0.34, 0.40 | 0.36, 0.35, 0.43 | 0.52, 0.35, 0.25 |
+| Ruins to a hole in each third | 12.9, 11.7, 11.0 | 13.1, 12.3, 11.5 | 25.6, 12.9, 5.4 |
+| Mean height in the hole (0 bottom, 1 top): tower, keep, vault | 0.45, 0.55, 0.49 | 0.46, 0.52, 0.59 | 0.26, 0.30, 0.25 |
+| The same: camp, hut, rubble | 0.49, 0.43, 0.52 | 0.51, 0.44, 0.47 | 0.43, 0.33, 0.37 |
+
+Finding a hole's discs and ruins took 12 to 15 ms in all three, no more with pieces than with kinds. Measuring alone changes
+which kinds find room: houses went from 2.0 to 5.3 a hole and pillars from 2.8 to 4.3, because a kind's lower pieces are
+no longer held to the room of its tallest. Every kind stands lower with the ramps, since all ruins
+do; the grand kinds by more.
+
+**Verification.**
+
+- Unit tests, 196, pass, and both loaders' jars build (`./gradlew build` in the sandbox). `DiscRuinsTest` now has the ramps
+  (share and count by thirds of a hole, against the same theme with no ramp), a kind that gathers where its weight is, a
+  piece with layers in the ground seen to have rock under every sampled column, a piece far too tall leaving every place to
+  another of its kind, and ruins of neighbouring discs apart. `DiscRuinPiecesTest` loads vanilla's own pools and structures
+  with the game's loader and checks what the level-side code makes of them: elements and weights, measures against the
+  templates' files, the place of an element leading back to it, air placed or left out (a small pack of the tests' own),
+  pieces with nothing over the ground, and which structures lend a piece and how deep. `DiscRuinFilesTest` checks the
+  measure itself against the jar's templates and that the mod's tag holds only optional entries.
+- Each rule was switched off in turn and seen to fail a test: rock under a piece, the share by height, the count by height,
+  a kind's weight by height, clear of other discs' ruins, the stem first, room for air, processors that leave air out
+  (named and written in place), nothing over the ground, a structure's depth, a start on the ground, the element a site
+  names. Two were not caught at first (the count by height, and the processors), and their tests were made to.
+- Dedicated dev servers in the sandbox, seed 11, the whole hole at x=-1572 z=2594 generated by `forceload` and read back from
+  the region files:
+
+| Run | NeoForge 21.1.252 | Fabric 0.19.5 |
+|---|---|---|
+| The mod alone: pieces in the hole (yesterday 11) | 26 | 26, the same templates, turns and places |
+| Of them under y 20, from y 20 to 79, above | 10, 15, 1 | the same |
+| Columns of a piece's floor with air under them | none | none |
+| `/locate structure overgrown_abyss:disc_ruins` from the hole's centre | 26 blocks away | the same |
+| `borrowed-ruins` pack: pieces | 51 | 51, the same |
+| Of them village centres, outpost plates, trail ruins | 35, 4, none | the same |
+| Epic Structures: Jungle Temples 1.0.2 added for the run: pieces | 26, of them 3 Epic's | the same |
+| Chests and brushable blocks in Epic's pieces | 5 and 14, with the loot tables its templates name | the same |
+| Dungeons and Taverns' overhaul added for the run | measured at its own sizes (up to 20 blocks of air on jungle discs, where vanilla's need 19); 26 pieces, none over air | not run: the jar is NeoForge's only |
+
+  With no other mod the log has no warning from the ruins, and one line for each theme: `Disc ruins of
+  overgrown_abyss:disc_jungle: 10 kinds with 54 pieces, needing rounds 8 to 24 blocks across and 2 to 19 blocks of air`.
+
+Not verified by the sandbox's runs: anything by eye, in game. Not run there: Larion, the owner's whole pack, a client.
+The owner ran this build in their pack later the same day (NeoForge, with Larion, Epic and Dungeons and Taverns; the log
+names the build) and said: "right now it doesn't look overcrowded". That log has no warning from the ruins. Each of Epic's
+three structures lends its pieces with one layer in the ground, so jungle discs have 13 kinds with 72 pieces, needing
+rounds of 8 to 67 blocks across and 2 to 47 blocks of air, and the three holes near the origin have 7 to 9 layers of discs.
+Still to look at in game: whether the top is too bare; whether grander-deeper reads; Epic's ruins among the outposts, and
+whether 15 is enough weight to meet them (3 in the test hole); a house or hut beside a ruin of the next disc.
+Known and left: with Dungeons and Taverns its buildings stand on their cellars, since a replaced template cannot say how
+deep it is meant to lie; a pack that wants them buried gives those kinds a `sink` in a `carve.json` of its own. Epic's two
+temples are in the tag and fit under no dome (the tallest is about 29, they are 48): making room for them is a round of its
+own (the dome's height, or a disc made for a temple). Only a structure's first piece stands, so one that is nothing without
+its joined pieces lends little (an outpost lends its plate). The ground the carve never opened is taken for rock, and may
+hold a cave of the terrain's.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -1791,9 +1936,11 @@ too (section 5, risk 5).
 2. Wall styles (Phase 2) and `BiomeInjector`.
 3. Decide whether lush caves features on the city floor suit the look, or whether the city should keep its own ground.
 4. Extract `ravine-core` into a shared source module when Rift starts.
-5. Disc ruins: look at them in game (the `many-ruins` pack puts them on every disc that has room), settle how many and which
-   kinds. Then pieces of our own, built for a disc rather than borrowed from the city: the placement takes any template
-   pool, so that is templates and JSON only.
+5. Disc ruins: look at them in game (the `many-ruins` pack puts them on every disc that has room, `borrowed-ruins` shows
+   borrowed ones without another mod), settle the ramps by height, how many and which kinds, and the weight of other mods'
+   ruins. Then pieces of our own, built for a disc rather than borrowed from the city: the placement takes any template
+   pool and measures it, so that is templates and JSON only.
+6. Room for a temple: Epic's are 48 high and the tallest dome is about 29.
 
 ## 9. Future additions (owner wishlist)
 
@@ -1813,6 +1960,9 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
 
 ### Epic Structures (large jungle temples)
 
+- **On discs since 2026-10-09** (section 7, Ruins by depth): its jar was read, and its structures are in the mod's tag
+  `#overgrown_abyss:on_discs/jungle` as optional entries. Its 14 standalone ruins stand on jungle and lush discs where they
+  fit; its temples fit under no dome. What follows is the older idea of joining its pieces to the city, which is not started.
 - **Why:** its large jungle temples look great. The idea is to merge their paths and jigsaw pieces with our jungle
   reskin of the Ancient City, so the city grows temple districts and approach paths instead of only reskinned vanilla
   pieces.
