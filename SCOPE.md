@@ -1978,7 +1978,7 @@ down, and further from the center of the hole", and "draft the loot tables".
   265 the second and 105 the third.
 - **A chest stands exactly where its marker is.** Most markers are in a template's lowest layer, which lies in the ground
   here, so most hut and house chests are set into the floor with the lid level with the ground. One of the nine in the test
-  hole is under a block of grass, as vanilla's are under gravel.
+  hole is under a block of grass, as vanilla's are under gravel. Standing them on the floor instead is a small change.
 - **One table for all the chests of a ruin**, and no step up for a grander kind.
 
 **Verification.**
@@ -2010,6 +2010,7 @@ about a tenth of the blocks inside the ruins' boxes differ, all of them vines, l
 masonry and chests do not. One city piece's chest in the test hole has a dripstone block of the terrain's on it.
 Known and left: camps, pillars, the statue and rubble have no chest; Artifacts' items no longer reach the disc ruins'
 chests through the jungle temple's table, so a pack that wants them there adds a modifier for the mod's tables.
+The numbers this is balanced by are in the table of levers in section 9, with those of the ideas that are not built yet.
 
 ## 8. Next steps
 
@@ -2026,7 +2027,9 @@ chests through the jungle temple's table, so a pack that wants them there adds a
 6. Room for a temple: Epic's are 48 high and the tallest dome is about 29. The owner's answer (2026-10-09) is a disc made
    for ruins, section 9.
 7. Treasure: the owner edits the nine draft tables; look at where the hut and house chests sit; then, in the owner's pack,
-   Lootr's `refresh_modids` for chests that refill.
+   Lootr's lists for chests that refill.
+8. The owner's goals of 2026-10-09 (section 9, with the levers of each): suggested next the penalty for going up or down
+   too fast, then the disc made for ruins, then fights that reset and traps. The owner has not set that order.
 
 ## 9. Future additions (owner wishlist)
 
@@ -2132,31 +2135,191 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
 
 ### Reasons to explore the discs, and to come back (owner's goals, 2026-10-09)
 
-- **The goals.** "I am trying to make sure there is a reason to explore the discs instead of just heading straight to the
-  bottom", and "a repeated reason to come back". The pack the mod is meant for is "focused on create aeronautics and
-  adventure, with cool biomes, dimensions, and bosses to fight", and has artifacts and levelling, "so players can get quite
-  a bit stronger that in vanilla". Treasure by rank (section 7) is the first step.
-- **A disc made for ruins.** "A dedicated disc that would have an extra high dome and would not spawn more discs on top of
-  it", "filled with connected ruins", of "the reskinned ancient city pieces and optionally other pieces from mods like
-  Epic's". Measured for Epic's temples (47 by 48 across, 47 high): the widest disc (radius 64) with a dome of about 58 where
-  the tallest is 29 now. It would be the first disc that keeps others away. The city's pieces are already joined by
-  vanilla's own assembly (`RavineCityStructure`), which would have to be held to the disc; of the 36 pieces Epic's large
-  temple joins on, 20 settle onto the height of the whole column and would land on the ground above the hole.
-- **A penalty for going up or down too fast** (from the show the mod is drawn from): "a stacking penalty for ascending or
-  descending too fast", wither as the easiest form, so that an elevator can be tuned to the speed that costs nothing, a
-  pitfall is worse than its fall, and "we don't want to risk the effect being applied to unsuspecting players outside the
-  reaches of the chasm". Decided so far: the same limit up and down "for now", each adjustable on its own; "tentatively"
-  stricter with depth; "tentatively" an ender pearl counts as travel. Suggested and not yet agreed: a depth the player is
-  adjusted to, which follows them at a fixed rate, with the penalty set by the gap. Artifacts' antidote vessel cancels
-  wither, so a penalty that is only the effect has a counter in that pack.
-- **Danger.** "Fights that reset, exploring the chasm should be dangerous and should feel dangerous - even as players get
-  good equipment". Trial spawners and mobs that knock players off a disc were suggested; and "something we haven't
-  considered yet: traps".
-- **Airships.** Flying between discs "was the original intended method of travel, it just shouldn't be super easy and
-  probably require a unique smaller craft"; reaching the bottom should take building ("bridges, elevators, and transport
-  systems").
-- **Far off.** "A custom boss fight to the bottom of the chasm", and perhaps a dimension behind it, with nothing yet for
-  the other side "besides more discs". A boss would be the first thing here that needs the mod on the client.
+Of what follows only the treasure is built (section 7, "Treasure by a disc's theme, depth and distance"). The rest is one
+discussion: the owner's ideas in their words, each in an item of its own below, with what was suggested in answer and the
+numbers each could be balanced by. "Suggested" marks what was proposed to the owner and not agreed. Of other mods, only what
+an item says was read from a jar is known; nothing of theirs was run for these ideas.
+
+- **The goals.** Now: "the goal is making it look cool and provide loot/resources players would want". "I am trying to make
+  sure there is a reason to explore the discs instead of just heading straight to the bottom." And "a repeated reason to
+  come back", for which "most of the reasons I can come up with ... involve integration with other mods".
+- **The reasons the owner counts today:** "shroomlights/froglights, any item that comes from mangrove, jungle, or amythist
+  discs, and the treasure from the ruins". Of these only what regrows where it is comes back by itself (budding amethyst on
+  crystal discs, glow berries, vines, saplings); shroomlights and froglights are placed once, and are now in the loot
+  tables too, with frogspawn in the mangrove ones.
+- **The pack the mod is meant for** is "focused on create aeronautics and adventure, with cool biomes, dimensions, and
+  bosses to fight", with artifacts and levelling, "so players can get quite a bit stronger that in vanilla".
+- **One rank for a disc (suggested).** The rank that picks a disc's loot table, higher the deeper and the further from the
+  centre, could also set how hard its fights are and how many traps its ruins hold, so that deeper and further out is both
+  deadlier and richer. Today only `loot` has it, with weights of its own; when a second thing needs it, the hole should
+  have one rank that all of them read.
+- **Order suggested:** treasure (built), then the penalty for going up or down too fast, then the disc made for ruins, then
+  fights and traps, which lean on the penalty. The owner agreed to the first.
+
+**The levers there are today.** All in `ravine/carve.json` unless it says otherwise; `dev-datapacks/README.md` describes each.
+
+| What it balances | Setting | As shipped |
+|---|---|---|
+| How many discs have ruins, and how many each | a theme's `ruins`: `chance`, `every`, `by_height` | jungle 0.6, 3000, 1.6 to 0.4; lush 0.3, 4000, 1.8 to 0.4; mangrove 0.25, 4000, 1.8 to 0.4 |
+| Which kinds, and where in a hole | each kind's `weight` and `by_height` | the table in `dev-datapacks/README.md` |
+| Other mods' ruins among the mod's own | `weight` of a tag in `structures` | 15 on jungle, 5 on lush |
+| How many chests | follows from the kinds: only towers, keeps, the vault, chambers, houses and huts hold one | about 23 ruins with a chest in a hole of vanilla's height |
+| Which discs hold which table | `ruins.loot`: `depth`, `distance`, and each table's `from` | 2 and 1; from 0, 0.6 and 0.85, which gives the tables a third, a half and a fifth of the chests |
+| What a chest holds | the files in `loot_table/chests/disc/`: a pool's `rolls`, an entry's `weight` and count, the levels of an enchantment, the weight of `empty` in the prize pool | 2 to 4, 3 to 5 and 4 to 7 rolls of valuables; the prize pool empty 8 or 9 times in 10, 3 in 4, and 1 in 2 |
+| What spawns on a disc | a disc biome's own spawn list over its parent's (`worldgen/biome/disc_*.json`), and a theme's `inherits.without_spawns` | nothing added, nothing left out |
+| What is placed on a disc | a theme's `growth`: any configured feature, `every`, `patches` | the mod's trees, bushes and lights |
+| Room between discs | `cone`: `layer_spacing`, `spacing`, `stack_chance`, `rider_chance`; `discs`: `min_radius`, `max_radius` | 20, 56, 0.4, 0.5; 20 and 64 |
+| Room over a disc | `discs`: `height_ratio`, `min_height` | 0.45 and 14, so 29 over the widest disc |
+| The clear middle of a hole | `cone.clear_radius` at the floor, `cone.upper.clear_radius` at the top | 8 and 20: from 16 blocks across to 40 |
+
+Levers in the owner's pack and not in the mod: Lootr's `refresh_value`, `refresh_loot_tables` and `refresh_modids`; a loot
+modifier that names the mod's tables; a datapack over any of the files above.
+
+### Chests that refill, mobs that come back, fights that reset (owner's wish; the means are suggestions)
+
+- **Idea:** "a repeated reason to come back", such as "increasing the spawn rate of mimics (from the artifacts mod) or
+  providing places they can respawn". And: "fights that reset, exploring the chasm should be dangerous and should feel
+  dangerous - even as players get good equipment".
+- **Chests that refill (in the pack; not tried).** The owner's pack has Lootr, whose config refills chests by loot table or
+  by a table's mod id, every `refresh_value` ticks (24000, 20 minutes); all its lists are empty there. Naming
+  `overgrown_abyss` in `refresh_modids` would refill the city's chests at the bottom too; naming the nine disc tables in
+  `refresh_loot_tables` refills only the discs'. This is why the disc ruins have tables of the mod's own.
+- **Mobs on a disc (exists, unused).** A disc biome's own spawn list is merged over its parent's (section 7, "A disc biome's
+  own spawns"), so a pack raises a mob's rate on a kind of disc with an entry in that biome's file. On NeoForge a biome
+  modifier was seen to reach a disc through its parent biome; one aimed at the disc biome itself was not tried. Levers: the
+  entry's weight and group size, for each kind of disc.
+- **Mobs that keep coming back in ruins (exists, empty).** `spawn_overrides` in `worldgen/structure/disc_ruins.json` is
+  empty. Filled, its mobs spawn inside the ruins' boxes in place of the biome's, as in a witch hut or an outpost, for as long
+  as the ruin stands. It is one list for every theme, since the ruins are one structure, and a pack replaces that one file
+  to name mobs of its own. Levers: the mob, its weight and group size, and `piece` or `full` for the box. Not tried; whether
+  Artifacts' mimic can spawn this way is not known.
+- **Mimics.** Read from Artifacts' jar (13.2.5): they come from its campsite features, `artifacts:campsite` and
+  `artifacts:minimalist_campsite` (one `artifacts:suspicious_chest`), which its own biome modifier places underground. A
+  theme's `growth` takes any configured feature and skips one that does not exist with a warning in the log, so a pack with
+  Artifacts can list one today, with `every` as its lever. Not tried: whether those features place rightly on a disc. A
+  mimic found is gone, so this is a reason to explore more than one to return.
+- **Fights that reset (suggested).** Vanilla's trial spawner comes back after `target_cooldown_length` (36000 ticks, 30
+  minutes, unless set), pays out from `loot_tables_to_eject` each time it is beaten, and adds mobs for each player near; a
+  vault pays each player once. In 1.21.1 a spawner's settings are in the block's own data (`normal_config`,
+  `ominous_config`; from 1.21.2 they are files of a registry), and a processor rule can give a block data
+  (`append_static`), so one could be written into a borrowed piece through its reskin, in JSON. Not tried. Levers:
+  `spawn_potentials` (which mobs, with what gear and attributes, so a pack can name its own or make vanilla's stronger),
+  `total_mobs`, `simultaneous_mobs`, both again `_added_per_player`, `ticks_between_spawn`, the cooldown, the ominous
+  settings, the reward tables, and how many spawners a ruin has from which rank.
+- **The fall (suggested).** What armour does not help against in a chasm is being knocked off a disc, so a mob that knocks
+  back, such as the breeze, threatens a strong player more than one that hits harder; the penalty below makes the fall
+  worse again. The owner: "adding mobs with knockback would be devious".
+- **Open:** which mobs, and whether every theme's ruins share them; where a spawner goes in pieces that were not built for
+  one; whether danger rises with the disc's rank.
+
+### Traps (owner idea; the kinds are suggestions)
+
+- **Idea:** "Something we haven't considered yet: traps." With the penalty below, "it also makes pitfall traps more
+  dangerous".
+- **Suggested, cheapest first:**
+  1. Infested masonry: a share of a ruin's bricks let out silverfish when broken. One rule in the reskin lists that are
+     there. Lever: the share.
+  2. Chest traps: TNT under a trapped chest, or a pressure plate and a hidden dispenser. A processor changes one block at a
+     time, so this is a small placing step of the mod's, where the loot is set now. Levers: the odds by a disc's rank, and
+     what a dispenser holds, which is a loot table.
+  3. False floors: big dripleaf over a hole through the disc, so that the trap is the fall. Needs holes in discs, which is
+     a change to the carve and to the undersides. Lever: how many, and on which discs.
+  4. Trap rooms: pieces built to be traps, which would be the mod's first templates of its own.
+- **What exists:** nothing; no ruin has a trap.
+
+### A disc made for ruins (owner idea)
+
+- **Idea:** "a dedicated disc that would have an extra high dome and would not spawn more discs on top of it, and it would
+  be filled with connected ruins, which would provide a dedicated place for larger ruin types to spawn such as Epic's
+  temples". It "would use the reskinned ancient city pieces and optionally other pieces from mods like Epic's". Its part in
+  the goals: "they have good looking ruins and lots of treasure to find".
+- **Measured for Epic's temples** (jar read, 1.0.2): 47 by 48 across and 47 high, saved with their air, one layer in the
+  ground. That is a round 34 in radius with 46 blocks of air. A dome is lower toward its rim, so the widest disc (radius 64)
+  needs a dome of about 58 for it, where the tallest is 29 now. Layers are about 20 apart, so that dome takes the height of
+  three of them: half or more of a hole of vanilla's height (the four near the test seed's origin have three to six layers)
+  and a third of one in the owner's pack (seven to nine). The disc is 128 across where the cone, at its lowest layer, is
+  about 210 across in a hole of vanilla's height and about 240 in the owner's pack.
+- **What exists:** pieces are measured, so the temples already in the tag would stand on such a disc as single pieces with
+  no new ruin code. The city's pieces are joined by vanilla's own assembly (`RavineCityStructure`; `size` 7,
+  `max_distance_from_center` 116), all at fixed heights.
+- **What it needs:** the layout to place such a disc, with a radius and a dome of its own; to leave out every disc whose
+  platform or stem would enter its dome, and riders on it, which makes it the first disc that removes others; a start of
+  the city on it, its reach held to a box inside the round so that nothing overhangs the rim; and a theme for it.
+- **Joining Epic's pieces is the costly part.** Its large temple joins on up to seven rounds from a pool of 36, within 80
+  blocks. 20 of the 36 are `terrain_matching`: they settle onto the top block of the whole column (`GravityProcessor`, read
+  from the 1.21.1 bytecode), which under the overhanging wall is the ground above the hole. So only its 16 fixed-height
+  pieces could join, or the mod would answer the height itself.
+- **Suggested:** at most one in a hole, on the lowest layer and set into the wall, where the rock under it is deep; the disc
+  first with single pieces on it, joined pieces after it has been seen; and it is the natural place to moor a craft.
+- **Levers (none exist yet):** how often a hole has one; on which layer; its radius and its dome's height; how far the
+  city reaches on it and for how many rounds; the weights of a temple against the city; and loot tables of its own.
+- **Open:** how often, which is the owner's to choose; how many discs it removes (a wedge of the two layers above it, not
+  measured).
+
+### A penalty for going up or down too fast (owner idea)
+
+- **Idea,** from the show the mod is drawn from: "we could add a stacking penalty for ascending or descending too fast.
+  Easiest way would be to add stacking wither debuffs. This makes building elevators convinient since you can tune the
+  speed to exactly how fast you can go without taking a debuff, it also makes pitfall traps more dangerous." And: "We don't
+  want to risk the effect being applied to unsuspecting players outside the reaches of the chasm though."
+- **Why it serves the goals (suggested reading):** it makes going straight to the bottom cost something without closing
+  anything off; it gives builders a number to engineer to; and wither goes past armour, so a fall or a knock stays
+  frightening to a strong player.
+- **Decided so far (owner):** the limits up and down "even, but make them independantly adjustable"; "tentatively stricter
+  with depth"; an ender pearl counting as travel "also tentatively yes, though creative ways of bypassing the curse might
+  be fun and it would take quite a few pearls to get back up, though going down might be too easy". So not every way
+  round it is to be closed.
+- **Suggested shape, not agreed:** each player has a depth they are adjusted to, which follows their real height at a fixed
+  rate. The penalty comes from the gap between the two and not from speed at any moment. A gap under a free band costs
+  nothing, so stairs, jumps and one short drop are free; with the band just over the gap between layers, one drop from disc
+  to disc is free and two in a row are not, which makes discs the places to rest. A lift at or under the rate never opens
+  a gap. A wider gap is a higher level of the effect, and waiting closes it.
+- **Keeping it inside the chasm (suggested):** it acts only inside a hole's own shape, which the mod can tell for any place
+  (`RavineCells.containing` and the level's footprint): between the hole's floor and its mouth, within its wall at that
+  height and a margin behind it, or in a disc's dome. Coming in sets the adjusted depth to where the player is, so walking
+  or caving in starts nothing. A harmless stage warns before any damage. The whole thing is a block in `carve.json`, and a
+  pack that leaves the block out has no penalty.
+- **What it needs:** the mod's first code that is not world generation: one number kept for each player and stepped on the
+  server. With vanilla's effects it still needs nothing on the client.
+- **Levers (none exist yet):** the rate upward and the rate downward; the free band; the gaps at which each level begins
+  and how long a level lasts once the gap has closed; how much stricter it is with depth; what counts as travel (an ender
+  pearl, chorus fruit, a portal, a command, respawning); the margin behind the wall; whether there is a warning stage; and
+  whether the mod deals the damage itself. To set them against: layers are 20 apart (`cone.layer_spacing`), climbing a
+  ladder is about 2.35 blocks a second, and a fall passes 20 blocks a second within its first second.
+- **To know:** Artifacts' antidote vessel cancels wither (its tag `artifacts:mob_effect/antidote_vessel_cancellable`, read
+  from the jar), and milk clears it, so a penalty that is only the effect has counters in the owner's pack: either those
+  are the intended relics, or the mod deals the damage and shows the effect as a sign. It must never act on ordinary
+  movement, which only playing can show. Not looked up: how a player aboard an Aeronautics craft reports their height, and
+  bubble columns.
+- **Open:** the suggested shape; the three tentative answers above; whether its strictness reads the same rank as loot.
+
+### Getting about: airships and what players build (owner's view)
+
+- **The owner:** "I'm not sure if an airship should reach the bottom without player's contructing something. My gut
+  reaction is no, because I want to provide a reason to build infrastructure around a chasm even if their base isn't
+  nearby, ie. bridges, elevators, and transport systems, however, flying between discs was the original intended method of
+  travel, it just shouldn't be super easy and probably require a unique smaller craft."
+- **What exists:** the clear middle of a hole, which no platform or stem enters, is 16 blocks across at the hole's floor and
+  widens evenly to 40 at its top, so 20 to 23 at the lowest discs. Discs of one layer have a slot for every 56 blocks round
+  the ring, layers are 20 apart, and discs are 20 to 64 in radius.
+- **Suggested:** the penalty above answers "should a ship reach the bottom" better than a narrower middle does, since it
+  limits how fast any craft may sink or climb and leaves the way open; the disc made for ruins is the place to moor.
+- **Levers:** the clear middle's two radii, `spacing` and `layer_spacing` for the gaps a small craft must pass, and the
+  penalty's rates.
+- **Not looked up:** how small a useful Aeronautics craft is, and `aeroportals` in the owner's pack.
+
+### A boss at the bottom, and a dimension (owner idea, far off)
+
+- **Idea:** "We have a long way to go before I want to add this, but I would also like to eventually add a custom boss fight
+  to the bottom of the chasm. I briefly considered adding a new dimension with this mod too, the boss could guard the
+  portal, though I don't know what I would want on the other side besides more discs."
+- **What exists:** the city on the hole's floor, in a cavern 56 high and 136 in radius (`cavern_height`, `cavern_radius`).
+- **Suggested for the boss:** first an arena at the bottom that a pack can fill with another mod's boss, lent the way the
+  ruins' tag lends structures; a boss of the mod's own later. A boss of its own is the first thing here that needs the mod
+  on the client (an entity and its model), where the mod is now wanted on the server alone.
+- **Suggested for the dimension:** wait for an idea the hole cannot hold. One that fits the pack is the same discs with no
+  walls, where a craft is the only way from one to the next. The disc code knows nothing of holes (`Disc`), which was kept
+  so for the owner's earlier wish to stand a disc above ground, so this stays open at no cost.
 
 ### When this is picked up
 
