@@ -411,7 +411,8 @@
           "rim_fade": {
             "width": 10,
             "to": 0.15,
-            "wander": 0.8
+            "wander": 0.8,
+            "reach": 0.25
           }
         },
         {
@@ -420,7 +421,8 @@
           "rim_fade": {
             "width": 10,
             "to": 0.15,
-            "wander": 0.8
+            "wander": 0.8,
+            "reach": 0.25
           }
         },
         {
@@ -735,7 +737,8 @@
           "rim_fade": {
             "width": 10,
             "to": 0.15,
-            "wander": 0.8
+            "wander": 0.8,
+            "reach": 0.25
           }
         },
         {
@@ -749,7 +752,8 @@
           "rim_fade": {
             "width": 10,
             "to": 0.15,
-            "wander": 0.8
+            "wander": 0.8,
+            "reach": 0.25
           }
         },
         {
@@ -762,7 +766,8 @@
           "rim_fade": {
             "width": 10,
             "to": 0.15,
-            "wander": 0.8
+            "wander": 0.8,
+            "reach": 0.25
           }
         },
         {
@@ -776,7 +781,8 @@
           "rim_fade": {
             "width": 10,
             "to": 0.15,
-            "wander": 0.8
+            "wander": 0.8,
+            "reach": 0.25
           }
         },
         {
@@ -789,7 +795,8 @@
           "rim_fade": {
             "width": 10,
             "to": 0.15,
-            "wander": 0.8
+            "wander": 0.8,
+            "reach": 0.25
           }
         },
         {

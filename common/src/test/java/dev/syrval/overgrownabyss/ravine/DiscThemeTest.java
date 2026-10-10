@@ -348,7 +348,7 @@ class DiscThemeTest {
                     {"feature": "overgrown_abyss:disc/amethyst_cluster", "every": 7},
                     {"feature": "minecraft:cave_vine", "every": 30, "on": "underside"},
                     {"feature": "minecraft:mangrove", "every": 12, "on": "water", "patches": {"size": 32.0, "cover": 0.25}},
-                    {"feature": "minecraft:jungle_tree", "every": 45, "rim_fade": {"width": 10.0, "to": 0.25, "wander": 0.75}},
+                    {"feature": "minecraft:jungle_tree", "every": 45, "rim_fade": {"width": 10.0, "to": 0.25, "wander": 0.75, "reach": 0.25}},
                     {"feature": "minecraft:vines", "every": 12, "on": "rim"}
                   ],
                   "wildness": {"min": 0.5, "max": 1.5}
@@ -365,7 +365,7 @@ class DiscThemeTest {
         assertTrue(parsed.growth().get(0).patches().isEmpty(), "spread evenly unless given patches");
         assertEquals(Optional.of(new DiscTheme.Patches(32, 0.25F)), parsed.growth().get(2).patches());
         assertEquals(Optional.of(new DiscWater(0.25F, 14, 2, 36, 1, 4)), parsed.water());
-        assertEquals(Optional.of(new DiscTheme.RimFade(10, 0.25F, 0.75F)), parsed.growth().get(3).rimFade());
+        assertEquals(Optional.of(new DiscTheme.RimFade(10, 0.25F, 0.75F, 0.25F)), parsed.growth().get(3).rimFade());
         assertTrue(parsed.growth().get(0).rimFade().isEmpty(), "as thick at the rim as anywhere unless given a fade");
         assertEquals(DiscTheme.Surface.RIM, parsed.growth().get(4).on());
         assertEquals(new DiscTheme.Wildness(0.5F, 1.5F), parsed.wildness());
@@ -639,6 +639,9 @@ class DiscThemeTest {
             assertTrue(wet.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.UNDERSIDE), "nothing hangs under the disc");
             assertTrue(wet.growth().stream().anyMatch(growth -> growth.rimFade().filter(fade -> fade.to() < 1 && fade.wander() > 0).isPresent()),
                     "its trees stand as thick at the rim as in the middle, the same all the way round");
+            // A small disc keeps the trees of its middle.
+            assertTrue(wet.growth().stream().flatMap(growth -> growth.rimFade().stream()).filter(fade -> fade.to() < 1).allMatch(fade -> fade.reach() <= 0.3),
+                    "a fade that thins trees may take a small disc's whole radius");
             // The thickest disc has to be one a player can still walk through.
             assertTrue(wet.wildness().min() < 1 && wet.wildness().max() > 1 && wet.wildness().max() <= 1.5, "wildness " + wet.wildness());
         }
@@ -703,17 +706,26 @@ class DiscThemeTest {
     @Test
     void aGrowthThinsOrGathersOverTheLastBlocksBeforeARim() {
         var disc = new Disc(0, 0, 60, 40, 18);
-        var thinning = new DiscTheme.RimFade(10, 0.2F, 0);
+        var thinning = new DiscTheme.RimFade(10, 0.2F, 0, 1);
         assertEquals(1, thinning.weightAt(77L, 3, disc, 0, 0), 1e-9, "the middle is left alone");
         assertEquals(1, thinning.weightAt(77L, 3, disc, 30, 0), 1e-9, "and so is everything further in than its width");
         assertEquals(0.6, thinning.weightAt(77L, 3, disc, 35, 0), 1e-6, "halfway through the width");
         assertEquals(0.2, thinning.weightAt(77L, 3, disc, 0, -40), 1e-6, "at the rim");
         assertEquals(0.2, thinning.weightAt(77L, 3, disc, 45, 0), 1e-6, "and no less beyond it");
-        var gathering = new DiscTheme.RimFade(6, 1.5F, 0);
+        var gathering = new DiscTheme.RimFade(6, 1.5F, 0, 1);
         assertEquals(1.25, gathering.weightAt(77L, 3, disc, 0, 37), 1e-6, "a fade to more than 1 gathers the growth at the rim");
         assertEquals(1.5, gathering.weightAt(77L, 3, disc, -40, 0), 1e-6);
 
-        var wandering = new DiscTheme.RimFade(10, 0.2F, 0.8F);
+        // On a disc 40 blocks in radius, a tenth of the radius is 4 blocks: the fade ends there whatever its width.
+        var held = new DiscTheme.RimFade(10, 0.2F, 0, 0.1F);
+        assertEquals(1, held.weightAt(77L, 3, disc, 35, 0), 1e-9, "past its reach the growth is left alone");
+        assertEquals(0.6, held.weightAt(77L, 3, disc, 38, 0), 1e-6, "halfway through what its reach leaves of its width");
+        assertEquals(10, thinning.widthAt(77L, 3, new Disc(0, 0, 60, 20, 14), 20, 0), 1e-9, "with no reach given a small disc is faded as far in as a large one");
+        for (int step = 0; step < 360; step++) {
+            assertTrue(widthRound(new DiscTheme.RimFade(10, 0.2F, 0.8F, 0.25F), disc, 3, step, 360) <= 10 + 1e-9, "a width that wanders past its reach");
+        }
+
+        var wandering = new DiscTheme.RimFade(10, 0.2F, 0.8F, 1);
         int steps = 1440;
         double narrowest = Double.MAX_VALUE;
         double widest = 0;
@@ -738,7 +750,7 @@ class DiscThemeTest {
 
     @Test
     void aThemeGrowsLessOfWhatFadesTheNearerTheRim() throws Exception {
-        var fading = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 3, DiscTheme.Surface.TOP, Optional.empty(), Optional.of(new DiscTheme.RimFade(12, 0, 0)));
+        var fading = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 3, DiscTheme.Surface.TOP, Optional.empty(), Optional.of(new DiscTheme.RimFade(12, 0, 0, 1)));
         RavineSettings settings = growing(DiscTheme.Wildness.EVEN, fading);
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
         CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);

@@ -207,15 +207,19 @@ public record DiscTheme(
      * <p>{@code wander} makes the width differ round the rim, from {@code width} less that share of itself to as much more, so
      * that along one stretch the growth keeps on to the edge and along another it stops well short. Every growth of a disc
      * wanders alike, so trees of different kinds leave the same clearings.
+     *
+     * <p>{@code reach} is the most of a disc's radius the fade may take, whatever its width: a width meant for a large disc
+     * would thin a small one all the way through.
      */
-    public record RimFade(float width, float to, float wander) {
+    public record RimFade(float width, float to, float wander, float reach) {
         private static final int HASH_BASE = 700_000;
         // Blocks of rim from one widening or narrowing to the next, in widths.
         private static final double ARC = 2;
         static final Codec<RimFade> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.floatRange(1, 64).fieldOf("width").forGetter(RimFade::width),
                 Codec.floatRange(0, 8).fieldOf("to").forGetter(RimFade::to),
-                Codec.floatRange(0, 1).optionalFieldOf("wander", 0F).forGetter(RimFade::wander)
+                Codec.floatRange(0, 1).optionalFieldOf("wander", 0F).forGetter(RimFade::wander),
+                Codec.floatRange(0.05F, 1).optionalFieldOf("reach", 1F).forGetter(RimFade::reach)
         ).apply(i, RimFade::new));
 
         double weightAt(long hash, int index, Disc disc, int x, int z) {
@@ -226,14 +230,15 @@ public record DiscTheme(
 
         /** How far in from the rim the fade reaches on the side of the disc that a column is on. */
         double widthAt(long hash, int index, Disc disc, int x, int z) {
+            double most = reach * disc.radius();
             if (wander == 0) {
-                return width;
+                return Math.min(width, most);
             }
             int around = Math.max(3, (int) Math.round(2 * Math.PI * disc.radius() / (ARC * width)));
             double turn = (Math.atan2(z - disc.z(), x - disc.x()) + Math.PI) / (2 * Math.PI);
             // Two indices for each disc: the value's own, and the one that slides its columns apart.
             double share = RavineCells.shareBelow(RavineCells.smoothRound(hash, HASH_BASE + 2 * index, turn * around, around, 0));
-            return width * (1 + wander * (2 * share - 1));
+            return Math.min(width * (1 + wander * (2 * share - 1)), most);
         }
     }
 

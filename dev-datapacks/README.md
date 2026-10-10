@@ -263,7 +263,9 @@ Three settings keep a disc's plants from ending in a wall at its edge and from l
   different distances from the edge; a `to` over 1 would gather a growth there instead. `wander` (0 to 1)
   lets the width differ round the rim, from that share less than `width` to that share more: with the trees' 0.8, 2 to 18
   blocks, so along one stretch the trees come to the edge and along another they stop well short. Every growth of a disc
-  wanders alike, so its trees leave the same clearings. Not for a growth on the rim itself.
+  wanders alike, so its trees leave the same clearings. `reach` (0.05 to 1) is the most of the disc's radius the fade may
+  take, whatever its width: the trees have 0.25, so on a disc 20 blocks in radius they are thinned over 5 blocks at most
+  and on one of 64 over 16. Without it a small disc is thinned through to its middle. Not for a growth on the rim itself.
 - `wildness` on a theme, `min` to `max`: each disc draws one number between them and grows that many times as much of
   everything in the theme's `growth`. What a disc inherits is not changed, so a disc at the low end is a glade in grass,
   not bare. Jungle and mangrove have 0.5 to 1.4. `max` is what decides whether the thickest disc can still be walked
@@ -378,7 +380,7 @@ and say how many of its pieces' lowest layers lie in the ground.
 - `bare-rims`: the mod's file without any growth on a rim, without `rim_fade` and without `wildness`: discs as they were
   before those three, every disc of a theme alike and its trees standing as thick at the edge as in the middle.
 - `heavy-rims`: the mod's file with twice as much on every rim (each `every` halved) and trees kept further back
-  (`width` 16, `to` 0, `wander` 0.9). For judging how much is too much.
+  (`width` 16, `to` 0, `wander` 0.9, `reach` 0.35). For judging how much is too much.
 
 - `no-giants`: the mod's file without the giant mushrooms, pads and glowing bulbs.
 - `many-giants`: the mod's file with four times as many of each (every `every` a quarter). For finding them and judging them.
