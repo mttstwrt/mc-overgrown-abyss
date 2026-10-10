@@ -1253,5 +1253,32 @@
     },
     "wood_reach": 48,
     "wood_blend": 16
+  },
+  "falls": {
+    "count": {
+      "min_inclusive": 2,
+      "max_inclusive": 4
+    },
+    "by_height": {
+      "bottom": 0.5,
+      "top": 2
+    },
+    "width": 1,
+    "min_drop": 10,
+    "max_per_disc": 1,
+    "pool": {
+      "radius": 3,
+      "depth": 2
+    },
+    "chain": 0.6,
+    "max_steps": 4,
+    "curtain": {
+      "chance": 0.2,
+      "width": {
+        "min_inclusive": 3,
+        "max_inclusive": 5
+      },
+      "min_radius": 40
+    }
   }
 }

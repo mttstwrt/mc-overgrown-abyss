@@ -325,6 +325,41 @@ the hole.
   `wood_reach` 48 blocks of such a disc takes its wood; between two different woods it is one or the other in patches along
   the root, the share shifting over `wood_blend` 16 blocks.
 
+### Falls
+
+`falls` (optional, see `FallSettings`) is water that leaves a disc over its rim. Without the block a hole has none. A hole has
+a number of them, not each disc a chance of one, so they stay something to come upon; and only a cone has them.
+
+- `count` 2 to 4: how many falls a hole starts. Fewer where it has fewer places for one.
+- Where one starts: where a disc's own stream or pond comes up against the bank inside its rim, on the side of the hole's
+  middle (the rest of a disc's rim is in the wall). So only a theme with `water` starts falls, and a wetter theme more of
+  them. `by_height` (0.5 at the lowest disc, 2 at the highest) makes a start likelier high up; `max_per_disc` 1.
+- What one needs: `min_drop` 10 blocks of open air under its lip, and to come down either on the hole's floor or on the top
+  of a lower disc where there is room for a pool. Never on a ruin, a root, a stem or the wall. Most places have only the
+  floor under them, so half of a hole's falls, rounded up, are first looked for among those that land on a disc.
+- `pool`: `radius` 3, `depth` 2 in its middle and 1 at its edge, inside the disc's bank, on a disc whose palette gives its
+  top 3 blocks of material (all of the mod's do; a disc with no theme has no pool, so nothing falls on it).
+- `chain` 0.6: the chance that a fall which landed in a pool goes on, by a channel from the pool towards the hole's middle
+  to that disc's rim and over. `max_steps` 4 is the most falls one after another.
+- `width` 1 is the water at an ordinary lip. `curtain`: with `chance` 0.2 a fall that starts on a disc of `min_radius` 40 or
+  more is `width` 3 to 5 wide instead, with a wider pool.
+
+How the water is made. Everything but the falling is still water written with the disc: a channel through the bank at the
+level of the water it leaves, to the platform's last column. Ground higher than that level is cut down to it (by 2 blocks
+at most under a channel, which leaves a block of the platform as its bed); every column has ground or water of its own
+level on each side. The last column has one side open, and is marked for the game to tick when the chunk comes alive, as
+the game marks water that the terrain left somewhere to run. From there the game runs it: out over the edge and down, at
+about 4 blocks a second, so a fall of 60 blocks takes a quarter of a minute to reach its pool the first time anyone comes
+near, and is there from then on. Landing in a pool it stops. Landing on the floor it spreads as water does, up to 7
+blocks and further downhill, and takes grass, flowers and vines with it.
+
+Nothing of a theme's own growth is started within 2 blocks of a fall's water or 7 of where one comes down, and the ground
+stays level there. To have none, take the block out; to see many, use the pack.
+
+- `no-falls`: the mod's file without `falls`.
+- `many-falls`: 8 to 10 falls a hole, `chain` 0.9. For finding them, and for seeing a hole with too many.
+- `curtain-falls`: every fall that can be is a curtain (`chance` 1, any disc from 25 in radius).
+
 ### Ruins
 
 Ruins stand on some discs, and on more of them the lower in a hole the disc is. A jungle disc has them three times in five
