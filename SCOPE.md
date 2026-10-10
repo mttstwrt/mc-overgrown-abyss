@@ -2403,6 +2403,55 @@ and `curtain-falls` are the packs.
 city included; the 7 blocks kept clear where one lands (so that no tree's crown spreads under it); that a disc with no
 theme has no pool and so nothing falls on it.
 
+### Wilder discs, part 5: springs in the wall
+
+The last round of the plan: "wall springs", water that comes out of the wall behind a disc.
+
+**What changed.** `falls` has `springs` (`count`, `height`, `feature`). A spring is over a disc on its side away from the
+hole's middle, where the disc's dome is cut into the wall: a block just inside the rock some way over the rim. The grower
+is handed that place and seven beside it, up and down first, and places `feature` at each in turn until one takes. The
+feature is the judge of the rock, since the wall is whatever the terrain left there. It is `disc/wall_spring`, vanilla's
+own spring with water, which wants rock over it, under it and on three sides and one side open, of the blocks in the tag
+`#overgrown_abyss:spring_rock`. A pool on the disc at the wall's foot catches the water. Where no place will do, the hole
+has the pool and no spring over it.
+
+**What the first build got wrong.** Four of six springs took, and two of those poured down beside their pools.
+
+- A dome leans in as it rises, so higher up the block under the place reckoned is open air, and a spring wants rock
+  under it. A spring is now put no higher than its wall is still nearly upright (leaning in half a block for a block's
+  rise at most), which on most discs is lower than the 3 to 7 over the rim that `height` asks for.
+- The pool was kept a block and more inside the rim, like any other water. A spring that took a place one along the wall
+  then came down on the ground between pool and wall. A spring's pool now reaches the wall's foot: every column of it at
+  the platform's edge is asked to have the wall's rock beyond it.
+
+**As told to the owner before they approved:** a spring's pool is not joined to a fall by a stream. A disc's top is a bowl,
+lowest in the middle, and still water cannot be laid across a dip; running water only reaches 7 blocks. A spring feeds a
+pond at the back of a disc, and falls leave from streams at its front. Making the discs that have a spring level, so that
+a stream could cross them, is a possible later round.
+
+**Measured** on dedicated servers, seed 11, the four holes, each left loaded 80 s and read back.
+
+| | |
+|---|---|
+| Springs chosen, without ruins, to a hole | 1, 1, 2, 2 |
+| That took: at the place reckoned; at one beside it | 3; 3 |
+| That came down into their pools | 6, one of them by way of a mineshaft's floor that crosses its dome |
+| Running water of a spring's on the ground beside its pool | none |
+| Fabric against NeoForge, the hole with two | the same two, at the same places, into their pools |
+| With the mod's own settings: falls, rims, ground and the discs' own water | as they were before springs |
+| Warnings or errors from the mod | none |
+
+One pool had running water on the ground beside it that was not the spring's: a pocket of the level's own water in the
+wall over it, which the dome had opened.
+
+243 unit tests pass (`./gradlew build`, both loader jars).
+
+**Not verified.** Nothing was looked at in game. Whether one or two springs to a hole are noticed at all beside the springs
+vanilla already puts in the hole's wall is the owner's to judge; `many-springs` has 6 to 8.
+
+**Mine and unjudged:** how many; that a spring sits low on the wall where the wall is upright and not where it would
+show most; the pool's size; the blocks of the tag.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -2423,9 +2472,10 @@ theme has no pool and so nothing falls on it.
    too fast, then the disc made for ruins, then fights that reset and traps. The owner has not set that order.
 9. Wilder discs: look at the rims, the giants and the ground in game (`bare-rims`, `heavy-rims`, `no-giants`,
    `many-giants`, `flat-discs` and `rugged-discs` to compare) and settle how much hangs over a rim, the edge trees,
-   `wildness`, what the giants are made of, and how rough the ground should be. The falls: how many, whether they should
-   reach the city, and how they behave in the owner's pack (`no-falls`, `many-falls`, `curtain-falls`). Then the round left
-   of the plan the owner approved on 2026-10-10: wall springs.
+   `wildness`, what the giants are made of, and how rough the ground should be. The falls and springs: how many, whether
+   falls should reach the city, and how running water behaves in the owner's pack (`no-falls`, `many-falls`,
+   `curtain-falls`, `many-springs`). That is the whole of the plan the owner approved on 2026-10-10; of the ideas they
+   passed over, a ragged rim is the one that would change a disc's look most.
 10. Roots: look at them in game (`huge-roots`, `many-roots`, `few-roots` and `no-roots` to compare), settle how many and how
    thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
    them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
@@ -2574,6 +2624,13 @@ an item says was read from a jar is known; nothing of theirs was run for these i
 | What crosses the clear middle | `roots.crossing.count` and `radius` | 1 or 2 roots a hole, 7 blocks across |
 | How much of a hole can be walked | `roots.links`: `chance`, `max_slope`; `roots.great.touch_chance` | 0.5 and 0.6, which gives about a third of the discs a link up to them; 0.5 |
 | How many roots, and how thick | `roots.great`: `count`, `radius`, `end_radius`; `roots.branches`: `every`, `by_height` | 3 to 5, 4.5 to 3.5; 150, 3 at the floor to 0.5 at the top |
+| How overgrown one disc is beside another | a theme's `wildness`: `min`, `max` | 0.5 to 1.4 on jungle and mangrove |
+| What hangs over a disc's rim, and how much | growths with `"on": "rim"`: `every`, `patches` | bushes, small trees, leaf tufts, roots and vines; a clear lip along about half of a jungle rim |
+| Where a disc's trees stop | a growth's `rim_fade`: `width`, `to`, `wander`, `reach` | the jungle's trees: 10, 0.15, 0.8, 0.25; the mangrove's none |
+| How many giants | the `every` of `giant_*` and `glow_bulb*` in a theme's `growth` | about six to a jungle disc, four to a lush or mangrove disc |
+| How rough a disc's ground is | a theme's `ground`: `mounds` and `outcrops`, each `height`, `size`, `cover` | a fifth of a jungle or lush top raised, a tenth of a mangrove's |
+| How many falls, and how far they go on | `falls`: `count`, `chain`, `max_steps`, `min_drop`, `curtain` | 2 to 4 a hole; 0.6 and 4; 10; one in five on large discs |
+| How many springs | `falls.springs.count` | 1 or 2 a hole |
 
 Levers in the owner's pack and not in the mod: Lootr's `refresh_value`, `refresh_loot_tables` and `refresh_modids`; a loot
 modifier that names the mod's tables; a datapack over any of the files above.
