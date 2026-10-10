@@ -32,7 +32,7 @@ class ConeShapeTest {
     static RavineSettings withCone(ConeSettings cone, DiscShape shape, WallNoise wallNoise) {
         RavineSettings s = RavineCellsTest.settings(42L, 1F);
         return new RavineSettings(s.salt(), s.cellSize(), 1F, s.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
-                136, 56, s.edgeFalloff(), shape, s.discThemes(), s.environment(), wallNoise, Optional.empty(), Optional.of(cone));
+                136, 56, s.edgeFalloff(), shape, s.discThemes(), s.environment(), wallNoise, Optional.empty(), Optional.of(cone), Optional.empty());
     }
 
     static final RavineSettings SETTINGS = withCone(CONE);

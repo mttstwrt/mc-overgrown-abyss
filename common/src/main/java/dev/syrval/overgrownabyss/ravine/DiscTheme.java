@@ -33,10 +33,13 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * @param water      ponds and streams in the disc's top
  * @param growth     what grows on the disc, in the order listed and before what it inherits
  * @param ruins      the ruins that stand on some of the theme's discs
+ * @param rootWood   what the hole's roots are made of where they pass near one of the theme's discs (see {@link RootSettings});
+ *                   without one the theme has no say in it
  */
 public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
-        Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Optional<DiscRuins> ruins) {
+        Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Optional<DiscRuins> ruins,
+        Optional<RootWood> rootWood) {
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -192,7 +195,8 @@ public record DiscTheme(
             DiscPalette.CODEC.optionalFieldOf("palette", DiscPalette.UNPAINTED).forGetter(DiscTheme::palette),
             DiscWater.CODEC.optionalFieldOf("water").forGetter(DiscTheme::water),
             Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(DiscTheme::growth),
-            DiscRuins.CODEC.optionalFieldOf("ruins").forGetter(DiscTheme::ruins)
+            DiscRuins.CODEC.optionalFieldOf("ruins").forGetter(DiscTheme::ruins),
+            RootWood.CODEC.optionalFieldOf("root_wood").forGetter(DiscTheme::rootWood)
     ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);
 
     // What is inherited is given to the theme's own biome, and grown where that biome is stamped.

@@ -69,7 +69,7 @@ class DiscRuinsTest {
     private static DiscTheme ruined(Optional<DiscWater> water, DiscRuins ruins) {
         return new DiscTheme(
                 Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE,
-                DiscPalette.UNPAINTED, water, List.of(), Optional.of(ruins));
+                DiscPalette.UNPAINTED, water, List.of(), Optional.of(ruins), Optional.empty());
     }
 
     /** The mod's own hole with other themes. */
@@ -77,7 +77,7 @@ class DiscRuinsTest {
         RavineSettings base = DiscThemeTest.shipped();
         return new RavineSettings(
                 base.salt(), base.cellSize(), 1F, base.sizeBias(), base.floor(), base.top(), base.cavernRadius(), base.cavernHeight(),
-                base.edgeFalloff(), base.discs(), List.of(themes), base.environment(), base.wallNoise(), base.ravine(), base.cone());
+                base.edgeFalloff(), base.discs(), List.of(themes), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
     }
 
     private static CellDiscs discs(RavineSettings settings, int cz, RuinPieces pieces) {
@@ -271,7 +271,7 @@ class DiscRuinsTest {
                 cone.rim(), cone.upper());
         return new RavineSettings(
                 base.salt(), base.cellSize(), 1F, base.sizeBias(), base.floor(), base.top(), base.cavernRadius(), base.cavernHeight(),
-                base.edgeFalloff(), base.discs(), base.discThemes(), base.environment(), base.wallNoise(), base.ravine(), Optional.of(hanging));
+                base.edgeFalloff(), base.discs(), base.discThemes(), base.environment(), base.wallNoise(), base.ravine(), Optional.of(hanging), base.roots());
     }
 
     @Test

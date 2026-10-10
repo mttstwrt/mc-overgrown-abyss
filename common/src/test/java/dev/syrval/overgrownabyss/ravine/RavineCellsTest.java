@@ -35,7 +35,7 @@ class RavineCellsTest {
     static RavineSettings settings(long salt, float chance, float sizeBias) {
         return new RavineSettings(
                 salt, 2048, chance, sizeBias, VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80), 128, 48, 8F,
-                SHAPE, List.of(), ENVIRONMENT, WallNoise.NONE, Optional.of(GEOMETRY), Optional.empty());
+                SHAPE, List.of(), ENVIRONMENT, WallNoise.NONE, Optional.of(GEOMETRY), Optional.empty(), Optional.empty());
     }
 
     @Test
