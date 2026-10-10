@@ -164,7 +164,7 @@ class RootBlocksTest {
 
     private static DiscTheme theme(Optional<RootWood> wood) {
         return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
-                DiscPalette.UNPAINTED, Optional.empty(), List.of(), Optional.empty(), wood);
+                DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, Optional.empty(), wood);
     }
 
     @Test

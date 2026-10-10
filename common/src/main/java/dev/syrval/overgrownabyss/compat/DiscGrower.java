@@ -118,18 +118,26 @@ public final class DiscGrower {
         Registry<ConfiguredFeature<?, ?>> features = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
         footprint.forEachGrowth(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, y, z, feature, on) -> {
             BlockPos pos = new BlockPos(x, y, z);
-            if (level.isOutsideBuildHeight(pos)) {
-                return;
-            }
-            // The place must be open and still be on the disc's own surface: another disc's platform or stem may have taken
-            // it, and the water of a pond is left out where something stands on the platform.
-            boolean under = on == DiscTheme.Surface.UNDERSIDE;
-            BlockPos surface = under ? pos.above() : pos.below();
-            boolean open = on == DiscTheme.Surface.WATER ? level.getBlockState(pos).is(Blocks.WATER) : level.isEmptyBlock(pos);
-            if (!open || !level.getBlockState(surface).isFaceSturdy(level, surface, under ? Direction.DOWN : Direction.UP)) {
+            if (level.isOutsideBuildHeight(pos) || !isOnItsSurface(level, pos, on)) {
                 return;
             }
             features.getHolder(feature).ifPresent(found -> found.value().place(level, generator, draws, pos));
         });
+    }
+
+    // The place must be open and still be on the disc's own surface: another disc's platform or stem may have taken it, the
+    // water of a pond is left out where something stands on the platform, and a rim inside the hole's wall has no open side.
+    private static boolean isOnItsSurface(WorldGenLevel level, BlockPos pos, DiscTheme.Surface on) {
+        return switch (on) {
+            case TOP -> level.isEmptyBlock(pos) && isSturdy(level, pos.below(), Direction.UP);
+            case WATER -> level.getBlockState(pos).is(Blocks.WATER) && isSturdy(level, pos.below(), Direction.UP);
+            case UNDERSIDE -> level.isEmptyBlock(pos) && isSturdy(level, pos.above(), Direction.DOWN);
+            case RIM -> level.isEmptyBlock(pos)
+                    && Direction.Plane.HORIZONTAL.stream().anyMatch(side -> isSturdy(level, pos.relative(side), side.getOpposite()));
+        };
+    }
+
+    private static boolean isSturdy(WorldGenLevel level, BlockPos pos, Direction face) {
+        return level.getBlockState(pos).isFaceSturdy(level, pos, face);
     }
 }

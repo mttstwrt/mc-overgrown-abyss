@@ -32,14 +32,15 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * @param palette    what the disc is made of; a part it leaves out keeps the terrain's own rock
  * @param water      ponds and streams in the disc's top
  * @param growth     what grows on the disc, in the order listed and before what it inherits
+ * @param wildness   how much more or less of that growth one disc has than another of the same theme
  * @param ruins      the ruins that stand on some of the theme's discs
  * @param rootWood   what the hole's roots are made of where they pass near one of the theme's discs (see {@link RootSettings});
  *                   without one the theme has no say in it
  */
 public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
-        Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Optional<DiscRuins> ruins,
-        Optional<RootWood> rootWood) {
+        Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Wildness wildness,
+        Optional<DiscRuins> ruins, Optional<RootWood> rootWood) {
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -122,11 +123,15 @@ public record DiscTheme(
         }
     }
 
-    /** Where on a platform something grows: on the dry ground of its top, in the water of its top, or under it. */
+    /**
+     * Where on a platform something grows: on the dry ground of its top, in the water of its top, under it, or on its rim,
+     * which is the open air right beside the platform's edge, where what is grown hangs down the side or leans out over it.
+     */
     public enum Surface implements StringRepresentable {
         TOP("top"),
         WATER("water"),
-        UNDERSIDE("underside");
+        UNDERSIDE("underside"),
+        RIM("rim");
 
         static final Codec<Surface> CODEC = StringRepresentable.fromEnum(Surface::values);
         private final String name;
@@ -143,21 +148,31 @@ public record DiscTheme(
 
     /**
      * A feature grown on one surface of the platform: on average one for every {@code every} blocks of that surface. The feature
-     * is placed in the open block on the surface (over dry ground, or under the disc's lowest rock), so it must be one that
-     * grows from there. In water it is placed in the lowest block of the water, as vanilla starts a tree that stands in water
-     * on its bed. Without {@code patches} it is spread evenly.
+     * is placed in the open block on the surface (over dry ground, under the disc's lowest rock, or beside the rim's top block),
+     * so it must be one that grows from there. In water it is placed in the lowest block of the water, as vanilla starts a tree
+     * that stands in water on its bed. Without {@code patches} it is spread evenly, and without {@code rimFade} as thickly at
+     * the rim as in the middle.
      */
-    public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, Surface on, Optional<Patches> patches) {
-        static final Codec<Growth> CODEC = RecordCodecBuilder.create(i -> i.group(
+    public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, Surface on, Optional<Patches> patches, Optional<RimFade> rimFade) {
+        static final Codec<Growth> CODEC = RecordCodecBuilder.<Growth>create(i -> i.group(
                 ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(Growth::feature),
                 Codec.intRange(1, 100_000).fieldOf("every").forGetter(Growth::every),
                 Surface.CODEC.optionalFieldOf("on", Surface.TOP).forGetter(Growth::on),
-                Patches.CODEC.optionalFieldOf("patches").forGetter(Growth::patches)
-        ).apply(i, Growth::new));
+                Patches.CODEC.optionalFieldOf("patches").forGetter(Growth::patches),
+                RimFade.CODEC.optionalFieldOf("rim_fade").forGetter(Growth::rimFade)
+        ).apply(i, Growth::new)).validate(Growth::validate);
 
-        /** How many times its average rate this grows in one column of the {@code index}-th disc of a hole. */
-        double weightAt(long hash, int index, int x, int z) {
-            return patches.map(found -> found.weightAt(hash, index, x, z)).orElse(1.0);
+        // The rim is one ring of columns, all of them at the rim.
+        private static DataResult<Growth> validate(Growth growth) {
+            return growth.on == Surface.RIM && growth.rimFade.isPresent()
+                    ? DataResult.error(() -> "a growth on the rim has no rim to fade towards")
+                    : DataResult.success(growth);
+        }
+
+        /** How many times its average rate this grows in one column of {@code disc}, the {@code index}-th disc of a hole. */
+        double weightAt(long hash, int index, Disc disc, int x, int z) {
+            return patches.map(found -> found.weightAt(hash, index, x, z)).orElse(1.0)
+                    * rimFade.map(found -> found.weightAt(hash, index, disc, x, z)).orElse(1.0);
         }
     }
 
@@ -184,6 +199,63 @@ public record DiscTheme(
         }
     }
 
+    /**
+     * How a growth changes towards the rim of a disc: over the last {@code width} blocks its rate goes steadily from what it is
+     * elsewhere to {@code to} times that at the rim itself. Under 1 thins it out, which takes trees away from the edge and leaves
+     * their crowns ending at different distances from it; over 1 gathers it there.
+     *
+     * <p>{@code wander} makes the width differ round the rim, from {@code width} less that share of itself to as much more, so
+     * that along one stretch the growth keeps on to the edge and along another it stops well short. Every growth of a disc
+     * wanders alike, so trees of different kinds leave the same clearings.
+     */
+    public record RimFade(float width, float to, float wander) {
+        private static final int HASH_BASE = 700_000;
+        // Blocks of rim from one widening or narrowing to the next, in widths.
+        private static final double ARC = 2;
+        static final Codec<RimFade> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.floatRange(1, 64).fieldOf("width").forGetter(RimFade::width),
+                Codec.floatRange(0, 8).fieldOf("to").forGetter(RimFade::to),
+                Codec.floatRange(0, 1).optionalFieldOf("wander", 0F).forGetter(RimFade::wander)
+        ).apply(i, RimFade::new));
+
+        double weightAt(long hash, int index, Disc disc, int x, int z) {
+            double fromRim = Math.max(disc.radius() - Math.hypot(x - disc.x(), z - disc.z()), 0);
+            double reach = widthAt(hash, index, disc, x, z);
+            return fromRim >= reach ? 1 : to + (1 - to) * fromRim / reach;
+        }
+
+        /** How far in from the rim the fade reaches on the side of the disc that a column is on. */
+        double widthAt(long hash, int index, Disc disc, int x, int z) {
+            if (wander == 0) {
+                return width;
+            }
+            int around = Math.max(3, (int) Math.round(2 * Math.PI * disc.radius() / (ARC * width)));
+            double turn = (Math.atan2(z - disc.z(), x - disc.x()) + Math.PI) / (2 * Math.PI);
+            // Two indices for each disc: the value's own, and the one that slides its columns apart.
+            double share = RavineCells.shareBelow(RavineCells.smoothRound(hash, HASH_BASE + 2 * index, turn * around, around, 0));
+            return width * (1 + wander * (2 * share - 1));
+        }
+    }
+
+    /**
+     * How the discs of one theme differ in how overgrown they are: each disc draws a factor between {@code min} and
+     * {@code max}, and everything the theme grows on that disc is that many times as frequent. What the disc inherits from
+     * another biome is left as it is, so the barest disc still has that biome's grass.
+     */
+    public record Wildness(float min, float max) {
+        static final Wildness EVEN = new Wildness(1, 1);
+        private static final int HASH_BASE = 710_000;
+        static final Codec<Wildness> CODEC = RecordCodecBuilder.<Wildness>create(i -> i.group(
+                Codec.floatRange(0, 4).fieldOf("min").forGetter(Wildness::min),
+                Codec.floatRange(0, 4).fieldOf("max").forGetter(Wildness::max)
+        ).apply(i, Wildness::new)).validate(wildness -> wildness.min > wildness.max ? DataResult.error(() -> "min must not exceed max") : DataResult.success(wildness));
+
+        /** The factor of the {@code index}-th disc of a hole. */
+        double factorFor(long hash, int index) {
+            return min + (max - min) * RavineCells.unit(hash, HASH_BASE + index);
+        }
+    }
+
     public static final Codec<DiscTheme> CODEC = RecordCodecBuilder.<DiscTheme>create(i -> i.group(
             ResourceKey.codec(Registries.BIOME).optionalFieldOf("biome").forGetter(DiscTheme::biome),
             Inherits.CODEC.optionalFieldOf("inherits").forGetter(DiscTheme::inherits),
@@ -195,6 +267,7 @@ public record DiscTheme(
             DiscPalette.CODEC.optionalFieldOf("palette", DiscPalette.UNPAINTED).forGetter(DiscTheme::palette),
             DiscWater.CODEC.optionalFieldOf("water").forGetter(DiscTheme::water),
             Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(DiscTheme::growth),
+            Wildness.CODEC.optionalFieldOf("wildness", Wildness.EVEN).forGetter(DiscTheme::wildness),
             DiscRuins.CODEC.optionalFieldOf("ruins").forGetter(DiscTheme::ruins),
             RootWood.CODEC.optionalFieldOf("root_wood").forGetter(DiscTheme::rootWood)
     ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);

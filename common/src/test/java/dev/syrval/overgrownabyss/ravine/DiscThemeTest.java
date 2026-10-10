@@ -52,7 +52,7 @@ class DiscThemeTest {
     }
 
     static DiscTheme theme(String biome, float weight, DiscTheme.Ramp byHeight, DiscTheme.Ramp byDistance, DiscTheme.Ramp bySize) {
-        return new DiscTheme(Optional.of(biome(biome)), Optional.empty(), weight, byHeight, byDistance, bySize, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(), Optional.empty(), Optional.empty());
+        return new DiscTheme(Optional.of(biome(biome)), Optional.empty(), weight, byHeight, byDistance, bySize, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
     }
 
     static final DiscTheme.Ramp EVEN = DiscTheme.Ramp.EVEN;
@@ -68,6 +68,38 @@ class DiscThemeTest {
             json.addProperty("chance", 1);
             return RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
         }
+    }
+
+    /** The mod's own hole with one theme on every disc, which grows what is given and nothing else. */
+    static RavineSettings growing(DiscTheme.Wildness wildness, DiscTheme.Growth... growth) throws Exception {
+        RavineSettings base = shipped();
+        var theme = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(growth), wildness, Optional.empty(), Optional.empty());
+        return new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
+                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
+    }
+
+    record Place(int x, int y, int z, DiscTheme.Surface on) {}
+
+    /** Every place where something grows in the chunks that hold a disc and the columns right outside it. */
+    static List<Place> placesAround(RavineSettings settings, RavineCell cell, CellDiscs cellDiscs, Disc d) {
+        var places = new ArrayList<Place>();
+        double reach = d.radius() + 1;
+        for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - reach), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + reach), 16); chunkX++) {
+            for (int chunkZ = Math.floorDiv((int) Math.floor(d.z() - reach), 16); chunkZ <= Math.floorDiv((int) Math.floor(d.z() + reach), 16); chunkZ++) {
+                DiscGrowth.forEach(settings, cell, cellDiscs, chunkX * 16, chunkZ * 16, (x, y, z, feature, on) -> places.add(new Place(x, y, z, on)));
+            }
+        }
+        return places;
+    }
+
+    /** Whether a place is the open block over a column of this disc's own top. */
+    static boolean isOnTopOf(Disc d, Place place) {
+        double fromAxis = Math.hypot(place.x() - d.x(), place.z() - d.z());
+        return place.on() == DiscTheme.Surface.TOP && fromAxis <= d.radius() && place.y() == d.topBlockAt(fromAxis) + 1;
+    }
+
+    static Disc largest(List<Disc> discs) {
+        return discs.stream().max((a, b) -> Double.compare(a.radius(), b.radius())).orElseThrow();
     }
 
     @Test
@@ -120,7 +152,7 @@ class DiscThemeTest {
     @Test
     void aThemesLimitsRuleItOutWhereARampWouldOnlyMakeItUnlikely() {
         var smallAndFar = new DiscTheme.Limits(DiscTheme.Span.ALL, new DiscTheme.Span(0.55F, 1), new DiscTheme.Span(0, 0.4F));
-        var kept = new DiscTheme(Optional.of(biome("kept")), Optional.empty(), 100, EVEN, EVEN, EVEN, smallAndFar, DiscPalette.UNPAINTED, Optional.empty(), List.of(), Optional.empty(), Optional.empty());
+        var kept = new DiscTheme(Optional.of(biome("kept")), Optional.empty(), 100, EVEN, EVEN, EVEN, smallAndFar, DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
         assertEquals(100, kept.weightFor(new DiscTraits(0.5, 0.8, 0.2)), 1e-9, "inside its limits it has its weight");
         assertEquals(0, kept.weightFor(new DiscTraits(0.5, 0.5, 0.2)), 1e-9, "too near the centre");
         assertEquals(0, kept.weightFor(new DiscTraits(0.5, 0.8, 0.5)), 1e-9, "too large");
@@ -250,15 +282,14 @@ class DiscThemeTest {
     @Test
     void aThemeGrowsThingsOnItsSurfacesAboutAsOftenAsItSays() throws Exception {
         RavineSettings base = shipped();
-        var onTop = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 50, DiscTheme.Surface.TOP, Optional.empty());
-        var under = new DiscTheme.Growth(feature("minecraft:cave_vine"), 20, DiscTheme.Surface.UNDERSIDE, Optional.empty());
-        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(onTop, under), Optional.empty(), Optional.empty());
+        var onTop = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 50, DiscTheme.Surface.TOP, Optional.empty(), Optional.empty());
+        var under = new DiscTheme.Growth(feature("minecraft:cave_vine"), 20, DiscTheme.Surface.UNDERSIDE, Optional.empty(), Optional.empty());
+        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(onTop, under), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
         CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
         Disc d = cellDiscs.layout().discs().get(0);
-        record Place(int x, int y, int z, DiscTheme.Surface on) {}
         var places = new ArrayList<Place>();
         var again = new ArrayList<Place>();
         for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - d.radius()), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + d.radius()), 16); chunkX++) {
@@ -316,8 +347,11 @@ class DiscThemeTest {
                   "growth": [
                     {"feature": "overgrown_abyss:disc/amethyst_cluster", "every": 7},
                     {"feature": "minecraft:cave_vine", "every": 30, "on": "underside"},
-                    {"feature": "minecraft:mangrove", "every": 12, "on": "water", "patches": {"size": 32.0, "cover": 0.25}}
-                  ]
+                    {"feature": "minecraft:mangrove", "every": 12, "on": "water", "patches": {"size": 32.0, "cover": 0.25}},
+                    {"feature": "minecraft:jungle_tree", "every": 45, "rim_fade": {"width": 10.0, "to": 0.25, "wander": 0.75}},
+                    {"feature": "minecraft:vines", "every": 12, "on": "rim"}
+                  ],
+                  "wildness": {"min": 0.5, "max": 1.5}
                 }
                 """);
         DiscTheme parsed = DiscTheme.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
@@ -326,16 +360,27 @@ class DiscThemeTest {
         assertEquals(DiscTheme.Ramp.EVEN, parsed.bySize(), "a ramp left out is even");
         assertTrue(parsed.palette().body().isPresent() && parsed.palette().top().isEmpty());
         assertEquals(DiscTheme.Surface.TOP, parsed.growth().get(0).on(), "things grow on the top unless told otherwise");
-        assertEquals(new DiscTheme.Growth(feature("minecraft:cave_vine"), 30, DiscTheme.Surface.UNDERSIDE, Optional.empty()), parsed.growth().get(1));
+        assertEquals(new DiscTheme.Growth(feature("minecraft:cave_vine"), 30, DiscTheme.Surface.UNDERSIDE, Optional.empty(), Optional.empty()), parsed.growth().get(1));
         assertEquals(DiscTheme.Surface.WATER, parsed.growth().get(2).on());
         assertTrue(parsed.growth().get(0).patches().isEmpty(), "spread evenly unless given patches");
         assertEquals(Optional.of(new DiscTheme.Patches(32, 0.25F)), parsed.growth().get(2).patches());
         assertEquals(Optional.of(new DiscWater(0.25F, 14, 2, 36, 1, 4)), parsed.water());
+        assertEquals(Optional.of(new DiscTheme.RimFade(10, 0.25F, 0.75F)), parsed.growth().get(3).rimFade());
+        assertTrue(parsed.growth().get(0).rimFade().isEmpty(), "as thick at the rim as anywhere unless given a fade");
+        assertEquals(DiscTheme.Surface.RIM, parsed.growth().get(4).on());
+        assertEquals(new DiscTheme.Wildness(0.5F, 1.5F), parsed.wildness());
         assertEquals(json, DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, parsed).getOrThrow(), "and is written back the same");
         var onlyAWeight = JsonParser.parseString("{\"weight\": 2}");
         DiscTheme bare = DiscTheme.CODEC.parse(JsonOps.INSTANCE, onlyAWeight).getOrThrow();
         assertTrue(bare.biome().isEmpty() && bare.growth().isEmpty() && bare.water().isEmpty() && bare.palette().equals(DiscPalette.UNPAINTED),
                 "everything but the weight is optional");
+        assertEquals(DiscTheme.Wildness.EVEN, bare.wildness(), "every disc as overgrown as the next unless told otherwise");
+        var fadingOnTheRim = json.getAsJsonObject().deepCopy();
+        fadingOnTheRim.getAsJsonArray("growth").get(4).getAsJsonObject().add("rim_fade", JsonParser.parseString("{\"width\": 4, \"to\": 0}"));
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, fadingOnTheRim).isError(), "a fade towards the rim for what grows on the rim");
+        var wilderAtLeast = json.getAsJsonObject().deepCopy();
+        wilderAtLeast.getAsJsonObject("wildness").addProperty("min", 2);
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, wilderAtLeast).isError(), "a least wildness over the most");
         var bad = json.getAsJsonObject().deepCopy();
         bad.getAsJsonArray("growth").get(0).getAsJsonObject().addProperty("every", 0);
         assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, bad).isError(), "growth on every block of none");
@@ -376,8 +421,8 @@ class DiscThemeTest {
     void aThemeGrowsWhatItGivesPatchesOnlyInThosePatches() throws Exception {
         RavineSettings base = shipped();
         var patches = new DiscTheme.Patches(8, 0.3F);
-        var inPatches = new DiscTheme.Growth(feature("minecraft:mangrove"), 6, DiscTheme.Surface.TOP, Optional.of(patches));
-        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(inPatches), Optional.empty(), Optional.empty());
+        var inPatches = new DiscTheme.Growth(feature("minecraft:mangrove"), 6, DiscTheme.Surface.TOP, Optional.of(patches), Optional.empty());
+        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(inPatches), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
@@ -400,7 +445,7 @@ class DiscThemeTest {
         double expected = 0;
         for (int x = (int) Math.floor(d.x() - d.radius()); x <= d.x() + d.radius(); x++) {
             for (int z = (int) Math.floor(d.z() - d.radius()); z <= d.z() + d.radius(); z++) {
-                // Nothing grows within a block and a half of the rim (DiscGrowth.RIM).
+                // Nothing grows within a block and a half of the rim (DiscGrowth.EDGE_CLEAR).
                 expected += Math.hypot(x - d.x(), z - d.z()) <= d.radius() - 1.5 ? Math.min(1, patches.weightAt(cell.hash(), 0, x, z) / 6) : 0;
             }
         }
@@ -441,9 +486,9 @@ class DiscThemeTest {
     void whatGrowsInWaterStartsOnTheBedOfAPondAndNowhereElse() throws Exception {
         RavineSettings base = shipped();
         var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
-        var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER, Optional.empty());
+        var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER, Optional.empty(), Optional.empty());
         var stone = new DiscPalette(List.of(), List.of(), base.discThemes().get(0).palette().body(), DiscPalette.UNPAINTED.stem());
-        var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater), Optional.empty(), Optional.empty());
+        var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(swamp), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
@@ -595,6 +640,161 @@ class DiscThemeTest {
         }
         assertTrue(themes.get(2).growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.WATER), "no mangrove stands in the water");
         assertTrue(themes.get(2).water().orElseThrow().ponds() > themes.get(1).water().orElseThrow().ponds(), "a swamp is wetter than a jungle");
+    }
+
+    @Test
+    void whatGrowsOnARimStartsBesideItsTopBlockAllTheWayRound() throws Exception {
+        RavineSettings settings = growing(DiscTheme.Wildness.EVEN, new DiscTheme.Growth(feature("minecraft:vines"), 5, DiscTheme.Surface.RIM, Optional.empty(), Optional.empty()));
+        RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
+        CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
+        List<Disc> discs = cellDiscs.layout().discs();
+        Disc d = largest(discs);
+        List<Place> places = placesAround(settings, cell, cellDiscs, d);
+        assertEquals(places, placesAround(settings, cell, cellDiscs, d), "the same places every time");
+        int[][] beside = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        int own = 0;
+        var octants = new HashSet<Integer>();
+        for (Place place : places) {
+            assertEquals(DiscTheme.Surface.RIM, place.on());
+            boolean besideARim = false;
+            for (Disc disc : discs) {
+                // Outside the platform, with the top block of one of the platform's columns right beside it.
+                boolean outside = Math.hypot(place.x() - disc.x(), place.z() - disc.z()) >= disc.radius();
+                boolean atATop = false;
+                for (int[] step : beside) {
+                    double fromAxis = Math.hypot(place.x() + step[0] - disc.x(), place.z() + step[1] - disc.z());
+                    atATop |= fromAxis < disc.radius() && disc.topBlockAt(fromAxis) == place.y();
+                }
+                besideARim |= outside && atATop;
+                if (disc == d && outside && atATop) {
+                    own++;
+                    octants.add((int) Math.floor((Math.atan2(place.z() - d.z(), place.x() - d.x()) + Math.PI) / (Math.PI / 4)) % 8);
+                }
+            }
+            assertTrue(besideARim, "not beside any disc's rim: " + place);
+        }
+        int rim = 0;
+        for (int x = (int) Math.floor(d.x() - d.radius()) - 1; x <= d.x() + d.radius() + 1; x++) {
+            for (int z = (int) Math.floor(d.z() - d.radius()) - 1; z <= d.z() + d.radius() + 1; z++) {
+                boolean inside = false;
+                for (int[] step : beside) {
+                    inside |= Math.hypot(x + step[0] - d.x(), z + step[1] - d.z()) < d.radius();
+                }
+                rim += inside && Math.hypot(x - d.x(), z - d.z()) >= d.radius() ? 1 : 0;
+            }
+        }
+        double around = 2 * Math.PI * d.radius();
+        assertTrue(rim > 0.8 * around && rim < 1.4 * around, rim + " columns right outside a rim " + Math.round(around) + " blocks round");
+        assertEquals(rim / 5.0, own, 0.35 * rim / 5.0, "places on the rim, one in 5 asked for");
+        assertEquals(8, octants.size(), "on every side of the disc");
+    }
+
+    @Test
+    void aGrowthThinsOrGathersOverTheLastBlocksBeforeARim() {
+        var disc = new Disc(0, 0, 60, 40, 18);
+        var thinning = new DiscTheme.RimFade(10, 0.2F, 0);
+        assertEquals(1, thinning.weightAt(77L, 3, disc, 0, 0), 1e-9, "the middle is left alone");
+        assertEquals(1, thinning.weightAt(77L, 3, disc, 30, 0), 1e-9, "and so is everything further in than its width");
+        assertEquals(0.6, thinning.weightAt(77L, 3, disc, 35, 0), 1e-6, "halfway through the width");
+        assertEquals(0.2, thinning.weightAt(77L, 3, disc, 0, -40), 1e-6, "at the rim");
+        assertEquals(0.2, thinning.weightAt(77L, 3, disc, 45, 0), 1e-6, "and no less beyond it");
+        var gathering = new DiscTheme.RimFade(6, 1.5F, 0);
+        assertEquals(1.25, gathering.weightAt(77L, 3, disc, 0, 37), 1e-6, "a fade to more than 1 gathers the growth at the rim");
+        assertEquals(1.5, gathering.weightAt(77L, 3, disc, -40, 0), 1e-6);
+
+        var wandering = new DiscTheme.RimFade(10, 0.2F, 0.8F);
+        int steps = 1440;
+        double narrowest = Double.MAX_VALUE;
+        double widest = 0;
+        boolean differs = false;
+        for (int step = 0; step < steps; step++) {
+            double width = widthRound(wandering, disc, 3, step, steps);
+            assertTrue(width >= 2 - 1e-6 && width <= 18 + 1e-6, "a width of " + width);
+            // Round the whole rim and back to where it began, with no jump anywhere, the join included.
+            assertEquals(width, widthRound(wandering, disc, 3, (step + 1) % steps, steps), 1.5, "a jump at step " + step);
+            narrowest = Math.min(narrowest, width);
+            widest = Math.max(widest, width);
+            differs |= Math.abs(width - widthRound(wandering, disc, 4, step, steps)) > 1;
+        }
+        assertTrue(narrowest < 5 && widest > 15, "the width only runs from " + narrowest + " to " + widest);
+        assertTrue(differs, "every disc wanders alike");
+    }
+
+    private static double widthRound(DiscTheme.RimFade fade, Disc disc, int index, int step, int steps) {
+        double angle = 2 * Math.PI * step / steps;
+        return fade.widthAt(77L, index, disc, (int) Math.round(disc.radius() * Math.cos(angle)), (int) Math.round(disc.radius() * Math.sin(angle)));
+    }
+
+    @Test
+    void aThemeGrowsLessOfWhatFadesTheNearerTheRim() throws Exception {
+        var fading = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 3, DiscTheme.Surface.TOP, Optional.empty(), Optional.of(new DiscTheme.RimFade(12, 0, 0)));
+        RavineSettings settings = growing(DiscTheme.Wildness.EVEN, fading);
+        RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
+        CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
+        Disc d = largest(cellDiscs.layout().discs());
+        assertTrue(d.radius() >= 30, "a disc of " + d.radius());
+        int[] grown = new int[2];
+        for (Place place : placesAround(settings, cell, cellDiscs, d)) {
+            double fromRim = d.radius() - Math.hypot(place.x() - d.x(), place.z() - d.z());
+            if (isOnTopOf(d, place)) {
+                grown[0] += fromRim < 6 ? 1 : 0;
+                grown[1] += fromRim >= 12 ? 1 : 0;
+            }
+        }
+        int[] columns = new int[2];
+        for (int x = (int) Math.floor(d.x() - d.radius()); x <= d.x() + d.radius(); x++) {
+            for (int z = (int) Math.floor(d.z() - d.radius()); z <= d.z() + d.radius(); z++) {
+                double fromRim = d.radius() - Math.hypot(x - d.x(), z - d.z());
+                columns[0] += fromRim >= 1.5 && fromRim < 6 ? 1 : 0;
+                columns[1] += fromRim >= 12 ? 1 : 0;
+            }
+        }
+        double nearTheRim = grown[0] / (double) columns[0];
+        double inTheMiddle = grown[1] / (double) columns[1];
+        assertEquals(1 / 3.0, inTheMiddle, 0.06, "in the middle, one in 3 asked for");
+        // From a block and a half to six blocks in, a fade to nothing over twelve leaves about a third.
+        assertTrue(nearTheRim > 0.15 * inTheMiddle && nearTheRim < 0.5 * inTheMiddle, nearTheRim + " near the rim against " + inTheMiddle);
+    }
+
+    @Test
+    void eachDiscOfAThemeIsAsOvergrownAsItsOwnDrawSays() throws Exception {
+        var uneven = new DiscTheme.Wildness(0.5F, 1.5F);
+        double sum = 0;
+        var seen = new HashSet<Double>();
+        for (int index = 0; index < 400; index++) {
+            double factor = uneven.factorFor(77L, index);
+            assertTrue(factor >= 0.5 && factor <= 1.5, "a factor of " + factor);
+            assertEquals(factor, uneven.factorFor(77L, index), "a disc keeps its factor");
+            sum += factor;
+            seen.add(factor);
+        }
+        assertEquals(1, sum / 400, 0.05, "spread evenly between the two");
+        assertTrue(seen.size() > 390, "each disc has a draw of its own");
+        assertEquals(1, DiscTheme.Wildness.EVEN.factorFor(77L, 9), 1e-9);
+
+        var tree = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 40, DiscTheme.Surface.TOP, Optional.empty(), Optional.empty());
+        RavineCell cell = RavineCells.at(11L, growing(DiscTheme.Wildness.EVEN, tree), 0, 0).orElseThrow();
+        var counts = new HashMap<DiscTheme.Wildness, Integer>();
+        var all = new HashMap<DiscTheme.Wildness, List<Place>>();
+        Disc d = null;
+        int index = -1;
+        for (DiscTheme.Wildness wildness : List.of(DiscTheme.Wildness.EVEN, new DiscTheme.Wildness(2, 2), new DiscTheme.Wildness(0, 0), uneven)) {
+            RavineSettings settings = growing(wildness, tree);
+            CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
+            d = largest(cellDiscs.layout().discs());
+            index = cellDiscs.layout().discs().indexOf(d);
+            List<Place> places = placesAround(settings, cell, cellDiscs, d);
+            Disc disc = d;
+            counts.put(wildness, (int) places.stream().filter(place -> isOnTopOf(disc, place)).count());
+            all.put(wildness, places);
+        }
+        int even = counts.get(DiscTheme.Wildness.EVEN);
+        assertTrue(even > 40, even + " places on the disc");
+        assertTrue(all.get(new DiscTheme.Wildness(2, 2)).containsAll(all.get(DiscTheme.Wildness.EVEN)), "a wilder disc grows all that a tamer one does");
+        assertEquals(2 * even, counts.get(new DiscTheme.Wildness(2, 2)), 0.25 * 2 * even, "and twice as wild is twice as much");
+        assertTrue(all.get(new DiscTheme.Wildness(0, 0)).isEmpty(), "a factor of nothing grows nothing");
+        double own = uneven.factorFor(cell.hash(), index);
+        assertEquals(own * even, counts.get(uneven), 0.3 * own * even + 5, "the disc's own factor of " + own);
     }
 
     @Test
