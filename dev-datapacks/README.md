@@ -344,6 +344,19 @@ a number of them, not each disc a chance of one, so they stay something to come 
 - `width` 1 is the water at an ordinary lip. `curtain`: with `chance` 0.2 a fall that starts on a disc of `min_radius` 40 or
   more is `width` 3 to 5 wide instead, with a wider pool.
 
+- `springs` (optional): water that comes out of the hole's wall behind a disc. `count` 1 to 2 a hole. One is over a disc
+  on its side away from the hole's middle, where the disc's dome is cut into the wall, `height` 3 to 7 blocks over the
+  rim, or lower: a dome leans in as it rises and a spring wants rock under it, so it is put no higher than the wall is
+  still nearly upright (leaning in by half a block for a block's rise at most), and a disc whose wall leans from the foot
+  has none. A pool lies on the disc at the foot of the wall for the water to come down into, 3 blocks out from under the
+  spring and right up to the wall. The spring itself is `feature`, the mod's `disc/wall_spring`, which is vanilla's own
+  spring: it only makes one in a block with rock over it, under it and on three sides and with one side open, of the
+  blocks in the tag `#overgrown_abyss:spring_rock` (the stones of the overworld, dirt, gravel, calcite, clay, moss and
+  smooth basalt). The wall is whatever the terrain left there, so the place reckoned for a spring and seven beside it are
+  tried in turn, up and down first; where none will do the hole has a pool there and no spring. A spring's pool is not
+  joined to any fall: a disc's top is a bowl, lowest in the middle, and still water cannot be laid across a dip. Vanilla
+  puts springs of its own in the hole's wall as well, wherever the rock suits.
+
 How the water is made. Everything but the falling is still water written with the disc: a channel through the bank at the
 level of the water it leaves, to the platform's last column. Ground higher than that level is cut down to it (by 2 blocks
 at most under a channel, which leaves a block of the platform as its bed); every column has ground or water of its own
@@ -359,6 +372,7 @@ stays level there. To have none, take the block out; to see many, use the pack.
 - `no-falls`: the mod's file without `falls`.
 - `many-falls`: 8 to 10 falls a hole, `chain` 0.9. For finding them, and for seeing a hole with too many.
 - `curtain-falls`: every fall that can be is a curtain (`chance` 1, any disc from 25 in radius).
+- `many-springs`: 6 to 8 springs a hole.
 
 ### Ruins
 

@@ -293,6 +293,12 @@ class DiscFallsTest {
             // Rare enough to be come upon: a handful to a hole, and none of them on to the floor of the world.
             assertTrue(falls.count().maxInclusive() <= 6 && falls.maxPerDisc() == 1, "falls on every disc: " + falls);
             assertTrue(shipped.roots().isPresent(), "roots and falls are read from the same place");
+            FallSettings.Springs springs = falls.springs().orElseThrow();
+            assertTrue(springs.count().maxInclusive() <= 4, "springs all round a hole: " + springs);
+            assertTrue(DiscFallsTest.class.getResource("/data/overgrown_abyss/worldgen/configured_feature/" + springs.feature().location().getPath() + ".json") != null,
+                    "no feature file for a spring");
+            String rock = new String(DiscFallsTest.class.getResourceAsStream("/data/overgrown_abyss/tags/block/spring_rock.json").readAllBytes());
+            assertTrue(rock.contains("minecraft:base_stone_overworld"), "a spring that the stone of a wall does not hold");
             var written = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, shipped).getOrThrow();
             assertEquals(Optional.of(falls), RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, written).getOrThrow().falls(), "and read back the same once written");
             var none = json.deepCopy();

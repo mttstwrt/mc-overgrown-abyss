@@ -69,7 +69,7 @@ class DiscFeatureFilesTest {
                     .map(id -> id.getPath())
                     .collect(Collectors.toSet());
             assertEquals(files, registered);
-            assertTrue(files.size() >= 35, files.size() + " feature files");
+            assertTrue(files.size() >= 36, files.size() + " feature files");
         }
     }
 }
