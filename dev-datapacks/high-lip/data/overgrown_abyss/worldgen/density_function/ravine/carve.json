@@ -64,6 +64,47 @@
           "on": "rim"
         }
       ],
+      "ground": {
+        "mounds": {
+          "height": 2,
+          "size": 18,
+          "cover": 0.25
+        },
+        "outcrops": {
+          "height": 5,
+          "size": 8,
+          "cover": 0.05,
+          "block": {
+            "type": "minecraft:weighted_state_provider",
+            "entries": [
+              {
+                "data": {
+                  "Name": "minecraft:stone"
+                },
+                "weight": 3
+              },
+              {
+                "data": {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                "weight": 2
+              },
+              {
+                "data": {
+                  "Name": "minecraft:moss_block"
+                },
+                "weight": 2
+              },
+              {
+                "data": {
+                  "Name": "minecraft:cobblestone"
+                },
+                "weight": 1
+              }
+            ]
+          }
+        }
+      },
       "ruins": {
         "chance": 0.3,
         "every": 4000,
@@ -505,6 +546,53 @@
         "min": 0.5,
         "max": 1.4
       },
+      "ground": {
+        "mounds": {
+          "height": 3,
+          "size": 22,
+          "cover": 0.3
+        },
+        "outcrops": {
+          "height": 4,
+          "size": 7,
+          "cover": 0.03,
+          "block": {
+            "type": "minecraft:weighted_state_provider",
+            "entries": [
+              {
+                "data": {
+                  "Name": "minecraft:stone"
+                },
+                "weight": 3
+              },
+              {
+                "data": {
+                  "Name": "minecraft:mossy_cobblestone"
+                },
+                "weight": 3
+              },
+              {
+                "data": {
+                  "Name": "minecraft:cobblestone"
+                },
+                "weight": 1
+              },
+              {
+                "data": {
+                  "Name": "minecraft:mossy_stone_bricks"
+                },
+                "weight": 1
+              },
+              {
+                "data": {
+                  "Name": "minecraft:andesite"
+                },
+                "weight": 1
+              }
+            ]
+          }
+        }
+      },
       "ruins": {
         "chance": 0.6,
         "every": 3000,
@@ -862,6 +950,13 @@
         "min": 0.5,
         "max": 1.4
       },
+      "ground": {
+        "mounds": {
+          "height": 1,
+          "size": 12,
+          "cover": 0.25
+        }
+      },
       "ruins": {
         "chance": 0.25,
         "every": 4000,
@@ -1013,7 +1108,37 @@
           "every": 12,
           "on": "underside"
         }
-      ]
+      ],
+      "ground": {
+        "outcrops": {
+          "height": 6,
+          "size": 5,
+          "cover": 0.08,
+          "block": {
+            "type": "minecraft:weighted_state_provider",
+            "entries": [
+              {
+                "data": {
+                  "Name": "minecraft:calcite"
+                },
+                "weight": 3
+              },
+              {
+                "data": {
+                  "Name": "minecraft:amethyst_block"
+                },
+                "weight": 2
+              },
+              {
+                "data": {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                "weight": 1
+              }
+            ]
+          }
+        }
+      }
     }
   ],
   "environment": {

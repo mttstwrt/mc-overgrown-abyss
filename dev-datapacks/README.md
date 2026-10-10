@@ -240,6 +240,26 @@ dirt, podzol, moss, mud; not the jungle's brick floors, not stone, not in water)
 is air or leaves, so not under a low part of a dome and not where a tree of the chunk next door already stands in the
 way. A bulb needs far less room and about two in five grow.
 
+A theme's `ground` is how its ground lies over the platform. The platform itself, and so the dome, the stem and the rim,
+stay as they are; the ground is more blocks on top, written into open air. Both parts are optional:
+
+- `mounds`: rises of the theme's own ground (the palette's `top` layers lie on a mound's surface, and what was the
+  platform's top under it takes the layers below). `cover` is the share of the top that is raised a block or more, in
+  patches about `size` blocks from one to the next. A mound stands a block high at its edge and climbs by less than a
+  block for each block across, so it is walked up without a jump, up to `height`. How high one gets is up to its width,
+  about a block and a tenth of `size`: with `size` 22 most are 2 or 3 high, and with `size` 12 none is over 2 whatever
+  `height` says. The theme's palette has to give its top at least `height` blocks of material.
+- `outcrops`: lumps of `block` (any block-state provider), a block high at their edges and `height` in their middles, with
+  sides as steep as they come. They are in a player's way, so `cover` wants to stay small.
+
+The ground stays on the platform within 4 blocks of the rim (whose side shows the palette's layers), under each ruin and 2
+blocks round it, and at water and right beside it, and rises from each of those by at most a block for each block further.
+So less of a top is raised than `cover` says, much less on a wet disc: measured over four holes, a fifth of a jungle or
+lush disc and a tenth of a mangrove disc. What grows on a disc and what it inherits stand on the ground, mounds included.
+The mod's own: jungle mounds up to 3 over 0.3 of the top with a few mossy stone outcrops up to 4; lush mounds up to 2 over
+0.25 with stone and moss outcrops up to 5; mangrove hummocks 1 high between its ponds; crystal spires of calcite and
+amethyst up to 6.
+
 Three settings keep a disc's plants from ending in a wall at its edge and from looking like the disc next to it:
 
 - `"on": "rim"` in a `growth` entry grows the feature in the open air right beside the top block of the rim, so it must be
@@ -382,6 +402,10 @@ and say how many of its pieces' lowest layers lie in the ground.
   before those three, every disc of a theme alike and its trees standing as thick at the edge as in the middle.
 - `heavy-rims`: the mod's file with twice as much on every rim (each `every` halved) and trees kept further back
   (`width` 16, `to` 0, `wander` 0.9, `reach` 0.35). For judging how much is too much.
+
+- `flat-discs`: the mod's file without any `ground`: every disc's top the smooth bowl it was.
+- `rugged-discs`: the mod's file with mounds a block higher over 1.6 times as much of each top, and outcrops 2 higher
+  over 2.5 times as much. For judging how far to go, and what it does to walking.
 
 - `no-giants`: the mod's file without the giant mushrooms, pads and glowing bulbs.
 - `many-giants`: the mod's file with four times as many of each (every `every` a quarter). For finding them and judging them.

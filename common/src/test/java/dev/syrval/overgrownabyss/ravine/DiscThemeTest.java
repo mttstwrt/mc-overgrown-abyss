@@ -656,6 +656,13 @@ class DiscThemeTest {
             // The thickest disc has to be one a player can still walk through.
             assertTrue(wet.wildness().min() < 1 && wet.wildness().max() > 1 && wet.wildness().max() <= 1.5, "wildness " + wet.wildness());
         }
+        for (DiscTheme theme : themes) {
+            // Outcrops are in a player's way; mounds are not, but ground a player has to climb all the time is no path either.
+            assertTrue(theme.ground().mounds().isPresent() || theme.ground().outcrops().isPresent(), "a top as smooth as a plate");
+            assertTrue(theme.ground().outcrops().map(DiscRelief.Outcrops::cover).orElse(0F) <= 0.1F, "outcrops over much of a disc");
+            assertTrue(theme.ground().mounds().map(DiscRelief.Mounds::cover).orElse(0F) <= 0.5F, "mounds over most of a disc");
+        }
+        assertEquals(1, themes.get(2).ground().mounds().orElseThrow().height(), "a swamp's ground is hummocks, not hills");
         for (DiscTheme green : themes.subList(0, 3)) {
             assertTrue(green.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.RIM), "nothing hangs over the rim");
             List<DiscTheme.Growth> giants = green.growth().stream().filter(DiscThemeTest::isGiant).toList();
