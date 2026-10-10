@@ -633,8 +633,7 @@ class DiscThemeTest {
         // left out so that a disc is not twice as thick with trees where they can.
         assertEquals(Map.of("disc_lush", List.of(), "disc_jungle", List.of("minecraft:trees_jungle"), "disc_mangrove", List.of("minecraft:trees_mangrove")), leftOut);
         DiscTheme lush = themes.get(0);
-        assertTrue(lush.growth().stream().allMatch(growth -> growth.on() == DiscTheme.Surface.RIM) && lush.water().isEmpty(),
-                "the lush disc's ground is its parent's and nothing more");
+        assertTrue(lush.water().isEmpty() && lush.palette().top().isEmpty(), "the lush disc's ground is its parent's and nothing more");
         for (DiscTheme wet : List.of(themes.get(1), themes.get(2))) {
             assertTrue(wet.water().orElseThrow().depth() <= 2, "water deeper than two blocks");
             assertTrue(wet.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.UNDERSIDE), "nothing hangs under the disc");
@@ -645,6 +644,10 @@ class DiscThemeTest {
         }
         for (DiscTheme green : themes.subList(0, 3)) {
             assertTrue(green.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.RIM), "nothing hangs over the rim");
+            List<DiscTheme.Growth> giants = green.growth().stream().filter(DiscThemeTest::isGiant).toList();
+            // A few to a disc, and listed before the trees: a cap needs the air it fills, and a tree grows round one.
+            assertTrue(!giants.isEmpty() && giants.stream().allMatch(growth -> growth.every() >= 300), "giants: " + giants);
+            assertEquals(giants, green.growth().subList(0, giants.size()), "something is grown before the giants");
         }
         assertTrue(themes.get(2).growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.WATER), "no mangrove stands in the water");
         assertTrue(themes.get(2).water().orElseThrow().ponds() > themes.get(1).water().orElseThrow().ponds(), "a swamp is wetter than a jungle");
@@ -803,6 +806,11 @@ class DiscThemeTest {
         assertTrue(all.get(new DiscTheme.Wildness(0, 0)).isEmpty(), "a factor of nothing grows nothing");
         double own = uneven.factorFor(cell.hash(), index);
         assertEquals(own * even, counts.get(uneven), 0.3 * own * even + 5, "the disc's own factor of " + own);
+    }
+
+    private static boolean isGiant(DiscTheme.Growth growth) {
+        String name = growth.feature().location().getPath();
+        return name.startsWith("disc/giant_") || name.startsWith("disc/glow_bulb");
     }
 
     @Test

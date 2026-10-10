@@ -46,6 +46,10 @@
       },
       "growth": [
         {
+          "feature": "overgrown_abyss:disc/glow_bulb",
+          "every": 400
+        },
+        {
           "feature": "overgrown_abyss:disc/rim_bush_azalea",
           "every": 14,
           "on": "rim",
@@ -382,6 +386,26 @@
       },
       "growth": [
         {
+          "feature": "overgrown_abyss:disc/giant_pad",
+          "every": 500,
+          "rim_fade": {
+            "width": 8,
+            "to": 4
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/giant_mushroom_red",
+          "every": 900,
+          "patches": {
+            "size": 30,
+            "cover": 0.3
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_bulb",
+          "every": 600
+        },
+        {
           "feature": "overgrown_abyss:disc/jungle_tree_giant",
           "every": 120,
           "rim_fade": {
@@ -681,6 +705,26 @@
         "stream_spacing": 30
       },
       "growth": [
+        {
+          "feature": "overgrown_abyss:disc/giant_pad",
+          "every": 400,
+          "rim_fade": {
+            "width": 8,
+            "to": 4
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/giant_mushroom_brown",
+          "every": 500,
+          "patches": {
+            "size": 24,
+            "cover": 0.3
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_bulb_swamp",
+          "every": 600
+        },
         {
           "feature": "overgrown_abyss:disc/mangrove_giant",
           "every": 40,

@@ -151,7 +151,7 @@ in its middle. Its numbers:
 The mod's own themes:
 
 - `disc_lush` inherits from `minecraft:lush_caves` and adds nothing to its ground: a plain stone platform, which lush caves
-  moss over itself. Vines hang over its rim.
+  moss over itself. Azalea bushes and vines hang over its rim, and a few glowing bulbs stand on it.
 - `disc_jungle` inherits from `minecraft:jungle` (three times as likely in the middle of the cone as at its edge). Its top is
   a patchwork, in patches 10 to 30 blocks across: about half of it grass, with podzol, moss, coarse dirt and mud, and here
   and there a floor of mossy stone bricks edged with mossy cobblestone. Under it are three layers, which show at the rim as
@@ -222,6 +222,23 @@ trunk raised 5 to 8 blocks, root arms that spread wider (`max_root_width` 10) an
 larger crown. It needs room for a trunk of at least 6 over its roots, so it grows under the higher parts of a dome. Vanilla's own tree feature is left out of what is inherited (`without_features`), or a disc would be
 twice as thick with trees without such a pack as with it. Everything else is still inherited: grass, flowers, melons, lily pads
 and whatever other mods add. With no themes every disc is the terrain's own rock in the biome it lies in.
+
+Giants, a few to a disc, listed first in each theme's `growth` so that they are grown before its trees (a cap needs the air
+it fills, and a tree started under one grows as tall as there is room):
+
+- `giant_mushroom_red` (jungle) and `giant_mushroom_brown` (mangrove): vanilla's two huge mushrooms with caps a block wider
+  each way. In groves (`patches`).
+- `giant_pad` (jungle and mangrove): a flat round leaf of moss nine blocks across on a stalk of bamboo block, 4 to 6 blocks
+  up and now and then twice that. It is the brown mushroom's own feature with other blocks. Its `rim_fade` has `to` 4, so
+  it grows four times as often by the rim, where its leaf hangs out over the edge.
+- `glow_bulb` (jungle and lush) and `glow_bulb_swamp` (mangrove): a stalk of bamboo block 5 to 9 tall with a ball of leaves
+  on it, about a quarter of the ball lights: azalea leaves and shroomlights, or mangrove leaves and froglights of all
+  three colours. A tree feature, so it stands on any ground and puts a block of moss under itself.
+
+For the mushrooms and the pad, `every` is places tried, and most tries come to nothing: the game grows one only on soil (grass,
+dirt, podzol, moss, mud; not the jungle's brick floors, not stone, not in water) and only where every block its cap will take
+is air or leaves, so not under a low part of a dome and not where a tree of the chunk next door already stands in the
+way. A bulb needs far less room and about two in five grow.
 
 Three settings keep a disc's plants from ending in a wall at its edge and from looking like the disc next to it:
 
@@ -362,6 +379,9 @@ and say how many of its pieces' lowest layers lie in the ground.
   before those three, every disc of a theme alike and its trees standing as thick at the edge as in the middle.
 - `heavy-rims`: the mod's file with twice as much on every rim (each `every` halved) and trees kept further back
   (`width` 16, `to` 0, `wander` 0.9). For judging how much is too much.
+
+- `no-giants`: the mod's file without the giant mushrooms, pads and glowing bulbs.
+- `many-giants`: the mod's file with four times as many of each (every `every` a quarter). For finding them and judging them.
 
 - `huge-roots`: the mod's file with roots half as thick again: great roots of radius 7 down to 5.5 (14 blocks across to 11),
   crossing roots 5.5, links 3, nothing under 2.
