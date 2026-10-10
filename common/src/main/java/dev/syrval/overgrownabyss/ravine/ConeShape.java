@@ -94,6 +94,36 @@ final class ConeShape {
         return Math.max(rock, clearAt(cone, bounds, y) - radial);
     }
 
+    /**
+     * How far a point is from the nearest rock of any kind, which a root asks as it grows: above 0 in open air, below 0 in
+     * the ground the hole left, in a platform or a stem, or under the floor.
+     */
+    static double airDistance(
+            RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, DiscLayout layout, double x, double y, double z) {
+        double overFloor = y - bounds.floorY();
+        if (overFloor < 0) {
+            return overFloor;
+        }
+        double radial = cell.distanceToCentre(x, z);
+        double open = openDistance(settings, cone, bounds, cell, layout, radial, x, y, z);
+        // As in rockDistance: a disc's rock counts only where the ground was opened, and never in the clear air.
+        double rock = open >= settings.edgeFalloff()
+                ? Double.POSITIVE_INFINITY
+                : Math.max(Discs.rockDistance(layout, settings.discs(), x, y, z), clearAt(cone, bounds, y) - radial);
+        return Math.min(Math.min(-open, rock), overFloor);
+    }
+
+    /**
+     * Radius of the main cut's wall, unevenness and all, on the side of the axis that a column is on, at a height between the
+     * floor and the top: the cone's, or the cavern's where that is wider.
+     */
+    static double wallRadiusAt(RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, double x, double z, double y) {
+        double t = (y - bounds.floorY()) / settings.cavernHeight();
+        double cavern = t >= 0 && t < 1 ? settings.cavernRadius() * Math.sqrt(1 - t * t) : 0;
+        double even = Math.max(radiusAt(settings, cone, bounds, y), cavern);
+        return even + settings.wallNoise().offset(cell.hash(), around(cone), turnOf(cell, x, z), y);
+    }
+
     // The main cut and the discs' domes.
     private static double openDistance(
             RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, DiscLayout layout,
