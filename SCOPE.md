@@ -2130,9 +2130,9 @@ edge, broken-off fragments, vine ropes to the disc below, an overgrown rim face,
 
 **Why the foliage ended in a wall.** Three things together. A platform is an exact circle. Every growth was spread at one
 rate right up to a block and a half from the rim, so the trees stood as thick at the edge as in the middle. And a theme
-could grow things on a disc's top, in its water and under it, but nowhere on its rim. Measured on a level made with the
-settings as they were (the `bare-rims` pack): of the columns in the last two blocks inside a jungle disc's rim 30% were
-under tree canopy, of those in the first two outside it 10%, and of the next two 2%.
+could grow things on a disc's top, in its water and under it, but nowhere on its rim. Measured on levels made with the
+settings as they were (the `bare-rims` pack): of the columns 2 to 4 blocks inside a jungle disc's rim 39% were under tree
+canopy, of the last two inside it 28%, of the first two outside it 12%, and of the next two 3%.
 
 **What changed.**
 
@@ -2148,72 +2148,123 @@ under tree canopy, of those in the first two outside it 10%, and of the next two
   there is not dirt already). They have patches of one size, so on each disc they stand along the same stretches of rim
   and leave the rest open.
 - **`rim_fade` on a growth:** over the last `width` blocks before the rim its rate goes steadily to `to` times what it is
-  elsewhere, and `wander` lets that width differ round the rim. The jungle's and mangrove's trees have 10, 0.15 and 0.8:
-  a width of 2 to 18 blocks, so along one stretch the trees come to the edge and along another they stop well short. Every
-  growth of a disc wanders alike.
+  elsewhere; `wander` lets that width differ round the rim; `reach` is the most of the disc's radius it may take. The
+  jungle's trees have 10, 0.15, 0.8 and 0.25: a width of 2 to 18 blocks, never more than a quarter of the radius, so along
+  one stretch the trees come to the edge and along another they stop short. Every growth of a disc wanders alike.
 - **`wildness` on a theme,** `min` to `max`: each disc draws one number between them and grows that many times as much of
   everything in the theme's `growth`. What it inherits is left alone. Jungle and mangrove have 0.5 to 1.4.
 
-The rim-rooted bushes and trees were not in the plan as approved. The first build had only what hangs (vines, tufts,
-roots) and the fade, and measuring it showed the wall still there: the fade thinned the last two blocks inside a jungle
-rim from 30% canopy to 24%, and nothing new reached past the rim at all (10% and 2% outside, as before). They are data
-on the surface the plan did add, and `bare-rims` takes them out with the rest. One thing the plan had was taken out again:
-gathering the jungle's bushes at the rim (`to` 1.5) put more in a player's way and did nothing the edge bushes do not do.
+**Where this differs from the plan as approved,** each time because of a measurement:
 
-**Measured** on dedicated servers, seed 11, new worlds, the hole at x=-1572 z=2594 (25 discs: 12 jungle, 7 mangrove, 3
-lush, 3 crystal), 784 chunks, read back from the region files. Columns under a higher disc, beside a lower one near
-enough for its trees to stand up past the rim, or in the wall are left out. "Under canopy" is a leaf three blocks or more
-over the ground (over the rim's top, outside it).
+- *Bushes and trees rooted on the very edge* were not in it. The first build had only what hangs (vines, tufts, roots) and
+  the fade, and nothing new reached past the rim at all. They are data on the surface the plan did add.
+- *Gathering the jungle's bushes at the rim* (`to` 1.5) was in it and was taken out: it put more in a player's way and did
+  nothing the edge bushes do not do.
+- *`reach`* was not in it. A fade up to 18 blocks wide is most of a small disc: jungle discs under 30 in radius went from
+  34% of their ground under canopy to 25%. With a reach of a quarter they are at 33%. This only showed once four holes
+  were measured; the first one's jungle discs happened to be large.
+- *The mangrove's trees have no fade.* The plan gave every tree one. A mangrove's crown reaches past the rim by itself
+  (21% and 13% under canopy in the first two blocks outside and the next two, with nothing done), and thinning the trees
+  there cut that to 15% and 7%.
 
-| | Before (`bare-rims`) | NeoForge | Fabric | `heavy-rims` |
-|---|---|---|---|---|
-| Jungle, under canopy: 2 to 4 blocks inside the rim | 41% | 37% | 34% | 33% |
-| the last 2 inside | 30% | 35% | 32% | 34% |
-| the first 2 outside | 10% | 23% | 22% | 28% |
-| 2 to 4 outside | 2% | 11% | 13% | 17% |
-| 4 to 6 outside | 0.3% | 1.0% | 1.1% | 1.3% |
-| Jungle, leaves at the rim's own height: the first 2 outside | 2% | 43% | 40% | 49% |
-| 2 to 4 outside | 0% | 19% | 17% | 27% |
-| Mangrove, under canopy: the last 2 inside | 47% | 39% | 39% | 18% |
-| the first 2 outside | 17% | 14% | 14% | 7% |
-| Mangrove, leaves at the rim's own height: the first 2 outside | 0% | 22% | 22% | 28% |
-| Mangrove, columns with a trunk: outer 10 blocks against further in | 0.99 | 0.39 | 0.39 | 0.33 |
-| Rim columns with something hanging in the 10 blocks under the lip: jungle | 25% | 55% | 50% | 69% |
-| mangrove | 11% | 44% | 44% | 60% |
-| lush | 27% | 44% | 44% | 52% |
-| Longest curtain of vines from a lip | 6 | 20 | 23 | 24 |
-| Jungle ground with a block at foot or head height, 8 discs: least, middle, most | 23%, 28%, 42% | 22%, 34%, 40% | 26%, 33%, 37% | 25%, 33%, 46% |
-| Warnings or errors from the mod | 0 | 0 | 0 | 0 |
-| Generation | 24 s | 28 s | 28 s | 28 s |
+**Measured** on a NeoForge dedicated server, seed 11, new worlds, the four holes within reach of the origin, each generated
+whole and read back from its region files: 45 jungle discs, 29 lush, 15 mangrove. Columns under a higher disc, beside a
+lower one near enough for its trees to stand up past the rim, or in the wall are left out. "Under canopy" is a leaf three
+blocks or more over the ground (over the rim's top, outside it). "Before" is the `bare-rims` pack, which has the same giants
+(next section) and the same draws for every tree, so the two columns differ only by what this round added.
 
-So a jungle disc's canopy now falls away over six blocks (35%, 23%, 11%, 1%) where it stopped in two (30%, 10%, 2%), with
-bushes at the rim's height along two fifths of the edge and a clear lip along about half of it. A mangrove's canopy was
-already looser past its rim and is not changed there; its trees are thinned to two fifths in the last ten blocks.
+| | Before (`bare-rims`) | After |
+|---|---|---|
+| Jungle, under canopy: 10 to 4 blocks inside the rim | 42% | 37% |
+| 4 to 2 inside | 39% | 28% |
+| the last 2 inside | 28% | 26% |
+| the first 2 outside | 12% | 20% |
+| 2 to 4 outside | 3% | 10% |
+| 4 to 6 outside | 0.2% | 1.0% |
+| Jungle, leaves at the rim's own height: the last 2 inside | 11% | 29% |
+| the first 2 outside | 1% | 38% |
+| 2 to 4 outside | 0% | 19% |
+| Jungle, columns with a trunk: outer 10 blocks against further in | 1.08 | 0.76 |
+| Jungle, a whole disc's ground under canopy: all discs; those under 30 in radius | 40%; 34% | 36%; 33% |
+| Mangrove, leaves at the rim's own height: the first 2 outside; 2 to 4 outside | 0%; 0% | 16%; 7% |
+| Rim columns with something hanging in the 10 blocks under the lip: jungle | 22% | 46% |
+| mangrove | 16% | 40% |
+| lush | 18% | 39% |
+| Longest curtain of vines from a lip: jungle, mangrove, lush | 9, 11, 6 | 24, 23, 13 |
+| Jungle ground with a block at foot or head height: all of it together | 32% | 33% |
+| by disc (21): least, middle, most | 20%, 32%, 48% | 15%, 34%, 44% |
+| the 7 discs that drew a wildness under 0.8; the 5 over 1.15 | | 28%; 37% |
+| Mangrove ground blocked: all of it together | 28% | 25% |
+| Warnings or errors from the mod | 0 | 0 |
 
-Outside the game, for the same hole, the places the grower is handed: tree starts in the outer ten blocks of a disc
-against those further in went from 1.10 to 0.72 (jungle tree), 0.96 to 0.62 (giant jungle tree) and about 1.2 to about 0.7
-(the three mangroves). In the world the jungle's trunk count near the rim did not show it (0.69 before and after): a
-disc has too few trunks there for the count to tell, which is why the canopy is what the table gives.
+So a jungle disc's canopy now falls away over some fourteen blocks (37%, 28%, 26%, 20%, 10%, 1%) where it stopped in four
+(39%, 28%, 12%, 3%), with bushes at the rim's own height along two fifths of the edge and a clear lip along about half
+of it.
 
-Wildness, same discs before and after: the disc that drew 0.70 went from 26% of its ground blocked to 22%, the one that
-drew 1.35 from 26% to 34%. All jungle ground measured together went from 30% to 34%; the discs of this hole that could be
-measured happened to draw 1.12 on average, where the average over many holes is 0.95.
+The "after" column was measured while the mangrove's trees still had their fade, so it has no line for the mangrove's
+canopy: that should now be what it was before, with its rim's bushes, roots and vines added, and has not been run since.
 
-**Verification.** 232 unit tests pass (`./gradlew build`, both loader jars), 4 of them new: rim places lie outside the
-platform beside a top block, on every side, about one for every `every` columns; the fade's weight, that its width closes
-on itself round the rim with no jump, and that growth in the world's layout thins by it; a disc's wildness is one draw
-that scales what it grows; the theme's file form. `DiscFeatureFilesTest` loads the 30 feature files with the game's own
-loader.
+One of the four holes was also generated on Fabric. It agrees with NeoForge's own numbers for that hole to within a few
+points on every line (canopy 33%, 21%, 18%, 15%, 7% against 32%, 21%, 24%, 20%, 8%; something hanging on 52% of the
+jungle's rim on both), with no warning or error.
+
+**Verification.** 232 unit tests pass (`./gradlew build`, both loader jars). New with this round: rim places lie outside
+the platform beside a top block, on every side, about one for every `every` columns; the fade's weight, that its width
+goes round the rim with no jump, that it stops at its reach, and that growth in a real layout thins by it; a disc's
+wildness is one draw that scales what it grows; the theme's file form. `DiscFeatureFilesTest` loads every feature file
+with the game's own loader.
 
 **Not verified.** Nothing was looked at in game: every number here says how much there is, not whether it looks right. The
-owner's pack was not run (Larion, C2ME and the overhaul that replaces the parent biomes). Only one hole was measured.
+owner's pack was not run (Larion, C2ME and the overhaul that replaces the parent biomes).
 
 **For the owner to judge** (all of it mine): how much hangs over a rim, and whether half a lip left clear shows enough of
 the jungle's layers (`bare-rims` and `heavy-rims` are the two ends); trees standing on the very edge at all; `wildness`
 0.5 to 1.4. On that last one: a quarter of the ground blocked was the mark set on 2026-10-05, and measured now, for the
-first time since ground cover and ruins were added, a jungle disc is at 30% before any of this. Bushes are most of it (20%
-of the ground). So the thickest disc a hole can draw is about 35% blocked, and `max` 1 with a lower `min` would keep the
-variety and make no disc thicker than today's.
+first time since ground cover and ruins were added, jungle ground is 32% blocked before any of this. Bushes are most of
+it. So the thickest discs a hole draws are about 37% blocked, and `max` 1 with a lower `min` would keep the variety and
+make no disc thicker than today's.
+
+### Wilder discs, part 2: giants
+
+The second round of the same plan: "giant flora", data only.
+
+- `giant_mushroom_red` (jungle) and `giant_mushroom_brown` (mangrove): vanilla's huge mushrooms with caps a block wider
+  each way, in groves.
+- `giant_pad` (jungle and mangrove): the brown mushroom's own feature with other blocks, a flat round leaf of moss nine
+  across on a stalk of bamboo block. Read from the 1.21.1 jar: that feature gives a cap block the mushroom's faces only
+  if the block has them, and sets a stalk block as it is given. Its `rim_fade` has `to` 4, so it grows four times as
+  often by the rim, where the leaf hangs out over the edge.
+- `glow_bulb` (jungle and lush) and `glow_bulb_swamp` (mangrove): tree features, a stalk of bamboo block 5 to 9 tall
+  with a ball of leaves about a quarter of which is shroomlights or froglights. A block of bamboo is no log, so the
+  leaves are persistent.
+
+They are listed before each theme's trees: a cap needs every block it fills to be air or leaves, and a tree started
+under one grows as tall as there is room. That moved every other growth one place down its list, and a growth's place is
+part of what its draws are made from, so every plant on a disc stands somewhere else than it did the round before.
+
+For the mushrooms and the pad `every` is places tried. The game grows one only on soil (so not on the jungle's brick
+floors, nor on a lush disc's stone, which is why lush discs have bulbs only) and only where the whole cap has air, so
+about one try in seven comes to anything. The numbers (400 to 900) allow for that.
+
+**Measured,** same four holes, NeoForge:
+
+| | Places tried | Grown | On how many discs |
+|---|---|---|---|
+| Jungle: red mushrooms | 125 | 56 | 17 of 45 |
+| Jungle: pads | 355 | 51, of which 16 with the leaf out past the rim | 20 of 45 |
+| Jungle: bulbs | 219 | 86 | 29 of 45 |
+| Lush: bulbs | 248 | 117 | 22 of 29 |
+| Mangrove: brown mushrooms | 118 | 13 | 7 of 15 |
+| Mangrove: pads | 215 | 28, of which 8 past the rim | 9 of 15 |
+| Mangrove: bulbs | 100 | 37 | 10 of 15 |
+
+Stalks are 4 to 12 blocks. All but a few caps are whole (a pad's is 77 blocks; the least found was 57, and a red
+mushroom's 16 to 40); a ball holds 6 to 23 lights. One of the holes on Fabric has the same within one or two of each
+kind. No warning or error from the mod on either loader. 232 unit tests pass; the game's loader takes all 35 feature
+files.
+
+Not verified: how any of it looks. Mine and unjudged: every block these are made of, how many there are, and that a
+mangrove disc gets so few mushrooms (its groves leave little clear air). `no-giants` and `many-giants` are the packs.
 
 ## 8. Next steps
 
@@ -2233,9 +2284,10 @@ variety and make no disc thicker than today's.
    Lootr's lists for chests that refill.
 8. The owner's goals of 2026-10-09 (section 9, with the levers of each): suggested next the penalty for going up or down
    too fast, then the disc made for ruins, then fights that reset and traps. The owner has not set that order.
-9. Wilder discs: look at the rims in game (`bare-rims` and `heavy-rims` to compare) and settle how much hangs there, the
-   edge trees and `wildness`. Then the four rounds left of the plan the owner approved on 2026-10-10: giant flora, mounds
-   and outcrops, falls with plunge pools and cascades, wall springs.
+9. Wilder discs: look at the rims and the giants in game (`bare-rims`, `heavy-rims`, `no-giants` and `many-giants` to
+   compare) and settle how much hangs over a rim, the edge trees, `wildness`, and what the giants are made of. Then the
+   three rounds left of the plan the owner approved on 2026-10-10: mounds and outcrops, falls with plunge pools and
+   cascades, wall springs.
 10. Roots: look at them in game (`huge-roots`, `many-roots`, `few-roots` and `no-roots` to compare), settle how many and how
    thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
    them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
