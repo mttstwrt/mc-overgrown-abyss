@@ -733,12 +733,6 @@
           "patches": {
             "size": 40,
             "cover": 0.45
-          },
-          "rim_fade": {
-            "width": 10,
-            "to": 0.15,
-            "wander": 0.8,
-            "reach": 0.25
           }
         },
         {
@@ -748,12 +742,6 @@
           "patches": {
             "size": 40,
             "cover": 0.5
-          },
-          "rim_fade": {
-            "width": 10,
-            "to": 0.15,
-            "wander": 0.8,
-            "reach": 0.25
           }
         },
         {
@@ -762,12 +750,6 @@
           "patches": {
             "size": 40,
             "cover": 0.65
-          },
-          "rim_fade": {
-            "width": 10,
-            "to": 0.15,
-            "wander": 0.8,
-            "reach": 0.25
           }
         },
         {
@@ -777,12 +759,6 @@
           "patches": {
             "size": 40,
             "cover": 0.65
-          },
-          "rim_fade": {
-            "width": 10,
-            "to": 0.15,
-            "wander": 0.8,
-            "reach": 0.25
           }
         },
         {
@@ -791,12 +767,6 @@
           "patches": {
             "size": 40,
             "cover": 0.8
-          },
-          "rim_fade": {
-            "width": 10,
-            "to": 0.15,
-            "wander": 0.8,
-            "reach": 0.25
           }
         },
         {

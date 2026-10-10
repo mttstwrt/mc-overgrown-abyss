@@ -637,8 +637,6 @@ class DiscThemeTest {
         for (DiscTheme wet : List.of(themes.get(1), themes.get(2))) {
             assertTrue(wet.water().orElseThrow().depth() <= 2, "water deeper than two blocks");
             assertTrue(wet.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.UNDERSIDE), "nothing hangs under the disc");
-            assertTrue(wet.growth().stream().anyMatch(growth -> growth.rimFade().filter(fade -> fade.to() < 1 && fade.wander() > 0).isPresent()),
-                    "its trees stand as thick at the rim as in the middle, the same all the way round");
             // A small disc keeps the trees of its middle.
             assertTrue(wet.growth().stream().flatMap(growth -> growth.rimFade().stream()).filter(fade -> fade.to() < 1).allMatch(fade -> fade.reach() <= 0.3),
                     "a fade that thins trees may take a small disc's whole radius");
@@ -652,6 +650,11 @@ class DiscThemeTest {
             assertTrue(!giants.isEmpty() && giants.stream().allMatch(growth -> growth.every() >= 300), "giants: " + giants);
             assertEquals(giants, green.growth().subList(0, giants.size()), "something is grown before the giants");
         }
+        assertTrue(themes.get(1).growth().stream().anyMatch(growth -> growth.rimFade().filter(fade -> fade.to() < 1 && fade.wander() > 0).isPresent()),
+                "the jungle's trees stand as thick at the rim as in the middle, the same all the way round");
+        // A mangrove's crown reaches out over the rim by itself, and thinning the trees there took a third of that away.
+        assertTrue(themes.get(2).growth().stream().flatMap(growth -> growth.rimFade().stream()).noneMatch(fade -> fade.to() < 1),
+                "the mangrove's trees are thinned towards the rim");
         assertTrue(themes.get(2).growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.WATER), "no mangrove stands in the water");
         assertTrue(themes.get(2).water().orElseThrow().ponds() > themes.get(1).water().orElseThrow().ponds(), "a swamp is wetter than a jungle");
     }

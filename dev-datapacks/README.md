@@ -259,12 +259,13 @@ Three settings keep a disc's plants from ending in a wall at its edge and from l
     lush disc. A curtain is a few columns wide, so an `every` much under 8 closes into one unbroken curtain and hides
     the view from the rim.
 - `rim_fade` in a `growth` entry changes how often it grows over the last `width` blocks before the rim: steadily from its
-  usual rate to `to` times that at the rim. The trees have `to` 0.15 over `width` 10, which leaves their crowns ending at
-  different distances from the edge; a `to` over 1 would gather a growth there instead. `wander` (0 to 1)
+  usual rate to `to` times that at the rim. The jungle's trees have `to` 0.15 over `width` 10, which leaves their crowns
+  ending at different distances from the edge; a `to` over 1 gathers a growth there instead, as the pads' does. The
+  mangrove's trees have none: their crowns reach out past the rim by themselves, and fewer trees there was less of that. `wander` (0 to 1)
   lets the width differ round the rim, from that share less than `width` to that share more: with the trees' 0.8, 2 to 18
   blocks, so along one stretch the trees come to the edge and along another they stop well short. Every growth of a disc
   wanders alike, so its trees leave the same clearings. `reach` (0.05 to 1) is the most of the disc's radius the fade may
-  take, whatever its width: the trees have 0.25, so on a disc 20 blocks in radius they are thinned over 5 blocks at most
+  take, whatever its width: the jungle's trees have 0.25, so on a disc 20 blocks in radius they are thinned over 5 blocks at most
   and on one of 64 over 16. Without it a small disc is thinned through to its middle. Not for a growth on the rim itself.
 - `wildness` on a theme, `min` to `max`: each disc draws one number between them and grows that many times as much of
   everything in the theme's `growth`. What a disc inherits is not changed, so a disc at the low end is a glade in grass,
