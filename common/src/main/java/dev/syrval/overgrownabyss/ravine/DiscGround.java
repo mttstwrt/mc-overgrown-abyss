@@ -11,7 +11,7 @@ import java.util.Optional;
  *
  * <p>The ground lies on the rock wherever something needs it level: near the rim, whose side shows the platform's own layers;
  * at the disc's water and beside it, which the rock holds in; and round each of its {@code flats}, the places where
- * something was stood on the platform itself, a ruin for one. Away from each of those it may rise by a block for each block
+ * something was stood on the platform itself or let into it: a ruin, or the water of a fall. Away from each of those it may rise by a block for each block
  * further, so a mound that one of them cuts into ends in a slope and not a wall.
  *
  * @param index the disc's place in its hole's layout, which its patches are drawn by
@@ -27,19 +27,32 @@ record DiscGround(Disc disc, long hash, int index, DiscRelief relief, Optional<D
         flats = List.copyOf(flats);
     }
 
-    /** The ground of each disc of a cell, in the layout's order; a disc with no theme, or a theme with level ground, has none over its rock. */
-    static List<DiscGround> of(RavineCell cell, List<Disc> discs, List<Optional<DiscTheme>> themes, List<DiscRuinSites.Placed> ruins, RuinPieces pieces) {
+    /** The round of ground each ruin stands on with the margin a ruin keeps, for each disc in the themes' order. */
+    static List<List<Flat>> roundsOf(List<Optional<DiscTheme>> themes, List<DiscRuinSites.Placed> ruins, RuinPieces pieces) {
+        var rounds = new ArrayList<List<Flat>>(themes.size());
+        for (int i = 0; i < themes.size(); i++) {
+            int index = i;
+            Optional<DiscRuins> of = themes.get(i).flatMap(DiscTheme::ruins);
+            rounds.add(ruins.stream()
+                    .filter(placed -> placed.disc() == index)
+                    .map(placed -> new Flat(
+                            placed.site().x() + 0.5, placed.site().z() + 0.5,
+                            of.map(kinds -> pieces.radiusOf(kinds, placed.site())).orElse(0.0) + DiscRuinSites.MARGIN))
+                    .toList());
+        }
+        return List.copyOf(rounds);
+    }
+
+    /**
+     * The ground of each disc of a cell, in the layout's order, level round its {@code ruins} and its falls' water; a disc with
+     * no theme, or a theme with level ground, has none over its rock anywhere.
+     */
+    static List<DiscGround> of(RavineCell cell, List<Disc> discs, List<Optional<DiscTheme>> themes, List<List<Flat>> ruins, DiscFalls falls) {
         var grounds = new ArrayList<DiscGround>(discs.size());
         for (int i = 0; i < discs.size(); i++) {
-            int index = i;
             Optional<DiscTheme> theme = themes.get(i);
-            var flats = new ArrayList<Flat>();
-            for (DiscRuinSites.Placed placed : ruins) {
-                if (placed.disc() == index) {
-                    double radius = theme.flatMap(DiscTheme::ruins).map(of -> pieces.radiusOf(of, placed.site())).orElse(0.0);
-                    flats.add(new Flat(placed.site().x() + 0.5, placed.site().z() + 0.5, radius + DiscRuinSites.MARGIN));
-                }
-            }
+            var flats = new ArrayList<>(ruins.get(i));
+            flats.addAll(falls.clearOf(i));
             grounds.add(new DiscGround(
                     discs.get(i), cell.hash(), i, theme.map(DiscTheme::ground).orElse(DiscRelief.FLAT), theme.flatMap(DiscTheme::water), flats));
         }

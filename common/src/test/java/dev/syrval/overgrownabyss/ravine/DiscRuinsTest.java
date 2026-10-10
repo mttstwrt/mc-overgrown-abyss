@@ -77,7 +77,7 @@ class DiscRuinsTest {
         RavineSettings base = DiscThemeTest.shipped();
         return new RavineSettings(
                 base.salt(), base.cellSize(), 1F, base.sizeBias(), base.floor(), base.top(), base.cavernRadius(), base.cavernHeight(),
-                base.edgeFalloff(), base.discs(), List.of(themes), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
+                base.edgeFalloff(), base.discs(), List.of(themes), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
     }
 
     private static CellDiscs discs(RavineSettings settings, int cz, RuinPieces pieces) {
@@ -271,7 +271,7 @@ class DiscRuinsTest {
                 cone.rim(), cone.upper());
         return new RavineSettings(
                 base.salt(), base.cellSize(), 1F, base.sizeBias(), base.floor(), base.top(), base.cavernRadius(), base.cavernHeight(),
-                base.edgeFalloff(), base.discs(), base.discThemes(), base.environment(), base.wallNoise(), base.ravine(), Optional.of(hanging), base.roots());
+                base.edgeFalloff(), base.discs(), base.discThemes(), base.environment(), base.wallNoise(), base.ravine(), Optional.of(hanging), base.dressing());
     }
 
     @Test

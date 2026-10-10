@@ -13,7 +13,7 @@ import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 /**
  * Gives the discs of one chunk their materials (see {@code DiscPalette}), by writing over the rock the terrain made them of,
  * then the ground that stands over their platforms (see {@code DiscGround}), their ponds and streams (see {@code DiscWater}),
- * and last the hole's roots (see {@code RootBlocks}), which go through
+ * the still water of the hole's falls (see {@code DiscFalls}), and last the hole's roots (see {@code RootBlocks}), which go through
  * whatever is there. It writes straight into the chunk, as carvers do, so it handles plain blocks only: a block that needs a
  * block entity is placed without one.
  */
@@ -53,6 +53,24 @@ public final class DiscPainter {
             }
             for (int below = 0; below < depth; below++) {
                 chunk.setBlockState(pos.set(x, surface - below, z), water, false);
+            }
+        });
+        BlockState air = Blocks.AIR.defaultBlockState();
+        footprint.forEachFallWater(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, level, z, depth, cut, lip) -> {
+            // As for a pond, only under open air, which here is over the ground that is cut away to let the water through.
+            if (chunk.isOutsideBuildHeight(level + cut + 1) || !chunk.getBlockState(pos.set(x, level + cut + 1, z)).isAir()) {
+                return;
+            }
+            for (int up = cut; up > 0; up--) {
+                chunk.setBlockState(pos.set(x, level + up, z), air, false);
+            }
+            for (int below = 0; below < depth; below++) {
+                chunk.setBlockState(pos.set(x, level - below, z), water, false);
+            }
+            // A lip is water with an open side. Marked, the game ticks it when the chunk comes alive, as it does water the terrain
+            // left with somewhere to run, and from there it runs by the game's own rules.
+            if (lip) {
+                chunk.markPosForPostprocessing(pos.set(x, level, z));
             }
         });
         footprint.forEachRootBlock(

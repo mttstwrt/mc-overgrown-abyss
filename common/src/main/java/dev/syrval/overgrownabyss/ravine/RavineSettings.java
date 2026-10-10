@@ -17,7 +17,8 @@ import net.minecraft.world.level.levelgen.WorldGenerationContext;
  * are (see {@link DiscTheme}): each disc is given one, which sets its biome, what it is made of, what grows on it and what
  * ruins stand on it. Without any, every disc is the terrain's own rock in the biome it lies in. {@code wall_noise} makes a
  * cone's own wall uneven (see {@link WallNoise}); without it the wall is an exact surface of revolution. {@code roots} are
- * the wooden roots that wind down a cone (see {@link RootSettings}); without it a hole has none.
+ * the wooden roots that wind down a cone (see {@link RootSettings}) and {@code falls} the water that falls from disc to disc
+ * (see {@link FallSettings}); without either a hole has none. The two are kept together in {@code dressing}.
  *
  * <p>Each ravine draws one size from 0 to 1 (a uniform draw raised to {@code size_bias}: 1 is even, below 1 favours large
  * ravines, above 1 small ones). The vertical bounds are anchors so the cavern floor follows the world bottom of whatever
@@ -40,7 +41,7 @@ public record RavineSettings(
         WallNoise wallNoise,
         Optional<RavineGeometry> ravine,
         Optional<ConeSettings> cone,
-        Optional<RootSettings> roots) {
+        ConeDressing dressing) {
 
     public static final MapCodec<RavineSettings> MAP_CODEC = RecordCodecBuilder.<RavineSettings>mapCodec(i -> i.group(
             Codec.LONG.fieldOf("salt").forGetter(RavineSettings::salt),
@@ -58,12 +59,21 @@ public record RavineSettings(
             WallNoise.CODEC.optionalFieldOf("wall_noise", WallNoise.NONE).forGetter(RavineSettings::wallNoise),
             RavineGeometry.CODEC.optionalFieldOf("ravine").forGetter(RavineSettings::ravine),
             ConeSettings.CODEC.optionalFieldOf("cone").forGetter(RavineSettings::cone),
-            // This makes 16 fields, which is all the codec builder takes: the next setting goes inside one of them.
-            RootSettings.CODEC.optionalFieldOf("roots").forGetter(RavineSettings::roots)
+            // This makes 16 fields, which is all the codec builder takes: the next setting goes inside one of them, as roots and
+            // falls are inside this last one.
+            ConeDressing.MAP_CODEC.forGetter(RavineSettings::dressing)
     ).apply(i, RavineSettings::new)).validate(RavineSettings::validate);
 
     public RavineSettings {
         discThemes = List.copyOf(discThemes);
+    }
+
+    public Optional<RootSettings> roots() {
+        return dressing.roots();
+    }
+
+    public Optional<FallSettings> falls() {
+        return dressing.falls();
     }
 
     // A cone's cell is a round hole: no length and no curves.
@@ -147,8 +157,16 @@ public record RavineSettings(
                     + " (min_height and half the layers' jitter), or the top layer's discs have no room for a dome");
         }
         // Roots follow a cone's wall round its axis, which a ravine has none of.
-        if (s.roots.isPresent() && s.cone.isEmpty()) {
+        if (s.roots().isPresent() && s.cone.isEmpty()) {
             return DataResult.error(() -> "roots are only for a cone");
+        }
+        // Falls drop through a cone's open air and are told from its wall, which a ravine has not got in that form.
+        if (s.falls().isPresent() && s.cone.isEmpty()) {
+            return DataResult.error(() -> "falls are only for a cone");
+        }
+        // A pool's middle may be cut a block into the ground, and still wants a block of the platform under it.
+        if (s.falls().isPresent() && s.discs.floorThickness() <= s.falls().get().pool().depth() + 1) {
+            return DataResult.error(() -> "floor_thickness must be above " + (s.falls().get().pool().depth() + 1) + " for a fall's pool to have a bed");
         }
         double moved = s.wallNoise.maxDisplacement();
         if (moved > 0 && s.cone.isEmpty()) {

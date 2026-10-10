@@ -54,7 +54,8 @@ final class DiscGrowth {
                             continue;
                         }
                         OptionalInt y = placeOn(each.on(), theme.get(), disc, ground, shape, cell.hash(), i, x, z, fromAxis);
-                        if (y.isPresent()) {
+                        // Nothing is started in a fall's water or by it, on a disc or over its lip, to stand in the water's way.
+                        if (y.isPresent() && !(each.on() != DiscTheme.Surface.UNDERSIDE && discs.falls().isNear(x, y.getAsInt(), z))) {
                             sink.accept(x, y.getAsInt(), z, each.feature(), each.on());
                         }
                     }

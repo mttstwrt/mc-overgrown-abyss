@@ -265,6 +265,7 @@ public final class RavineDensityHook {
                         roots.great(), roots.crossing(), roots.branches(), roots.links(), roots.floorRun(), roots.winding(), roots.minRadius(),
                         roots.woodReach(), roots.woodBlend()),
                 () -> OvergrownAbyss.LOGGER.info("Roots: none"));
+        s.falls().ifPresentOrElse(falls -> OvergrownAbyss.LOGGER.info("Falls: {}", falls), () -> OvergrownAbyss.LOGGER.info("Falls: none"));
     }
 
     /**

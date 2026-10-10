@@ -83,7 +83,8 @@ final class RootRoutes {
         return RavineCells.unit(hash, HASH_BASE + row * DRAWS + index);
     }
 
-    private static int countFor(InclusiveRange<Integer> range, double unit) {
+    /** The whole number a uniform draw in [0, 1) picks from a range, each as likely as the next. */
+    static int countFor(InclusiveRange<Integer> range, double unit) {
         return range.minInclusive() + (int) (unit * (range.maxInclusive() - range.minInclusive() + 1));
     }
 

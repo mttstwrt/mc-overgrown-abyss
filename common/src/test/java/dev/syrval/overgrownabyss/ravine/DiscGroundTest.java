@@ -37,7 +37,7 @@ class DiscGroundTest {
     static RavineSettings with(DiscTheme theme) throws Exception {
         RavineSettings base = DiscThemeTest.shipped();
         return new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
-                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
+                base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
     }
 
     private record Block(int x, int y, int z) {}

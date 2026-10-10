@@ -55,13 +55,19 @@ final class DiscBlocks {
             int toZ = Math.min(minZ + CHUNK_SIZE - 1, (int) Math.floor(disc.z() + disc.radius()));
             for (int x = fromX; x <= toX; x++) {
                 for (int z = fromZ; z <= toZ; z++) {
-                    int depth = water.get().depthAt(disc, cell.hash(), i, x, z);
+                    // A fall's water takes the place of the disc's own where the two would meet: it may lie lower.
+                    int depth = cellDiscs.falls().holds(i, x, z) ? 0 : water.get().depthAt(disc, cell.hash(), i, x, z);
                     if (depth > 0) {
                         sink.accept(x, disc.topBlockAt(Math.hypot(x - disc.x(), z - disc.z())), z, depth);
                     }
                 }
             }
         }
+    }
+
+    /** The columns of the chunk whose lowest corner is {@code (minX, minZ)} where a fall's still water lies (see {@link DiscFalls}). */
+    static void forEachFallWater(CellDiscs cellDiscs, int minX, int minZ, DiscFallSink sink) {
+        cellDiscs.falls().forEachColumn(minX, minZ, column -> sink.accept(column.x(), column.level(), column.z(), column.depth(), column.cut(), column.lip()));
     }
 
     /**

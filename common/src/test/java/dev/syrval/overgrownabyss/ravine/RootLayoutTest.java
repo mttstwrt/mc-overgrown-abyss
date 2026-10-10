@@ -32,7 +32,7 @@ class RootLayoutTest {
 
     static RavineSettings rooted(RavineSettings s, RootSettings roots) {
         return new RavineSettings(s.salt(), s.cellSize(), s.chance(), s.sizeBias(), s.floor(), s.top(), s.cavernRadius(), s.cavernHeight(), s.edgeFalloff(),
-                s.discs(), s.discThemes(), s.environment(), s.wallNoise(), s.ravine(), s.cone(), Optional.of(roots));
+                s.discs(), s.discThemes(), s.environment(), s.wallNoise(), s.ravine(), s.cone(), new ConeDressing(Optional.of(roots), Optional.empty()));
     }
 
     private static RavineCell cell(int cz) {

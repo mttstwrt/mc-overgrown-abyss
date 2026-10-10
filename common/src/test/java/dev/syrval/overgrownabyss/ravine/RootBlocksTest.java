@@ -159,7 +159,7 @@ class RootBlocksTest {
         DiscLayout layout = () -> discs;
         return new CellDiscs(
                 layout, List.of(Optional.of(theme(Optional.of(MANGROVE))), Optional.of(theme(Optional.of(JUNGLE))), Optional.of(theme(Optional.empty()))),
-                List.of(), List.of(), RootLayout.NONE);
+                List.of(), List.of(), RootLayout.NONE, DiscFalls.NONE);
     }
 
     private static DiscTheme theme(Optional<RootWood> wood) {
@@ -201,7 +201,7 @@ class RootBlocksTest {
         // Two discs of different woods as near as each other share the place evenly.
         List<Disc> close = List.of(new Disc(0, 0, 0, 30, 14), new Disc(80, 0, 0, 30, 14));
         DiscLayout layout = () -> close;
-        var both = new CellDiscs(layout, List.of(Optional.of(theme(Optional.of(MANGROVE))), Optional.of(theme(Optional.of(JUNGLE)))), List.of(), List.of(), RootLayout.NONE);
+        var both = new CellDiscs(layout, List.of(Optional.of(theme(Optional.of(MANGROVE))), Optional.of(theme(Optional.of(JUNGLE)))), List.of(), List.of(), RootLayout.NONE, DiscFalls.NONE);
         assertEquals(0.5, RootBlocks.mixAt(SETTINGS, both, 40, 0, 0).share(), 1e-9);
         RootBlocks.Mix nearer = RootBlocks.mixAt(SETTINGS, both, 36, 0, 0);
         assertSame(MANGROVE, nearer.first());
@@ -215,7 +215,7 @@ class RootBlocksTest {
         RavineSettings base = RootLayoutTest.rooted(ConeShapeTest.LOW_SETTINGS, ROOTS);
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), base.chance(), base.sizeBias(), base.floor(), base.top(), base.cavernRadius(),
                 base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme(Optional.of(MANGROVE)), theme(Optional.of(JUNGLE))), base.environment(),
-                base.wallNoise(), base.ravine(), base.cone(), base.roots());
+                base.wallNoise(), base.ravine(), base.cone(), base.dressing());
         RavineCell c = RavineCells.at(7L, settings, 1, 0).orElseThrow();
         CellDiscs discs = CellDiscs.of(settings, BOUNDS, c);
         int mangrove = 0;
