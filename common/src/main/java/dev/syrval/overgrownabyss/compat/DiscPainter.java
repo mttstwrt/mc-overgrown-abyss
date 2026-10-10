@@ -12,8 +12,9 @@ import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 
 /**
  * Gives the discs of one chunk their materials (see {@code DiscPalette}), by writing over the rock the terrain made them of,
- * and then their ponds and streams (see {@code DiscWater}). It writes straight into the chunk, as carvers do, so it handles
- * plain blocks only: a block that needs a block entity is placed without one.
+ * then their ponds and streams (see {@code DiscWater}), and last the hole's roots (see {@code RootBlocks}), which go through
+ * whatever is there. It writes straight into the chunk, as carvers do, so it handles plain blocks only: a block that needs a
+ * block entity is placed without one.
  */
 public final class DiscPainter {
     // Keeps these draws apart from vanilla's own decoration draws for the same chunk.
@@ -45,5 +46,8 @@ public final class DiscPainter {
                 chunk.setBlockState(pos.set(x, surface - below, z), water, false);
             }
         });
+        footprint.forEachRootBlock(
+                chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), chunk.getMinBuildHeight(), chunk.getMaxBuildHeight(),
+                (x, y, z, block) -> chunk.setBlockState(pos.set(x, y, z), block.getState(draws, pos), false));
     }
 }

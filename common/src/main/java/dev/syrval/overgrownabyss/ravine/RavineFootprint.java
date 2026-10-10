@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
-/** What a level's ravines do to the world around them, as seen by noise fill, biome assignment, disc materials, growth and structures. */
+/** What a level's ravines do to the world around them, as seen by noise fill, biome assignment, disc materials, roots, growth and structures. */
 public interface RavineFootprint {
     RavineFootprint NONE = new RavineFootprint() {
         @Override
@@ -32,6 +32,9 @@ public interface RavineFootprint {
 
         @Override
         public void forEachDiscWater(int minX, int minZ, DiscWaterSink sink) {}
+
+        @Override
+        public void forEachRootBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {}
 
         @Override
         public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {}
@@ -65,6 +68,12 @@ public interface RavineFootprint {
 
     /** Calls {@code sink} with every column where a disc holds water in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachDiscWater(int minX, int minZ, DiscWaterSink sink);
+
+    /**
+     * Calls {@code sink} with every block that is one of a hole's roots in the chunk whose lowest corner is {@code (minX, minZ)},
+     * between {@code minY} and {@code maxY} (exclusive).
+     */
+    void forEachRootBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink);
 
     /** Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachGrowth(int minX, int minZ, DiscGrowthSink sink);
@@ -138,6 +147,13 @@ public interface RavineFootprint {
             public void forEachDiscWater(int minX, int minZ, DiscWaterSink sink) {
                 for (Region region : copy) {
                     region.carve().forEachDiscWater(minX, minZ, sink);
+                }
+            }
+
+            @Override
+            public void forEachRootBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachRootBlock(minX, minZ, minY, maxY, sink);
                 }
             }
 

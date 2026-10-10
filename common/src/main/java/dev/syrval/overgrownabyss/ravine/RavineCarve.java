@@ -163,6 +163,17 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     /**
+     * Calls {@code sink} with every block that is root in the chunk whose lowest corner is {@code (minX, minZ)}, between
+     * {@code minY} and {@code maxY} (exclusive). See {@link RootBlocks}.
+     */
+    public void forEachRootBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
+        if (settings.roots().isEmpty()) {
+            return;
+        }
+        holeAt(minX, minZ).ifPresent(hole -> RootBlocks.forEach(settings, hole.cell(), discsOf(hole), minX, minZ, minY, maxY, sink));
+    }
+
+    /**
      * Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is
      * {@code (minX, minZ)}. See {@link DiscGrowth}.
      */
