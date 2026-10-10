@@ -33,6 +33,7 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * @param water      ponds and streams in the disc's top
  * @param growth     what grows on the disc, in the order listed and before what it inherits
  * @param wildness   how much more or less of that growth one disc has than another of the same theme
+ * @param ground     how the disc's ground lies over its platform: mounds and outcrops
  * @param ruins      the ruins that stand on some of the theme's discs
  * @param rootWood   what the hole's roots are made of where they pass near one of the theme's discs (see {@link RootSettings});
  *                   without one the theme has no say in it
@@ -40,7 +41,7 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
         Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Wildness wildness,
-        Optional<DiscRuins> ruins, Optional<RootWood> rootWood) {
+        DiscRelief ground, Optional<DiscRuins> ruins, Optional<RootWood> rootWood) {
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -273,6 +274,7 @@ public record DiscTheme(
             DiscWater.CODEC.optionalFieldOf("water").forGetter(DiscTheme::water),
             Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(DiscTheme::growth),
             Wildness.CODEC.optionalFieldOf("wildness", Wildness.EVEN).forGetter(DiscTheme::wildness),
+            DiscRelief.CODEC.optionalFieldOf("ground", DiscRelief.FLAT).forGetter(DiscTheme::ground),
             DiscRuins.CODEC.optionalFieldOf("ruins").forGetter(DiscTheme::ruins),
             RootWood.CODEC.optionalFieldOf("root_wood").forGetter(DiscTheme::rootWood)
     ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);
@@ -289,6 +291,12 @@ public record DiscTheme(
         if (theme.water.isPresent() && !theme.palette.coversTop(theme.water.get().depth() + 1)) {
             return DataResult.error(() -> "a theme with water needs a palette that gives its platform's top "
                     + (theme.water.get().depth() + 1) + " blocks of material: the water's sides and its bed");
+        }
+        // A mound is made of what the palette gives the top; a part of it left to the terrain would be a hole.
+        Optional<DiscRelief.Mounds> mounds = theme.ground.mounds();
+        if (mounds.isPresent() && !theme.palette.coversTop(mounds.get().height())) {
+            return DataResult.error(() -> "a theme with mounds needs a palette that gives its platform's top "
+                    + mounds.get().height() + " blocks of material: what the mounds are made of");
         }
         return DataResult.success(theme);
     }

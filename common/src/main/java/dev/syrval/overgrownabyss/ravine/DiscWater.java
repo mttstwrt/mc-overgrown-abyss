@@ -32,6 +32,10 @@ public record DiscWater(float ponds, float pondSize, float streamWidth, float st
     private static final int HASH_BASE = 400_000;
     // Where a stream's value changes by less than this over the spacing of the streams, it marks no line to follow.
     private static final double LEVEL_GROUND = 0.25;
+    // A smooth value changes by at most this over one of its sizes (2.13 at its steepest).
+    private static final double STEEPEST = 2.2;
+    // Ground right beside water stays on the rock: a bank to stand on, and no wall over the water.
+    private static final double SHORE = 1;
     /**
      * How deep the water is in one column of a disc's top, or 0 where there is none. {@code index} is the disc's place in its
      * layout, which gives each disc of a hole its own ponds and streams.
@@ -43,6 +47,41 @@ public record DiscWater(float ponds, float pondSize, float streamWidth, float st
         }
         int wanted = wantedAt(hash, index, x, z);
         return wanted > 0 && isHeldIn(disc, x, z, fromAxis) ? wanted : 0;
+    }
+
+    /**
+     * How many blocks of ground may stand over the platform in a column without burying water or walling it in (see
+     * {@link DiscGround}), up to {@code most}: none where the disc holds water or would but for the rim or a step of the bowl,
+     * none right beside that, and a block more for each block further from it.
+     */
+    double dryRoomAt(long hash, int index, int x, int z, double most) {
+        if (farFromWater(hash, index, x, z) - SHORE >= most) {
+            return most;
+        }
+        // Water may be near, so look: the nearest column that would hold some, out as far as it could matter.
+        int reach = (int) Math.ceil(most + SHORE);
+        double nearest = Double.POSITIVE_INFINITY;
+        for (int dx = -reach; dx <= reach; dx++) {
+            for (int dz = -reach; dz <= reach; dz++) {
+                double away = Math.hypot(dx, dz);
+                if (away < nearest && wantedAt(hash, index, x + dx, z + dz) > 0) {
+                    nearest = away;
+                }
+            }
+        }
+        return Math.clamp(nearest - SHORE, 0, most);
+    }
+
+    // Blocks that no water is nearer than, reckoned from the two smooth values alone: one that is some way from the level that
+    // marks a pond's edge, or a stream's middle, is at least that many blocks from it. A cheap answer, and a low one.
+    private double farFromWater(long hash, int index, int x, int z) {
+        double fromPond = ponds > 0
+                ? (RavineCells.levelBelow(1 - ponds) - RavineCells.smoothOver(hash, HASH_BASE + 2 * index, x, z, pondSize)) * pondSize / STEEPEST
+                : Double.POSITIVE_INFINITY;
+        double fromStream = streamWidth > 0
+                ? Math.abs(RavineCells.smoothOver(hash, HASH_BASE + 2 * index + 1, x, z, streamSpacing) - 0.5) * streamSpacing / STEEPEST - streamWidth / 2
+                : Double.POSITIVE_INFINITY;
+        return Math.min(fromPond, fromStream);
     }
 
     private int wantedAt(long hash, int index, int x, int z) {

@@ -163,6 +163,17 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     /**
+     * Calls {@code sink} with every block of ground that stands over a disc's platform in the chunk whose lowest corner is
+     * {@code (minX, minZ)}, between {@code minY} and {@code maxY} (exclusive). See {@link DiscGround}.
+     */
+    public void forEachMoundBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
+        if (settings.discThemes().isEmpty()) {
+            return;
+        }
+        holeAt(minX, minZ).ifPresent(hole -> DiscBlocks.forEachMound(discsOf(hole), minX, minZ, minY, maxY, sink));
+    }
+
+    /**
      * Calls {@code sink} with every block that is root in the chunk whose lowest corner is {@code (minX, minZ)}, between
      * {@code minY} and {@code maxY} (exclusive). See {@link RootBlocks}.
      */
@@ -255,7 +266,7 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         @Override
         public OptionalInt groundAt(int x, int z) {
             double fromAxis = Math.hypot(x - disc.x(), z - disc.z());
-            return fromAxis < disc.radius() ? OptionalInt.of(disc.topBlockAt(fromAxis) + 1) : OptionalInt.empty();
+            return fromAxis < disc.radius() ? OptionalInt.of(cellDiscs.grounds().get(index).topBlockAt(x, z) + 1) : OptionalInt.empty();
         }
 
         @Override

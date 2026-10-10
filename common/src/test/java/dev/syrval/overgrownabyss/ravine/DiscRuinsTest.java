@@ -69,7 +69,7 @@ class DiscRuinsTest {
     private static DiscTheme ruined(Optional<DiscWater> water, DiscRuins ruins) {
         return new DiscTheme(
                 Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE,
-                DiscPalette.UNPAINTED, water, List.of(), DiscTheme.Wildness.EVEN, Optional.of(ruins), Optional.empty());
+                DiscPalette.UNPAINTED, water, List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.of(ruins), Optional.empty());
     }
 
     /** The mod's own hole with other themes. */

@@ -12,7 +12,8 @@ import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 
 /**
  * Gives the discs of one chunk their materials (see {@code DiscPalette}), by writing over the rock the terrain made them of,
- * then their ponds and streams (see {@code DiscWater}), and last the hole's roots (see {@code RootBlocks}), which go through
+ * then the ground that stands over their platforms (see {@code DiscGround}), their ponds and streams (see {@code DiscWater}),
+ * and last the hole's roots (see {@code RootBlocks}), which go through
  * whatever is there. It writes straight into the chunk, as carvers do, so it handles plain blocks only: a block that needs a
  * block entity is placed without one.
  */
@@ -35,6 +36,14 @@ public final class DiscPainter {
         footprint.forEachDiscBlock(
                 chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), chunk.getMinBuildHeight(), chunk.getMaxBuildHeight(),
                 (x, y, z, block) -> chunk.setBlockState(pos.set(x, y, z), block.getState(draws, pos), false));
+        // Ground over a platform is for open air: a stem that comes down on the platform, or the wall where the disc lies in it, stays.
+        footprint.forEachMoundBlock(
+                chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), chunk.getMinBuildHeight(), chunk.getMaxBuildHeight(),
+                (x, y, z, block) -> {
+                    if (chunk.getBlockState(pos.set(x, y, z)).isAir()) {
+                        chunk.setBlockState(pos, block.getState(draws, pos), false);
+                    }
+                });
         BlockState water = Blocks.WATER.defaultBlockState();
         footprint.forEachDiscWater(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, surface, z, depth) -> {
             // Only under open air. Where a stem or a root stands on the platform, or the rock of the wall lies on it, the

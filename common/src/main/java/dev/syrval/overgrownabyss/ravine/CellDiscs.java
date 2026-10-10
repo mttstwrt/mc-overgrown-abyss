@@ -9,7 +9,7 @@ import java.util.OptionalInt;
  * cell's hole lies between, the cell, the ground over it and the pieces the level has for ruins, so they are built once for a cell and then only read, which makes
  * them safe to share between worker threads.
  */
-record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes, List<RuinSite> ruins, RootLayout roots) {
+record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes, List<RuinSite> ruins, List<DiscGround> grounds, RootLayout roots) {
 
     /** The discs of a hole whose ground is nowhere lower than its top, in a level that has no pieces for ruins. */
     static CellDiscs of(RavineSettings settings, RavineBounds bounds, RavineCell cell) {
@@ -20,9 +20,10 @@ record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes, List<RuinS
         DiscLayout layout = DiscLayouts.of(settings, bounds, cell, ground);
         List<DiscTraits> traits = DiscTraits.of(settings, cell, layout.discs());
         List<Optional<DiscTheme>> themes = DiscThemes.assign(settings, cell, traits);
+        List<DiscRuinSites.Placed> ruins = DiscRuinSites.onDiscs(settings, bounds, cell, layout, themes, traits, pieces);
         return new CellDiscs(
-                layout, themes, DiscRuinSites.of(settings, bounds, cell, layout, themes, traits, pieces),
-                RootLayout.of(settings, bounds, cell, layout, ground));
+                layout, themes, ruins.stream().map(DiscRuinSites.Placed::site).toList(),
+                DiscGround.of(cell, layout.discs(), themes, ruins, pieces), RootLayout.of(settings, bounds, cell, layout, ground));
     }
 
     /**

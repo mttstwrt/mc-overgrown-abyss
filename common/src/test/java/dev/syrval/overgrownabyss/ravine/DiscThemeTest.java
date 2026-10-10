@@ -52,7 +52,7 @@ class DiscThemeTest {
     }
 
     static DiscTheme theme(String biome, float weight, DiscTheme.Ramp byHeight, DiscTheme.Ramp byDistance, DiscTheme.Ramp bySize) {
-        return new DiscTheme(Optional.of(biome(biome)), Optional.empty(), weight, byHeight, byDistance, bySize, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
+        return new DiscTheme(Optional.of(biome(biome)), Optional.empty(), weight, byHeight, byDistance, bySize, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
     }
 
     static final DiscTheme.Ramp EVEN = DiscTheme.Ramp.EVEN;
@@ -73,7 +73,7 @@ class DiscThemeTest {
     /** The mod's own hole with one theme on every disc, which grows what is given and nothing else. */
     static RavineSettings growing(DiscTheme.Wildness wildness, DiscTheme.Growth... growth) throws Exception {
         RavineSettings base = shipped();
-        var theme = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(growth), wildness, Optional.empty(), Optional.empty());
+        var theme = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(growth), wildness, DiscRelief.FLAT, Optional.empty(), Optional.empty());
         return new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
     }
@@ -152,7 +152,7 @@ class DiscThemeTest {
     @Test
     void aThemesLimitsRuleItOutWhereARampWouldOnlyMakeItUnlikely() {
         var smallAndFar = new DiscTheme.Limits(DiscTheme.Span.ALL, new DiscTheme.Span(0.55F, 1), new DiscTheme.Span(0, 0.4F));
-        var kept = new DiscTheme(Optional.of(biome("kept")), Optional.empty(), 100, EVEN, EVEN, EVEN, smallAndFar, DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
+        var kept = new DiscTheme(Optional.of(biome("kept")), Optional.empty(), 100, EVEN, EVEN, EVEN, smallAndFar, DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
         assertEquals(100, kept.weightFor(new DiscTraits(0.5, 0.8, 0.2)), 1e-9, "inside its limits it has its weight");
         assertEquals(0, kept.weightFor(new DiscTraits(0.5, 0.5, 0.2)), 1e-9, "too near the centre");
         assertEquals(0, kept.weightFor(new DiscTraits(0.5, 0.8, 0.5)), 1e-9, "too large");
@@ -284,7 +284,7 @@ class DiscThemeTest {
         RavineSettings base = shipped();
         var onTop = new DiscTheme.Growth(feature("minecraft:jungle_tree"), 50, DiscTheme.Surface.TOP, Optional.empty(), Optional.empty());
         var under = new DiscTheme.Growth(feature("minecraft:cave_vine"), 20, DiscTheme.Surface.UNDERSIDE, Optional.empty(), Optional.empty());
-        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(onTop, under), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
+        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(onTop, under), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
@@ -351,7 +351,11 @@ class DiscThemeTest {
                     {"feature": "minecraft:jungle_tree", "every": 45, "rim_fade": {"width": 10.0, "to": 0.25, "wander": 0.75, "reach": 0.25}},
                     {"feature": "minecraft:vines", "every": 12, "on": "rim"}
                   ],
-                  "wildness": {"min": 0.5, "max": 1.5}
+                  "wildness": {"min": 0.5, "max": 1.5},
+                  "ground": {
+                    "mounds": {"height": 3, "size": 22.0, "cover": 0.25},
+                    "outcrops": {"height": 5, "size": 8.0, "cover": 0.5, "block": {"type": "minecraft:simple_state_provider", "state": {"Name": "minecraft:andesite"}}}
+                  }
                 }
                 """);
         DiscTheme parsed = DiscTheme.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
@@ -369,12 +373,19 @@ class DiscThemeTest {
         assertTrue(parsed.growth().get(0).rimFade().isEmpty(), "as thick at the rim as anywhere unless given a fade");
         assertEquals(DiscTheme.Surface.RIM, parsed.growth().get(4).on());
         assertEquals(new DiscTheme.Wildness(0.5F, 1.5F), parsed.wildness());
+        assertEquals(Optional.of(new DiscRelief.Mounds(3, 22, 0.25F)), parsed.ground().mounds());
+        assertEquals(5, parsed.ground().outcrops().orElseThrow().height());
         assertEquals(json, DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, parsed).getOrThrow(), "and is written back the same");
         var onlyAWeight = JsonParser.parseString("{\"weight\": 2}");
         DiscTheme bare = DiscTheme.CODEC.parse(JsonOps.INSTANCE, onlyAWeight).getOrThrow();
         assertTrue(bare.biome().isEmpty() && bare.growth().isEmpty() && bare.water().isEmpty() && bare.palette().equals(DiscPalette.UNPAINTED),
                 "everything but the weight is optional");
         assertEquals(DiscTheme.Wildness.EVEN, bare.wildness(), "every disc as overgrown as the next unless told otherwise");
+        assertEquals(DiscRelief.FLAT, bare.ground(), "and the platform is the ground unless told otherwise");
+        var moundsOfNothing = json.getAsJsonObject().deepCopy();
+        moundsOfNothing.remove("palette");
+        moundsOfNothing.remove("water");
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, moundsOfNothing).isError(), "mounds with no palette to make them of");
         var fadingOnTheRim = json.getAsJsonObject().deepCopy();
         fadingOnTheRim.getAsJsonArray("growth").get(4).getAsJsonObject().add("rim_fade", JsonParser.parseString("{\"width\": 4, \"to\": 0}"));
         assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, fadingOnTheRim).isError(), "a fade towards the rim for what grows on the rim");
@@ -422,7 +433,7 @@ class DiscThemeTest {
         RavineSettings base = shipped();
         var patches = new DiscTheme.Patches(8, 0.3F);
         var inPatches = new DiscTheme.Growth(feature("minecraft:mangrove"), 6, DiscTheme.Surface.TOP, Optional.of(patches), Optional.empty());
-        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(inPatches), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
+        var growing = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(inPatches), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(growing), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
@@ -488,7 +499,7 @@ class DiscThemeTest {
         var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
         var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER, Optional.empty(), Optional.empty());
         var stone = new DiscPalette(List.of(), List.of(), base.discThemes().get(0).palette().body(), DiscPalette.UNPAINTED.stem());
-        var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater), DiscTheme.Wildness.EVEN, Optional.empty(), Optional.empty());
+        var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
         RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(swamp), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.roots());
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
@@ -567,10 +578,12 @@ class DiscThemeTest {
                 int z = (int) Math.floor(d.z());
                 int minX = Math.floorDiv(x, 16) * 16;
                 int minZ = Math.floorDiv(z, 16) * 16;
-                // The chunk under the disc's middle holds this disc's plot exactly when its theme inherits.
+                // The chunk under the disc's middle holds this disc's plot exactly when its theme inherits. Its ground there is
+                // the open block over the platform, or over a mound if one stands on it.
+                int open = cellDiscs.grounds().get(i).topBlockAt(x, z) + 1;
                 var found = new ArrayList<DiscPlot>();
                 bound.forEachInheritingDisc(minX, minZ, (what, plot) -> {
-                    if (plot.groundAt(x, z).isPresent() && plot.groundAt(x, z).getAsInt() == (int) Math.ceil(d.topAt(Math.hypot(x - d.x(), z - d.z())))
+                    if (plot.groundAt(x, z).isPresent() && plot.groundAt(x, z).getAsInt() == open
                             && plot.groundAt((int) (d.x() + d.radius() + 2), z).isEmpty() && plot.groundAt((int) (d.x() - d.radius() - 2), z).isEmpty()
                             && what.equals(inherits.orElse(null))) {
                         found.add(plot);

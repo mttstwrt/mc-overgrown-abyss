@@ -45,6 +45,13 @@ public record RuinPieces(Map<DiscRuins, List<Kind>> byRuins) {
     }
 
     /** The kinds a theme's ruins can be in this level; none if nothing of them could be measured. */
+    /** The radius of the round of ground a site's piece was given; 0 for a site that none of these ruins' pieces made. */
+    double radiusOf(DiscRuins ruins, RuinSite site) {
+        return of(ruins).stream().flatMap(kind -> kind.pieces().stream())
+                .filter(piece -> piece.pool().equals(site.pool()) && piece.element() == site.element())
+                .mapToDouble(Piece::radius).findFirst().orElse(0);
+    }
+
     List<Kind> of(DiscRuins ruins) {
         return byRuins.getOrDefault(ruins, List.of());
     }

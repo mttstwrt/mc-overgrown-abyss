@@ -34,7 +34,8 @@ final class DiscBlocks {
         for (int i = 0; i < discs.size(); i++) {
             Disc disc = discs.get(i);
             if (painter.reaches(disc)) {
-                cellDiscs.themes().get(i).ifPresent(theme -> painter.platform(disc, theme.palette()));
+                DiscGround ground = cellDiscs.grounds().get(i);
+                cellDiscs.themes().get(i).ifPresent(theme -> painter.platform(disc, theme.palette(), ground));
             }
         }
     }
@@ -63,6 +64,46 @@ final class DiscBlocks {
         }
     }
 
+    /**
+     * The blocks of ground that stand over the platforms of the chunk whose lowest corner is {@code (minX, minZ)}, between
+     * {@code minY} and {@code maxY} (exclusive): see {@link DiscGround}. A mound takes the palette's material for its depth
+     * under the mound's own top, an outcrop its own block all the way down. They are meant for open air: where a stem comes
+     * down on the platform, or the hole's wall lies on it, that stays, which is for whoever writes them to see to.
+     */
+    static void forEachMound(CellDiscs cellDiscs, int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
+        List<Disc> discs = cellDiscs.layout().discs();
+        for (int i = 0; i < discs.size(); i++) {
+            Optional<DiscTheme> theme = cellDiscs.themes().get(i);
+            DiscGround ground = cellDiscs.grounds().get(i);
+            if (theme.isEmpty() || ground.relief().equals(DiscRelief.FLAT)) {
+                continue;
+            }
+            Disc disc = discs.get(i);
+            DiscPalette palette = theme.get().palette();
+            int fromX = Math.max(minX, (int) Math.ceil(disc.x() - disc.radius()));
+            int toX = Math.min(minX + CHUNK_SIZE - 1, (int) Math.floor(disc.x() + disc.radius()));
+            int fromZ = Math.max(minZ, (int) Math.ceil(disc.z() - disc.radius()));
+            int toZ = Math.min(minZ + CHUNK_SIZE - 1, (int) Math.floor(disc.z() + disc.radius()));
+            for (int x = fromX; x <= toX; x++) {
+                for (int z = fromZ; z <= toZ; z++) {
+                    int rise = ground.riseAt(x, z);
+                    if (rise == 0) {
+                        continue;
+                    }
+                    int rock = disc.topBlockAt(Math.hypot(x - disc.x(), z - disc.z()));
+                    Optional<BlockStateProvider> outcrop = ground.isOutcropAt(x, z) ? ground.relief().outcrops().map(DiscRelief.Outcrops::block) : Optional.empty();
+                    for (int y = Math.max(rock + 1, minY); y <= Math.min(rock + rise, maxY - 1); y++) {
+                        double belowTop = rock + rise - y + 0.5;
+                        Optional<BlockStateProvider> block = outcrop.or(() -> palette.blockAt(new DiscPoint.Platform(belowTop, Double.MAX_VALUE)));
+                        if (block.isPresent()) {
+                            sink.accept(x, y, z, block.get());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private record Painter(
             RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout,
             int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
@@ -77,11 +118,26 @@ final class DiscBlocks {
                     && disc.z() + disc.radius() >= minZ && disc.z() - disc.radius() <= minZ + CHUNK_SIZE - 1;
         }
 
-        void platform(Disc disc, DiscPalette palette) {
-            int bottom = (int) Math.floor(disc.floor() - shape().floorThickness()) + 1;
-            int top = (int) Math.ceil(disc.floor() + disc.bowl()) - 1;
-            for (int y = Math.max(bottom, minY); y <= Math.min(top, maxY - 1); y++) {
-                slice(disc, palette, y, disc.radius(), false);
+        void platform(Disc disc, DiscPalette palette, DiscGround ground) {
+            int bottom = Math.max((int) Math.floor(disc.floor() - shape().floorThickness()) + 1, minY);
+            int top = Math.min((int) Math.ceil(disc.floor() + disc.bowl()) - 1, maxY - 1);
+            int fromX = Math.max(minX, (int) Math.ceil(disc.x() - disc.radius()));
+            int toX = Math.min(minX + CHUNK_SIZE - 1, (int) Math.floor(disc.x() + disc.radius()));
+            int fromZ = Math.max(minZ, (int) Math.ceil(disc.z() - disc.radius()));
+            int toZ = Math.min(minZ + CHUNK_SIZE - 1, (int) Math.floor(disc.z() + disc.radius()));
+            for (int x = fromX; x <= toX; x++) {
+                for (int z = fromZ; z <= toZ; z++) {
+                    // Under a mound the platform's own top is that much deeper in the ground, and takes the layer of that depth.
+                    int rise = ground.riseAt(x, z);
+                    for (int y = bottom; y <= top; y++) {
+                        if (disc.pointAt(shape(), x, y, z).orElse(null) instanceof DiscPoint.Platform(double belowTop, double aboveUnderside)) {
+                            Optional<BlockStateProvider> block = palette.blockAt(new DiscPoint.Platform(belowTop + rise, aboveUnderside));
+                            if (block.isPresent()) {
+                                sink.accept(x, y, z, block.get());
+                            }
+                        }
+                    }
+                }
             }
         }
 

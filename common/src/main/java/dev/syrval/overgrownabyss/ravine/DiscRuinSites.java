@@ -56,14 +56,7 @@ final class DiscRuinSites {
     /** A ruin and which disc of the layout it stands on. */
     record Placed(int disc, RuinSite site) {}
 
-    /** The sites of every ruin in a cell, in the order of the discs they stand on. */
-    static List<RuinSite> of(
-            RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, List<Optional<DiscTheme>> themes,
-            List<DiscTraits> traits, RuinPieces pieces) {
-        return onDiscs(settings, bounds, cell, layout, themes, traits, pieces).stream().map(Placed::site).toList();
-    }
-
-    /** The same, each with its disc. */
+    /** Every ruin in a cell with the disc it stands on, in the order of those discs. */
     static List<Placed> onDiscs(
             RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, List<Optional<DiscTheme>> themes,
             List<DiscTraits> traits, RuinPieces pieces) {

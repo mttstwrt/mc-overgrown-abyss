@@ -31,6 +31,9 @@ public interface RavineFootprint {
         public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {}
 
         @Override
+        public void forEachMoundBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {}
+
+        @Override
         public void forEachDiscWater(int minX, int minZ, DiscWaterSink sink) {}
 
         @Override
@@ -65,6 +68,12 @@ public interface RavineFootprint {
      * between {@code minY} and {@code maxY} (exclusive).
      */
     void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink);
+
+    /**
+     * Calls {@code sink} with every block of ground that stands over a disc's platform in the chunk whose lowest corner is
+     * {@code (minX, minZ)}, between {@code minY} and {@code maxY} (exclusive). The blocks are for open air only.
+     */
+    void forEachMoundBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink);
 
     /** Calls {@code sink} with every column where a disc holds water in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachDiscWater(int minX, int minZ, DiscWaterSink sink);
@@ -140,6 +149,13 @@ public interface RavineFootprint {
             public void forEachDiscBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
                 for (Region region : copy) {
                     region.carve().forEachDiscBlock(minX, minZ, minY, maxY, sink);
+                }
+            }
+
+            @Override
+            public void forEachMoundBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachMoundBlock(minX, minZ, minY, maxY, sink);
                 }
             }
 

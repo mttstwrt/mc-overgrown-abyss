@@ -32,6 +32,7 @@ final class DiscGrowth {
             Disc disc = all.get(i);
             List<DiscTheme.Growth> growth = theme.get().growth();
             double wildness = theme.get().wildness().factorFor(cell.hash(), i);
+            DiscGround ground = discs.grounds().get(i);
             // One growth at a time, in the order the theme lists them, so that what is listed later finds what was listed
             // earlier already there: vines after the trees they hang from.
             for (int g = 0; g < Math.min(growth.size(), MAX_GROWTHS); g++) {
@@ -52,7 +53,7 @@ final class DiscGrowth {
                         if (draw >= wildness * each.weightAt(cell.hash(), i, disc, x, z)) {
                             continue;
                         }
-                        OptionalInt y = placeOn(each.on(), theme.get(), disc, shape, cell.hash(), i, x, z, fromAxis);
+                        OptionalInt y = placeOn(each.on(), theme.get(), disc, ground, shape, cell.hash(), i, x, z, fromAxis);
                         if (y.isPresent()) {
                             sink.accept(x, y.getAsInt(), z, each.feature(), each.on());
                         }
@@ -62,11 +63,12 @@ final class DiscGrowth {
         }
     }
 
-    // The block a growth starts in: the open one over the top block or under the disc's lowest rock (the stem's flare under
+    // The block a growth starts in: the open one over the ground or under the disc's lowest rock (the stem's flare under
     // most of a standing disc), the lowest block of water, or the open one beside the top block of the rim.
-    private static OptionalInt placeOn(DiscTheme.Surface on, DiscTheme theme, Disc disc, DiscShape shape, long hash, int index, int x, int z, double fromAxis) {
+    private static OptionalInt placeOn(
+            DiscTheme.Surface on, DiscTheme theme, Disc disc, DiscGround ground, DiscShape shape, long hash, int index, int x, int z, double fromAxis) {
         return switch (on) {
-            case TOP -> OptionalInt.of(disc.topBlockAt(fromAxis) + 1);
+            case TOP -> OptionalInt.of(ground.topBlockAt(x, z) + 1);
             case UNDERSIDE -> disc.hangBlockAt(shape, fromAxis);
             case WATER -> {
                 int depth = theme.water().map(water -> water.depthAt(disc, hash, index, x, z)).orElse(0);
