@@ -633,10 +633,18 @@ class DiscThemeTest {
         // left out so that a disc is not twice as thick with trees where they can.
         assertEquals(Map.of("disc_lush", List.of(), "disc_jungle", List.of("minecraft:trees_jungle"), "disc_mangrove", List.of("minecraft:trees_mangrove")), leftOut);
         DiscTheme lush = themes.get(0);
-        assertTrue(lush.growth().isEmpty() && lush.water().isEmpty(), "the lush disc is its parent and nothing more");
+        assertTrue(lush.growth().stream().allMatch(growth -> growth.on() == DiscTheme.Surface.RIM) && lush.water().isEmpty(),
+                "the lush disc's ground is its parent's and nothing more");
         for (DiscTheme wet : List.of(themes.get(1), themes.get(2))) {
             assertTrue(wet.water().orElseThrow().depth() <= 2, "water deeper than two blocks");
             assertTrue(wet.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.UNDERSIDE), "nothing hangs under the disc");
+            assertTrue(wet.growth().stream().anyMatch(growth -> growth.rimFade().filter(fade -> fade.to() < 1 && fade.wander() > 0).isPresent()),
+                    "its trees stand as thick at the rim as in the middle, the same all the way round");
+            // The thickest disc has to be one a player can still walk through.
+            assertTrue(wet.wildness().min() < 1 && wet.wildness().max() > 1 && wet.wildness().max() <= 1.5, "wildness " + wet.wildness());
+        }
+        for (DiscTheme green : themes.subList(0, 3)) {
+            assertTrue(green.growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.RIM), "nothing hangs over the rim");
         }
         assertTrue(themes.get(2).growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.WATER), "no mangrove stands in the water");
         assertTrue(themes.get(2).water().orElseThrow().ponds() > themes.get(1).water().orElseThrow().ponds(), "a swamp is wetter than a jungle");

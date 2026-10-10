@@ -44,6 +44,22 @@
           }
         }
       },
+      "growth": [
+        {
+          "feature": "overgrown_abyss:disc/rim_bush_azalea",
+          "every": 14,
+          "on": "rim",
+          "patches": {
+            "size": 14,
+            "cover": 0.5
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_vines",
+          "every": 16,
+          "on": "rim"
+        }
+      ],
       "ruins": {
         "chance": 1,
         "every": 1200,
@@ -359,11 +375,21 @@
       "growth": [
         {
           "feature": "overgrown_abyss:disc/jungle_tree_giant",
-          "every": 120
+          "every": 120,
+          "rim_fade": {
+            "width": 10,
+            "to": 0.15,
+            "wander": 0.8
+          }
         },
         {
           "feature": "overgrown_abyss:disc/jungle_tree",
-          "every": 45
+          "every": 45,
+          "rim_fade": {
+            "width": 10,
+            "to": 0.15,
+            "wander": 0.8
+          }
         },
         {
           "feature": "overgrown_abyss:disc/jungle_bush",
@@ -407,8 +433,40 @@
           "feature": "overgrown_abyss:disc/vines_hanging",
           "every": 10,
           "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_tree",
+          "every": 18,
+          "on": "rim",
+          "patches": {
+            "size": 14,
+            "cover": 0.5
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_bush",
+          "every": 9,
+          "on": "rim",
+          "patches": {
+            "size": 14,
+            "cover": 0.5
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_leaves",
+          "every": 14,
+          "on": "rim"
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_vines",
+          "every": 12,
+          "on": "rim"
         }
       ],
+      "wildness": {
+        "min": 0.5,
+        "max": 1.4
+      },
       "ruins": {
         "chance": 1,
         "every": 1200,
@@ -593,6 +651,11 @@
           "patches": {
             "size": 40,
             "cover": 0.45
+          },
+          "rim_fade": {
+            "width": 10,
+            "to": 0.15,
+            "wander": 0.8
           }
         },
         {
@@ -602,6 +665,11 @@
           "patches": {
             "size": 40,
             "cover": 0.5
+          },
+          "rim_fade": {
+            "width": 10,
+            "to": 0.15,
+            "wander": 0.8
           }
         },
         {
@@ -610,6 +678,11 @@
           "patches": {
             "size": 40,
             "cover": 0.65
+          },
+          "rim_fade": {
+            "width": 10,
+            "to": 0.15,
+            "wander": 0.8
           }
         },
         {
@@ -619,6 +692,11 @@
           "patches": {
             "size": 40,
             "cover": 0.65
+          },
+          "rim_fade": {
+            "width": 10,
+            "to": 0.15,
+            "wander": 0.8
           }
         },
         {
@@ -627,6 +705,11 @@
           "patches": {
             "size": 40,
             "cover": 0.8
+          },
+          "rim_fade": {
+            "width": 10,
+            "to": 0.15,
+            "wander": 0.8
           }
         },
         {
@@ -689,8 +772,31 @@
             "size": 14,
             "cover": 0.6
           }
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_bush_mangrove",
+          "every": 12,
+          "on": "rim",
+          "patches": {
+            "size": 14,
+            "cover": 0.5
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_roots",
+          "every": 10,
+          "on": "rim"
+        },
+        {
+          "feature": "overgrown_abyss:disc/rim_vines",
+          "every": 14,
+          "on": "rim"
         }
       ],
+      "wildness": {
+        "min": 0.5,
+        "max": 1.4
+      },
       "ruins": {
         "chance": 1,
         "every": 1200,

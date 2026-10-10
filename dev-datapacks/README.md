@@ -150,7 +150,8 @@ in its middle. Its numbers:
 
 The mod's own themes:
 
-- `disc_lush` inherits from `minecraft:lush_caves` and adds nothing: a plain stone platform, which lush caves moss over itself.
+- `disc_lush` inherits from `minecraft:lush_caves` and adds nothing to its ground: a plain stone platform, which lush caves
+  moss over itself. Vines hang over its rim.
 - `disc_jungle` inherits from `minecraft:jungle` (three times as likely in the middle of the cone as at its edge). Its top is
   a patchwork, in patches 10 to 30 blocks across: about half of it grass, with podzol, moss, coarse dirt and mud, and here
   and there a floor of mossy stone bricks edged with mossy cobblestone. Under it are three layers, which show at the rim as
@@ -221,6 +222,35 @@ trunk raised 5 to 8 blocks, root arms that spread wider (`max_root_width` 10) an
 larger crown. It needs room for a trunk of at least 6 over its roots, so it grows under the higher parts of a dome. Vanilla's own tree feature is left out of what is inherited (`without_features`), or a disc would be
 twice as thick with trees without such a pack as with it. Everything else is still inherited: grass, flowers, melons, lily pads
 and whatever other mods add. With no themes every disc is the terrain's own rock in the biome it lies in.
+
+Three settings keep a disc's plants from ending in a wall at its edge and from looking like the disc next to it:
+
+- `"on": "rim"` in a `growth` entry grows the feature in the open air right beside the top block of the rim, so it must be
+  one that hangs down the side, holds on to it, or stands on nothing. `every` is then blocks of rim: one for every so many
+  of the columns that touch the platform's edge, which is about the rim's length round. Where the rim lies in the hole's
+  wall nothing grows. The mod's own:
+  - `rim_bush` and `rim_tree` (jungle), `rim_bush_mangrove` and `rim_bush_azalea` (lush): a bush, or a tree 3 to 6 blocks
+    tall hung with vines, rooted on the very edge so that its leaves stand out over the drop. They are ordinary tree
+    features; a tree started in open air puts its `dirt_provider` block under itself, which here is the block beside the
+    platform's second layer, so each grows from a knot of wood, roots or rooted dirt that holds on to the side. They have
+    `patches` of one size (14 blocks, half the rim), so on each disc they stand along the same stretches of rim and
+    leave the rest of it open: a bush for every 9 blocks of rim and a tree for every 18 on the jungle, a bush for every
+    12 on the mangrove and every 14 on the lush disc.
+  - `rim_leaves` (jungle, every 14): tufts of leaves out and down from the lip.
+  - `rim_roots` (mangrove, every 10): mangrove roots down the side, tipped with hanging roots.
+  - `rim_vines`: curtains of vines 3 to 24 long, most of them short; every 12 on the jungle, 14 on the mangrove, 16 on the
+    lush disc. A curtain is a few columns wide, so an `every` much under 8 closes into one unbroken curtain and hides
+    the view from the rim.
+- `rim_fade` in a `growth` entry changes how often it grows over the last `width` blocks before the rim: steadily from its
+  usual rate to `to` times that at the rim. The trees have `to` 0.15 over `width` 10, which leaves their crowns ending at
+  different distances from the edge; a `to` over 1 would gather a growth there instead. `wander` (0 to 1)
+  lets the width differ round the rim, from that share less than `width` to that share more: with the trees' 0.8, 2 to 18
+  blocks, so along one stretch the trees come to the edge and along another they stop well short. Every growth of a disc
+  wanders alike, so its trees leave the same clearings. Not for a growth on the rim itself.
+- `wildness` on a theme, `min` to `max`: each disc draws one number between them and grows that many times as much of
+  everything in the theme's `growth`. What a disc inherits is not changed, so a disc at the low end is a glade in grass,
+  not bare. Jungle and mangrove have 0.5 to 1.4. `max` is what decides whether the thickest disc can still be walked
+  through: it multiplies the trees and bushes too.
 
 ### Roots
 
@@ -327,6 +357,11 @@ and say how many of its pieces' lowest layers lie in the ground.
 - `tall-rings`: the mod's file with `layer_spacing` 28 in place of 20. It was measured for the ruins and left out of the
   mod's own file: a hole 200 blocks deep goes from 7 layers and about 65 discs to 5 layers and about 43, and what it gains
   is towers, about 1.4 to a hole in place of 0.7. The lower kinds lose more discs than they gain room. For judging the look.
+
+- `bare-rims`: the mod's file without any growth on a rim, without `rim_fade` and without `wildness`: discs as they were
+  before those three, every disc of a theme alike and its trees standing as thick at the edge as in the middle.
+- `heavy-rims`: the mod's file with twice as much on every rim (each `every` halved) and trees kept further back
+  (`width` 16, `to` 0, `wander` 0.9). For judging how much is too much.
 
 - `huge-roots`: the mod's file with roots half as thick again: great roots of radius 7 down to 5.5 (14 blocks across to 11),
   crossing roots 5.5, links 3, nothing under 2.
