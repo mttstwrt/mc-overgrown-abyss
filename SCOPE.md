@@ -2323,6 +2323,86 @@ low read as mounds under trees, are the owner's to judge; `flat-discs` and `rugg
 **Mine and unjudged:** every number; that the ground stays level round ruins (so a ruin never stands on a mound, and a
 disc full of ruins is nearly flat); what outcrops are made of.
 
+### Wilder discs, part 4: falls, pools and falls that go on
+
+The fourth round of the same plan, and the owner's own first idea: "we have streams and ponds but not waterfalls spilling
+over the edges. We do need to be careful not to overdo the waterfalls though". Of the water ideas offered they picked all
+four; three are here (outlets with a number to a hole, pools to land in with falls that go on, and wide falls) and the
+fourth, springs in the wall, is the next section.
+
+**Why there were none.** A disc's water was only ever put where it is held in: nowhere within its `bank` of the rim, nowhere
+beside lower ground, and nothing was told to run.
+
+**What changed.** A hole's settings have `falls` (`FallSettings`; a cone only), and each hole finds its own (`DiscFalls`).
+
+- *How many.* `count` to a hole, 2 to 4, not a chance for each disc: that is the answer to "not overdo". One to a disc.
+- *Where one starts.* Where a disc's own stream or pond comes up against its bank, on the side of the hole's middle; the
+  rest of a disc's rim is in the wall. Likelier high up (`by_height`).
+- *What it needs.* `min_drop` 10 of open air, and to come down on the floor or on the top of a lower disc with room for
+  a pool. Never on a ruin, a root, a stem or the wall.
+- *The pool.* Still water, 3 in radius and 2 deep in its middle, at the level of the lowest ground in its round.
+- *Going on.* With chance `chain` 0.6 a channel leads from the pool towards the hole's middle to that disc's lip, and over
+  again; 4 falls one after another at most.
+- *Wide falls.* One in five of those that start on a disc of 40 or more in radius is 3 to 5 wide.
+- *Half on discs.* Most places have only the floor under them, so half of a hole's falls, rounded up, are first looked for
+  among those that land on a disc. Not in the plan; without it a hole had few pools and no fall that went on.
+
+**How the water is made.** Everything but the falling is still water written with the disc, which cannot leave: each column
+has ground or water of its own level on every side but a lip's open one, and a block of the platform under it; higher
+ground is cut down to it. The lip is marked on the chunk as it is carved, the game ticks it when the chunk becomes
+ticking, and from there the game runs the water by its own rules. This is how vanilla starts water that the terrain left
+with somewhere to run, and it needed no new hook. A fall's water takes the place of the disc's own where they meet; the
+ground stays level round it; nothing a theme grows is started within 2 blocks of it or 7 of where one comes down.
+
+**The limits told to the owner before they approved,** and what the runs say of each:
+
+1. *A fall runs down when its chunk first comes alive.* Not timed in play. On the servers every fall had reached its landing
+   within the 80 s each hole was left loaded, the longest 65 blocks.
+2. *A fall with no pool under it spreads where it lands.* Up to 7 blocks on the floor, as expected, and 11 where the floor
+   slopes. Three of twelve falls came down on buildings of the city.
+3. *A spring's pond is not joined to a fall by a stream.* Next section.
+4. *The owner's pack differs.* Not run: C2ME and Streams Reflowing are the two that bear on this.
+
+**Three faults found by reading generated levels back,** all mended:
+
+- No fall could reach the floor. The floor's own height is the lowest open block, where the reckoning of open air already
+  says none, and it was taken for rock in the way.
+- A fall's column was reckoned straight on from its channel, which on a slanting rim is a block aside from where the game
+  runs the water; so was the middle of its pool. It is now the open column beside the lip, or all of them for a wide one.
+- A root between a lip and its landing was looked for only every 18 blocks down, and one fall came down on a root 12
+  blocks under its lip and ran off along it.
+
+**Measured** on dedicated servers, seed 11, the four holes, each left loaded 80 s and read back from its region files.
+
+| | |
+|---|---|
+| Falls to a hole, the mod's own settings (NeoForge) | 2, 4, 4, 2 |
+| Of those 12: wide; landing in a pool on a disc; going on from the pool | 1; 2; 1 |
+| Water in every block from the lip down, of the falls into pools and the one that goes on | all |
+| Running water round a pool | none |
+| Falls by a ruin | none |
+| How far the water spreads on the floor | 2 to 7 blocks; 11 down a slope |
+| The same holes without ruins, where the lab lists what the server builds: columns of still water there | 155 of 156 (a mangrove root through one) |
+| of those: running; with water on the ground beside them; with a cut not cleared; with a deep middle missing | 0; 0; 0; 0 |
+| The discs' own water running, that was not before | none |
+| Fabric against NeoForge, the same hole | the same falls, the same counts |
+| Warnings or errors from the mod | none |
+| Finding a hole's falls | 2 to 7 ms, once |
+
+Running water turned up 10 blocks from one pool, on the pool's disc. Followed up, it was a spring of the level's own, in
+the hole's wall 60 blocks above: vanilla puts a spring wherever rock has the right shape round it, and a hole is a great
+deal of wall. So holes already had the odd fall from the wall on to a disc, of the game's making and at random.
+
+242 unit tests pass (`./gradlew build`, both loader jars); `DiscFallsTest` is new.
+
+**Not verified.** Nothing was looked at in game. How long a fall takes to arrive when a player flies in, how it looks from
+the middle of the hole, and whether a fall on a city roof is welcome are the owner's to judge. `no-falls`, `many-falls`
+and `curtain-falls` are the packs.
+
+**Mine and unjudged:** every number; half of a hole's falls landing on discs; that a fall may end on the floor at all,
+city included; the 7 blocks kept clear where one lands (so that no tree's crown spreads under it); that a disc with no
+theme has no pool and so nothing falls on it.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -2343,8 +2423,9 @@ disc full of ruins is nearly flat); what outcrops are made of.
    too fast, then the disc made for ruins, then fights that reset and traps. The owner has not set that order.
 9. Wilder discs: look at the rims, the giants and the ground in game (`bare-rims`, `heavy-rims`, `no-giants`,
    `many-giants`, `flat-discs` and `rugged-discs` to compare) and settle how much hangs over a rim, the edge trees,
-   `wildness`, what the giants are made of, and how rough the ground should be. Then the two rounds left of the plan the
-   owner approved on 2026-10-10: falls with plunge pools and cascades, and wall springs.
+   `wildness`, what the giants are made of, and how rough the ground should be. The falls: how many, whether they should
+   reach the city, and how they behave in the owner's pack (`no-falls`, `many-falls`, `curtain-falls`). Then the round left
+   of the plan the owner approved on 2026-10-10: wall springs.
 10. Roots: look at them in game (`huge-roots`, `many-roots`, `few-roots` and `no-roots` to compare), settle how many and how
    thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
    them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
