@@ -2,6 +2,7 @@ package dev.syrval.overgrownabyss.compat;
 
 import dev.syrval.overgrownabyss.OvergrownAbyss;
 import dev.syrval.overgrownabyss.ravine.DiscPlot;
+import dev.syrval.overgrownabyss.ravine.DiscSpringSink;
 import dev.syrval.overgrownabyss.ravine.DiscTheme;
 import dev.syrval.overgrownabyss.ravine.RavineFootprint;
 import java.util.List;
@@ -13,6 +14,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
@@ -53,6 +55,31 @@ public final class DiscGrower {
         // would hold the very blocks the trees start in. What is inherited then fills in around them.
         growThemesOwn(level, generator, footprint, chunkPos, draws);
         growInherited(level, generator, footprint, chunkPos, draws, decorationSeed);
+        openSprings(level, generator, footprint, chunkPos, draws);
+    }
+
+    // A spring is a feature given a block in the wall behind a disc. The wall is whatever the terrain left there, so the
+    // feature is the judge of whether a place will do, and the places reckoned for it are tried until one does.
+    private static void openSprings(WorldGenLevel level, ChunkGenerator generator, RavineFootprint footprint, ChunkPos chunkPos, WorldgenRandom draws) {
+        Registry<ConfiguredFeature<?, ?>> features = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
+        footprint.forEachSpring(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), new DiscSpringSink() {
+            private Optional<Holder.Reference<ConfiguredFeature<?, ?>>> spring = Optional.empty();
+            private boolean open;
+
+            @Override
+            public void begin(ResourceKey<ConfiguredFeature<?, ?>> feature) {
+                spring = features.getHolder(feature);
+                open = false;
+            }
+
+            @Override
+            public void tryAt(int x, int y, int z) {
+                BlockPos pos = new BlockPos(x, y, z);
+                if (!open && spring.isPresent() && !level.isOutsideBuildHeight(pos)) {
+                    open = spring.get().value().place(level, generator, draws, pos);
+                }
+            }
+        });
     }
 
     // The parent biome's features, read now: the list is whatever the parent has after other mods have changed it.

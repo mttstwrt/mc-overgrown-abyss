@@ -3,7 +3,10 @@ package dev.syrval.overgrownabyss.ravine;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.InclusiveRange;
+import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 
 /**
  * The falls of a cone: water that leaves a disc over its rim, lands in a pool on a disc below, and may go on from there. A
@@ -19,10 +22,11 @@ import net.minecraft.util.InclusiveRange;
  * @param chain      chance that a fall which landed in a pool goes on over that disc's rim
  * @param maxSteps   the most falls one after another, the first counted
  * @param curtain    a wider fall that some of the larger discs get in place of an ordinary one
+ * @param springs    water that comes out of the wall behind a disc
  */
 public record FallSettings(
         InclusiveRange<Integer> count, DiscTheme.Ramp byHeight, int width, int minDrop, int maxPerDisc, Pool pool, float chain, int maxSteps,
-        Optional<Curtain> curtain) {
+        Optional<Curtain> curtain, Optional<Springs> springs) {
 
     /**
      * @param radius blocks from the middle of a pool to its edge; a wide fall's pool is wider
@@ -48,6 +52,23 @@ public record FallSettings(
         ).apply(i, Curtain::new));
     }
 
+    /**
+     * Springs in the hole's wall where a disc lies in it: water comes out of the rock some way over the disc's ground, on its
+     * side away from the hole's middle, and falls into a small pool at the foot of the wall.
+     *
+     * @param count   how many a hole has, where it has discs with wall behind them
+     * @param height  blocks over the disc's rim that a spring comes out
+     * @param feature the feature that makes one, given a block in the wall: it has to ask for rock round itself and one open
+     *                side, as vanilla's spring does, since the wall is whatever the terrain left there
+     */
+    public record Springs(InclusiveRange<Integer> count, InclusiveRange<Integer> height, ResourceKey<ConfiguredFeature<?, ?>> feature) {
+        static final Codec<Springs> CODEC = RecordCodecBuilder.create(i -> i.group(
+                InclusiveRange.codec(Codec.intRange(0, 16)).fieldOf("count").forGetter(Springs::count),
+                InclusiveRange.codec(Codec.intRange(2, 16)).fieldOf("height").forGetter(Springs::height),
+                ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(Springs::feature)
+        ).apply(i, Springs::new));
+    }
+
     static final Codec<FallSettings> CODEC = RecordCodecBuilder.create(i -> i.group(
             InclusiveRange.codec(Codec.intRange(0, 16)).fieldOf("count").forGetter(FallSettings::count),
             DiscTheme.Ramp.BY_HEIGHT.optionalFieldOf("by_height", DiscTheme.Ramp.EVEN).forGetter(FallSettings::byHeight),
@@ -57,6 +78,7 @@ public record FallSettings(
             Pool.CODEC.fieldOf("pool").forGetter(FallSettings::pool),
             Codec.floatRange(0, 1).optionalFieldOf("chain", 0F).forGetter(FallSettings::chain),
             Codec.intRange(1, 8).optionalFieldOf("max_steps", 4).forGetter(FallSettings::maxSteps),
-            Curtain.CODEC.optionalFieldOf("curtain").forGetter(FallSettings::curtain)
+            Curtain.CODEC.optionalFieldOf("curtain").forGetter(FallSettings::curtain),
+            Springs.CODEC.optionalFieldOf("springs").forGetter(FallSettings::springs)
     ).apply(i, FallSettings::new));
 }

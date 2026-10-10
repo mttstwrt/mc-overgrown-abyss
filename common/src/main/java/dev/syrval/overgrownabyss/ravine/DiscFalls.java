@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.Consumer;
+import net.minecraft.util.InclusiveRange;
 
 /**
  * The falls of one hole (see {@link FallSettings}), found once for its cell and then only read.
@@ -27,7 +28,7 @@ import java.util.function.Consumer;
  * water is cut down to it, by no more than leaves that block.
  */
 final class DiscFalls {
-    static final DiscFalls NONE = new DiscFalls(List.of(), List.of());
+    static final DiscFalls NONE = new DiscFalls(List.of(), List.of(), List.of());
     // Level ground kept round a fall's water, for a bank to stand on, and clear of what a disc grows.
     static final double CLEAR = 2.5;
     // Round the column a fall comes down a disc grows nothing this far out, so that no crown is spread under the water.
@@ -41,6 +42,16 @@ final class DiscFalls {
     private static final int CURTAIN_DRAWS = HASH_BASE + 100_000;
     private static final int WIDTH_DRAWS = HASH_BASE + 200_000;
     private static final int CHAIN_DRAWS = HASH_BASE + 300_000;
+    private static final int SPRING_COUNT_DRAW = HASH_BASE + 1;
+    private static final int SPRING_DRAWS = HASH_BASE + 400_000;
+    // A spring's draws: its place in the order, how far round from straight away from the hole's middle, and how high.
+    private static final int DRAWS_A_SPRING = 3;
+    // A spring comes out within this angle either way of straight away from the hole's middle.
+    private static final double SPRING_ARC = 0.6;
+    // The pool at a spring's foot is this far across from its middle, as much of that as lies on the disc.
+    private static final double SPRING_POOL = 3;
+    // A spring wants rock under it and an open side, so the wall it is in may lean in by no more than this for a block's rise.
+    private static final double UPRIGHT = 0.5;
     private static final int[][] BESIDE = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     // A start is looked for every so many blocks along the inside of a bank.
     private static final double BETWEEN_STARTS = 2;
@@ -69,17 +80,38 @@ final class DiscFalls {
      */
     record Fall(int from, int x, int z, int level, int width, int drop, OptionalInt onto, int step) {}
 
+    /** A place in the world. */
+    record Place(int x, int y, int z) {}
+
+    /**
+     * One spring: the disc it is over, the places in the wall where it may be made, the first that takes it being the one, and
+     * the column its water comes down on the disc, with the height of the pool there.
+     */
+    record Spring(int disc, List<Place> tries, int x, int z, int level) {
+        Spring {
+            tries = List.copyOf(tries);
+        }
+    }
+
     private final List<Column> columns;
     private final List<Fall> falls;
+    private final List<Spring> springs;
+    private final Map<Long, List<Spring>> springsByChunk = new HashMap<>();
     private final Map<Long, List<Column>> byChunk = new HashMap<>();
     private final Set<Key> held = new HashSet<>();
     // The heights of the falls' water near each column, by the column's place (see columnOf).
     private final Map<Long, List<Integer>> near = new HashMap<>();
     private final Map<Integer, List<DiscGround.Flat>> clear = new HashMap<>();
 
-    private DiscFalls(List<Column> columns, List<Fall> falls) {
+    private DiscFalls(List<Column> columns, List<Fall> falls, List<Spring> springs) {
         this.columns = List.copyOf(columns);
         this.falls = List.copyOf(falls);
+        this.springs = List.copyOf(springs);
+        for (Spring spring : this.springs) {
+            Place first = spring.tries().getFirst();
+            springsByChunk.computeIfAbsent(chunkOf(first.x(), first.z()), chunk -> new ArrayList<>()).add(spring);
+            keepClear(spring.x(), spring.z(), spring.level(), CLEAR_UNDER);
+        }
         for (Column column : this.columns) {
             byChunk.computeIfAbsent(chunkOf(column.x(), column.z()), chunk -> new ArrayList<>()).add(column);
             held.add(new Key(column.disc(), column.x(), column.z()));
@@ -116,7 +148,8 @@ final class DiscFalls {
         }
         var grower = new Grower(settings, settings.cone().get(), settings.falls().get(), bounds, cell, layout, themes, traits, ruins, roots);
         grower.grow();
-        return new DiscFalls(List.copyOf(grower.taken.values()), grower.grown);
+        grower.spring();
+        return new DiscFalls(List.copyOf(grower.taken.values()), grower.grown, grower.sprung);
     }
 
     List<Fall> falls() {
@@ -125,6 +158,15 @@ final class DiscFalls {
 
     List<Column> columns() {
         return columns;
+    }
+
+    List<Spring> springs() {
+        return springs;
+    }
+
+    /** Calls {@code sink} with each spring whose first place is in the chunk whose lowest corner is {@code (minX, minZ)}. */
+    void forEachSpring(int minX, int minZ, Consumer<Spring> sink) {
+        springsByChunk.getOrDefault(chunkOf(minX, minZ), List.of()).forEach(sink);
     }
 
     /** Calls {@code sink} with each column of a fall's water in the chunk whose lowest corner is {@code (minX, minZ)}. */
@@ -181,6 +223,7 @@ final class DiscFalls {
         private final Map<Long, List<Root.Knot>> knots = new HashMap<>();
         private final Map<Key, Column> taken = new LinkedHashMap<>();
         private final List<Fall> grown = new ArrayList<>();
+        private final List<Spring> sprung = new ArrayList<>();
         private final int[] startedOn;
 
         /** A place where a disc's own water meets its bank, and the way straight out from the disc's middle through it. */
@@ -225,6 +268,77 @@ final class DiscFalls {
             // few pools and fewer cascades, so half its falls, rounded up, are first looked for among those that land on a disc.
             int started = start(order, (wanted + 1) / 2, true);
             start(order, wanted - started, false);
+        }
+
+        /** Finds the hole's springs, on discs taken in an order drawn for them. Falls come first, and a spring keeps out of their water. */
+        void spring() {
+            Optional<FallSettings.Springs> springs = falls.springs();
+            if (springs.isEmpty()) {
+                return;
+            }
+            int wanted = RootRoutes.countFor(springs.get().count(), RavineCells.unit(cell.hash(), SPRING_COUNT_DRAW));
+            var order = new ArrayList<Integer>();
+            for (int i = 0; i < discs.size(); i++) {
+                order.add(i);
+            }
+            order.sort(Comparator.comparingDouble(i -> RavineCells.unit(cell.hash(), SPRING_DRAWS + DRAWS_A_SPRING * i)));
+            for (int i : order) {
+                if (sprung.size() >= wanted) {
+                    break;
+                }
+                springOver(i, springs.get().height()).ifPresent(sprung::add);
+            }
+        }
+
+        /**
+         * A spring over one disc, or empty if the disc has no wall behind it there or no room for the pool. The dome over a disc
+         * is cut into the wall on the side away from the hole's middle; the spring is a block just inside that cut, and its
+         * water comes down the face of the wall on to the disc.
+         */
+        private Optional<Spring> springOver(int i, InclusiveRange<Integer> height) {
+            Disc disc = discs.get(i);
+            double away = Math.atan2(disc.z() - cell.centreZ(), disc.x() - cell.centreX())
+                    + (2 * RavineCells.unit(cell.hash(), SPRING_DRAWS + DRAWS_A_SPRING * i + 1) - 1) * SPRING_ARC;
+            int rim = disc.topBlockAt(disc.radius());
+            int y = rim + 1 + RootRoutes.countFor(height, RavineCells.unit(cell.hash(), SPRING_DRAWS + DRAWS_A_SPRING * i + 2));
+            // A dome leans in more and more as it rises. The spring is put no higher than its wall is still nearly upright,
+            // and a disc whose wall leans from the foot has none.
+            while (y > rim + 1 && wallAt(disc, y - 1) - wallAt(disc, y) > UPRIGHT) {
+                y--;
+            }
+            if (y <= rim + 1) {
+                return Optional.empty();
+            }
+            // The block just inside the rock at that height, and the open one in front of it.
+            double wall = wallAt(disc, y);
+            int x = (int) Math.round(disc.x() + (wall + 0.7) * Math.cos(away));
+            int z = (int) Math.round(disc.z() + (wall + 0.7) * Math.sin(away));
+            int frontX = (int) Math.round(disc.x() + (wall - 0.7) * Math.cos(away));
+            int frontZ = (int) Math.round(disc.z() + (wall - 0.7) * Math.sin(away));
+            // Rock by the hole's own shape, which is all that can be said here: a cave or a vein of ore is the feature's to find.
+            if (air(x, y, z) >= 0 || air(x, y + 1, z) >= 0 || air(x, y - 1, z) >= 0 || air(frontX, y, frontZ) <= 0) {
+                return Optional.empty();
+            }
+            Optional<List<Column>> pool = pool(i, frontX, frontZ, 1, true);
+            if (pool.isEmpty()) {
+                return Optional.empty();
+            }
+            keep(pool.get());
+            // The wall is what the terrain left, so the place reckoned may not suit; the ones beside it are tried after it.
+            var tries = new ArrayList<Place>();
+            int alongX = (int) Math.round(-Math.sin(away));
+            int alongZ = (int) Math.round(Math.cos(away));
+            for (int[] step : new int[][] {{0, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 2, 0}, {alongX, 0, alongZ}, {-alongX, 0, -alongZ}, {alongX, 1, alongZ}, {-alongX, 1, -alongZ}}) {
+                tries.add(new Place(x + step[0], y + step[1], z + step[2]));
+            }
+            return Optional.of(new Spring(i, tries, frontX, frontZ, pool.get().getFirst().level()));
+        }
+
+        // How far from a disc's axis its dome's wall is at a height: the platform's whole radius at the middle of its top, and
+        // nothing at the dome's own height.
+        private static double wallAt(Disc disc, int y) {
+            double share = Math.clamp((y - disc.floor()) / disc.height(), 0, 1);
+            return disc.radius() * Math.sqrt(1 - share * share);
         }
 
         // Starts falls at the first places in the order that can have one, up to so many, and says how many it started.
@@ -317,7 +431,7 @@ final class DiscFalls {
             int z = middle[1];
             List<Column> pool = List.of();
             if (landing.get().onto().isPresent()) {
-                Optional<List<Column>> made = pool(landing.get().onto().getAsInt(), x, z, width);
+                Optional<List<Column>> made = pool(landing.get().onto().getAsInt(), x, z, width, false);
                 if (made.isEmpty() || !drops.stream().allMatch(drop -> made.get().stream().anyMatch(column -> column.x() == drop[0] && column.z() == drop[1]))) {
                     return false;
                 }
@@ -390,7 +504,7 @@ final class DiscFalls {
                     // The pool this channel leaves, or a channel it runs into: the same water.
                     continue;
                 }
-                Optional<Column> column = already == null ? column(disc, key, level, 1, strip) : Optional.empty();
+                Optional<Column> column = already == null ? column(disc, key, level, 1, strip, false) : Optional.empty();
                 if (column.isEmpty()) {
                     return Optional.empty();
                 }
@@ -402,9 +516,10 @@ final class DiscFalls {
 
         /**
          * A pool round the column a fall comes down on; empty where the disc has no room for one or nothing to hold it. A wide
-         * fall has a wider pool.
+         * fall has a wider pool. One {@code byTheWall} is a spring's: allowed in the bank and right up to the rim, which
+         * there has the wall's rock outside it and not open air, and made only of ground the dome leaves open.
          */
-        private Optional<List<Column>> pool(int i, int middleX, int middleZ, int width) {
+        private Optional<List<Column>> pool(int i, int middleX, int middleZ, int width, boolean byTheWall) {
             Disc disc = discs.get(i);
             Optional<DiscTheme> theme = themes.get(i);
             FallSettings.Pool pool = falls.pool();
@@ -412,8 +527,8 @@ final class DiscFalls {
             if (theme.isEmpty() || !theme.get().palette().coversTop(pool.depth() + 1)) {
                 return Optional.empty();
             }
-            double radius = Math.max(pool.radius(), width / 2.0 + 2);
-            if (fromAxis(disc, middleX, middleZ) + radius > disc.radius() - theme.get().water().map(DiscWater::bank).orElse(BANK)) {
+            double radius = byTheWall ? SPRING_POOL : Math.max(pool.radius(), width / 2.0 + 2);
+            if (!byTheWall && fromAxis(disc, middleX, middleZ) + radius > disc.radius() - theme.get().water().map(DiscWater::bank).orElse(BANK)) {
                 return Optional.empty();
             }
             int reach = (int) Math.ceil(radius);
@@ -421,7 +536,9 @@ final class DiscFalls {
             int lowest = Integer.MAX_VALUE;
             for (int x = middleX - reach; x <= middleX + reach; x++) {
                 for (int z = middleZ - reach; z <= middleZ + reach; z++) {
-                    if (Math.hypot(x - middleX, z - middleZ) <= radius) {
+                    boolean inTheOpen = !byTheWall
+                            || fromAxis(disc, x, z) < disc.radius() && air(x, disc.topBlockAt(fromAxis(disc, x, z)) + 1, z) > 0;
+                    if (Math.hypot(x - middleX, z - middleZ) <= radius && inTheOpen) {
                         round.add(new Key(i, x, z));
                         lowest = Math.min(lowest, disc.topBlockAt(fromAxis(disc, x, z)));
                     }
@@ -436,16 +553,26 @@ final class DiscFalls {
                 return Optional.empty();
             }
             var columns = new ArrayList<Column>();
-            for (Key key : members) {
-                boolean inTheMiddle = Math.hypot(key.x() - middleX, key.z() - middleZ) <= radius - 1.5;
-                Optional<Column> deep = inTheMiddle ? column(disc, key, level, pool.depth(), members) : Optional.empty();
-                Optional<Column> made = deep.or(() -> column(disc, key, level, 1, members));
-                if (made.isEmpty()) {
-                    return Optional.empty();
+            // A fall's pool is its whole round or nothing. A spring's is whatever of its round will hold: a column that would
+            // not is left as ground, and the rest are asked again with ground there beside them.
+            for (boolean settled = false; !settled; ) {
+                settled = true;
+                columns.clear();
+                for (Key key : List.copyOf(members)) {
+                    boolean inTheMiddle = Math.hypot(key.x() - middleX, key.z() - middleZ) <= radius - 1.5;
+                    Optional<Column> deep = inTheMiddle ? column(disc, key, level, pool.depth(), members, byTheWall) : Optional.empty();
+                    Optional<Column> made = deep.or(() -> column(disc, key, level, 1, members, byTheWall));
+                    if (made.isPresent()) {
+                        columns.add(made.get());
+                    } else if (byTheWall) {
+                        members.remove(key);
+                        settled = false;
+                    } else {
+                        return Optional.empty();
+                    }
                 }
-                columns.add(made.get());
             }
-            return Optional.of(columns);
+            return members.contains(new Key(i, middleX, middleZ)) ? Optional.of(columns) : Optional.empty();
         }
 
         private boolean hasLowerGroundBeside(Disc disc, Key key, int level, Set<Key> round) {
@@ -461,9 +588,10 @@ final class DiscFalls {
 
         /**
          * One column of still water with its top block at {@code level}, as one of {@code members}; empty if water put there
-         * would not stay, or has no business there.
+         * would not stay, or has no business there. {@code walled} water is a spring's pool: where it comes to the platform's
+         * edge it has to have the wall's rock beyond, and is no lip.
          */
-        private Optional<Column> column(Disc disc, Key key, int level, int depth, Set<Key> members) {
+        private Optional<Column> column(Disc disc, Key key, int level, int depth, Set<Key> members, boolean walled) {
             int x = key.x();
             int z = key.z();
             int ground = disc.topBlockAt(fromAxis(disc, x, z));
@@ -485,7 +613,10 @@ final class DiscFalls {
                     continue;
                 }
                 if (fromAxis(disc, besideX, besideZ) >= disc.radius()) {
-                    lip = true;
+                    if (walled && air(besideX, level, besideZ) >= 0) {
+                        return Optional.empty();
+                    }
+                    lip = !walled;
                     continue;
                 }
                 int besideGround = disc.topBlockAt(fromAxis(disc, besideX, besideZ));

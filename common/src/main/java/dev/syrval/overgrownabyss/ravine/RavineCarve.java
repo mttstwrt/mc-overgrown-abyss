@@ -182,6 +182,21 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     /**
+     * Calls {@code sink} with every spring whose first place is in the chunk whose lowest corner is {@code (minX, minZ)}: the
+     * feature that makes it, and the places in the wall to try it at, in order. See {@link DiscFalls}.
+     */
+    public void forEachSpring(int minX, int minZ, DiscSpringSink sink) {
+        Optional<FallSettings.Springs> springs = settings.falls().flatMap(FallSettings::springs);
+        if (springs.isEmpty()) {
+            return;
+        }
+        holeAt(minX, minZ).ifPresent(hole -> discsOf(hole).falls().forEachSpring(minX, minZ, spring -> {
+            sink.begin(springs.get().feature());
+            spring.tries().forEach(place -> sink.tryAt(place.x(), place.y(), place.z()));
+        }));
+    }
+
+    /**
      * Calls {@code sink} with every block that is root in the chunk whose lowest corner is {@code (minX, minZ)}, between
      * {@code minY} and {@code maxY} (exclusive). See {@link RootBlocks}.
      */

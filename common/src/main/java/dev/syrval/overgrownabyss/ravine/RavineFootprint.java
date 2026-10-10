@@ -40,6 +40,9 @@ public interface RavineFootprint {
         public void forEachFallWater(int minX, int minZ, DiscFallSink sink) {}
 
         @Override
+        public void forEachSpring(int minX, int minZ, DiscSpringSink sink) {}
+
+        @Override
         public void forEachRootBlock(int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {}
 
         @Override
@@ -83,6 +86,9 @@ public interface RavineFootprint {
 
     /** Calls {@code sink} with every column where a fall's still water lies in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachFallWater(int minX, int minZ, DiscFallSink sink);
+
+    /** Calls {@code sink} with every spring whose first place is in the chunk whose lowest corner is {@code (minX, minZ)}. */
+    void forEachSpring(int minX, int minZ, DiscSpringSink sink);
 
     /**
      * Calls {@code sink} with every block that is one of a hole's roots in the chunk whose lowest corner is {@code (minX, minZ)},
@@ -176,6 +182,13 @@ public interface RavineFootprint {
             public void forEachFallWater(int minX, int minZ, DiscFallSink sink) {
                 for (Region region : copy) {
                     region.carve().forEachFallWater(minX, minZ, sink);
+                }
+            }
+
+            @Override
+            public void forEachSpring(int minX, int minZ, DiscSpringSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachSpring(minX, minZ, sink);
                 }
             }
 

@@ -23,7 +23,7 @@ class DiscFallsTest {
 
     static final FallSettings MANY = new FallSettings(
             new InclusiveRange<>(4, 4), DiscTheme.Ramp.EVEN, 1, 10, 1, new FallSettings.Pool(3, 2), 1, 4,
-            Optional.of(new FallSettings.Curtain(0.5F, new InclusiveRange<>(3, 5), 30)));
+            Optional.of(new FallSettings.Curtain(0.5F, new InclusiveRange<>(3, 5), 30)), Optional.empty());
     private static final int[][] BESIDE = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     /** The mod's own hole with other falls, or none. */
@@ -228,6 +228,58 @@ class DiscFallsTest {
             assertEquals(ownWithoutFalls.values().stream().mapToInt(Integer::intValue).sum() - replaced, own.values().stream().mapToInt(Integer::intValue).sum(),
                     "and the rest of the discs' own water is as it was");
             assertEquals(0, grownBesideAFall[0], "things grown in a fall's water or on its bank");
+        }
+    }
+
+    @Test
+    void aSpringComesOutOfTheWallBehindADiscOverAPoolAtItsFoot() throws Exception {
+        var springs = new FallSettings.Springs(new InclusiveRange<>(3, 3), new InclusiveRange<>(3, 7), DiscThemeTest.feature("overgrown_abyss:disc/wall_spring"));
+        var falls = new FallSettings(MANY.count(), MANY.byHeight(), 1, 10, 1, MANY.pool(), 1, 4, Optional.empty(), Optional.of(springs));
+        RavineSettings settings = with(Optional.of(falls));
+        int found = 0;
+        for (Hole hole : holes(settings)) {
+            List<Disc> discs = hole.discs().layout().discs();
+            DiscFalls water = hole.discs().falls();
+            assertTrue(water.springs().size() <= 3, water.springs().size() + " springs in a hole that may have three");
+            assertEquals(water.springs(), CellDiscs.of(settings, DiscThemeTest.LEVEL, hole.cell()).falls().springs(), "the same springs every time");
+            for (DiscFalls.Spring spring : water.springs()) {
+                Disc d = discs.get(spring.disc());
+                DiscFalls.Place first = spring.tries().getFirst();
+                assertTrue(ConeShape.airDistance(settings, settings.cone().orElseThrow(), DiscThemeTest.LEVEL, hole.cell(), hole.discs().layout(), first.x(), first.y(), first.z()) < 0,
+                        "a spring in open air: " + spring);
+                int over = first.y() - d.topBlockAt(d.radius());
+                assertTrue(over >= 2 && over <= 8, "a spring " + over + " over the rim");
+                // A spring wants rock under it and an open side, so it is no higher than its dome's wall is nearly upright.
+                double leansIn = d.radius() * (Math.sqrt(1 - Math.pow((first.y() - 1 - d.floor()) / d.height(), 2)) - Math.sqrt(1 - Math.pow((first.y() - d.floor()) / d.height(), 2)));
+                assertTrue(leansIn <= 0.5 + 1e-9, "a spring where the wall leans in by " + leansIn + " in a block's rise");
+                assertTrue(spring.tries().size() >= 5 && spring.tries().stream().allMatch(place -> Math.abs(place.x() - first.x()) <= 1 && Math.abs(place.y() - first.y()) <= 2
+                        && Math.abs(place.z() - first.z()) <= 1), "the places to try a spring at are the one reckoned and those beside it");
+                // On the side of the disc that lies in the wall: away from the hole's middle.
+                double out = (first.x() - d.x()) * (d.x() - hole.cell().centreX()) + (first.z() - d.z()) * (d.z() - hole.cell().centreZ());
+                assertTrue(out > 0, "a spring on the side of the hole's middle: " + spring);
+                List<DiscFalls.Column> pool = water.columns().stream()
+                        .filter(column -> column.disc() == spring.disc() && Math.hypot(column.x() - spring.x(), column.z() - spring.z()) <= 3).toList();
+                assertTrue(pool.stream().anyMatch(column -> column.x() == spring.x() && column.z() == spring.z() && column.level() == spring.level()),
+                        "no water under " + spring);
+                // The pool reaches the foot of the wall, so that the water comes down into it wherever along the wall the spring is.
+                assertTrue(pool.stream().anyMatch(column -> Math.hypot(column.x() - d.x(), column.z() - d.z()) > d.radius() - 1.5), "a spring's pool short of the wall");
+                for (DiscFalls.Column column : pool) {
+                    assertTrue(!column.lip(), "a spring's pool with an open side");
+                    for (int[] step : BESIDE) {
+                        int x = column.x() + step[0];
+                        int z = column.z() + step[1];
+                        boolean offThePlatform = Math.hypot(x - d.x(), z - d.z()) >= d.radius();
+                        assertTrue(!offThePlatform || ConeShape.airDistance(settings, settings.cone().orElseThrow(), DiscThemeTest.LEVEL, hole.cell(), hole.discs().layout(), x, column.level(), z) < 0,
+                                "open air and not the wall beyond a spring's pool at " + column);
+                    }
+                }
+                assertTrue(water.isNear(spring.x() + 5, spring.level() + 1, spring.z()), "the ground round where a spring's water comes down is kept clear");
+                found++;
+            }
+        }
+        assertTrue(found >= 8, found + " springs in six holes");
+        for (Hole hole : holes(with(Optional.of(MANY)))) {
+            assertTrue(hole.discs().falls().springs().isEmpty(), "springs without the setting");
         }
     }
 
