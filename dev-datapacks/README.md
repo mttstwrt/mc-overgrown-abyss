@@ -59,6 +59,7 @@ in its middle. Its numbers:
   it is the share of discs drawn to hang from a root instead, which they do where they have a ceiling. `root_spread` 3 and
   `root_scale` 4 shape such a root (3 stem radii wide where it meets the ceiling, half that 4 blocks away).
 - Themes: four, see below.
+- Roots: winding wooden roots from under the mouth to the floor, see below.
 
 `disc_themes` (optional, see `DiscTheme`) are the kinds of disc. Each disc is given one by a weighted draw, and a theme sets:
 
@@ -221,6 +222,39 @@ larger crown. It needs room for a trunk of at least 6 over its roots, so it grow
 twice as thick with trees without such a pack as with it. Everything else is still inherited: grass, flowers, melons, lily pads
 and whatever other mods add. With no themes every disc is the terrain's own rock in the biome it lies in.
 
+### Roots
+
+`roots` (optional, see `RootSettings`) are the wooden roots that wind through a hole. Without the block a hole has none. They
+are blocks written over whatever is there: a root runs into the wall, through a platform or stem in its way, and across the
+floor. The city and the mod's own ruins build round them (their rules leave alone the blocks of the tag
+`#overgrown_abyss:ruins_cannot_replace`, which holds the two woods; a pack that makes roots of other blocks adds them there).
+Measured outside the game with the mod's numbers, on level ground: a hole 150 deep has 45 to 63 roots and 124,000 to 168,000
+blocks of root, one 294 deep has 92 to 126 roots and 221,000 to 310,000 blocks, two thirds of it in the lowest third of
+the hole.
+
+- `great`: the roots that run from the wall under the mouth to the floor. `count` 3 to 5 a hole. `radius` 4.5 where one
+  leaves the wall, down to `end_radius` 3.5 at the floor (9 blocks across to 7). `fall` 0.5 is how far it comes down for
+  each block it goes round the hole, about: lower winds it further round, higher drops it more steeply. With `touch_chance`
+  0.5 a leg of it turns in to lie against a disc's rim, its top level with the rim's, where a disc about there has a place
+  for it; otherwise the leg swings out to the wall. In the bell at the foot of the hole it keeps to the wall, lands on the
+  floor and runs on along it for half to all of `floor_run` 60 blocks, sinking as it goes, before it dives.
+- `crossing`: `count` 1 to 2 roots a hole that span it from wall to wall, sagging through the clear air round the axis, of
+  `radius` 3.5. No other root enters the clear air. 0 to 0 keeps the middle open.
+- `branches`: roots that leave other roots, for another root near by, a disc's rim, the floor or the wall. One for every
+  `every` 150 blocks of root, times `by_height`: 3 at the floor and 0.5 at the top, so they gather at the bottom. A branch is
+  `shrink` 0.65 of its parent's radius where it leaves it, branches may branch once more (`depth` 2), and none goes further
+  than `reach` 60 for its end. One thinner than `min_radius` 1.5 is not grown.
+- `links`: roots a player can walk up from the top of one disc, round the outside of the rim of a disc above, to that rim.
+  `chance` 0.5 is the share of discs drawn to have one from the nearest disc under them; about half to two thirds of those
+  get it, since a link is left out where it cannot make the climb in the open at `max_slope` 0.6 (three blocks up in five
+  forward). `radius` 2.
+- `winding` 0.6: how far a root strays to either side of the straight way to where it is going. 0 is straight.
+- `wood`: what a root is made of where no disc says otherwise: `bark` for its outermost block and, if given, `core` for the
+  rest. The mod's is jungle wood and mangrove wood in patches. A theme's `root_wood` (same form) is the wood of roots near
+  its discs: jungle wood on the jungle theme, mangrove wood on the mangrove one, none on lush and crystal. A root within
+  `wood_reach` 48 blocks of such a disc takes its wood; between two different woods it is one or the other in patches along
+  the root, the share shifting over `wood_blend` 16 blocks.
+
 ### Ruins
 
 Ruins stand on some discs, and on more of them the lower in a hole the disc is. A jungle disc has them three times in five
@@ -294,6 +328,13 @@ and say how many of its pieces' lowest layers lie in the ground.
   mod's own file: a hole 200 blocks deep goes from 7 layers and about 65 discs to 5 layers and about 43, and what it gains
   is towers, about 1.4 to a hole in place of 0.7. The lower kinds lose more discs than they gain room. For judging the look.
 
+- `huge-roots`: the mod's file with roots half as thick again: great roots of radius 7 down to 5.5 (14 blocks across to 11),
+  crossing roots 5.5, links 3, nothing under 2.
+- `many-roots`: 5 to 7 great roots, 2 to 3 crossing, a branch for every 80 blocks of root, and a link to every disc that can
+  have one (`chance` 1).
+- `few-roots`: 2 to 3 great roots, at most one crossing, a branch for every 400 blocks, and `links.chance` 0.25.
+- `no-roots`: the mod's file without `roots`, the hole as it was before them.
+
 - `tuned-themes`: the mod's file as it was before biomes were inherited, with the hand-made palettes and growth lists for lush,
   jungle and mangrove (denser foliage, mangrove roots on stems). For comparing the two in game. It inherits spawns only
   (`"stages": []`), so its foliage is all its own.
@@ -308,7 +349,7 @@ and say how many of its pieces' lowest layers lie in the ground.
 - `smooth-walls`: the mod's file without `wall_noise`, an exact round hole. For comparing with the uneven wall.
 
 `cone` and `tuned-themes` were made from the file before that change and have no `rim`, `upper` or `wall_noise` either, so
-they also keep the fixed top and the even wall. To try them with the new shape, copy the mod's `top`, `cell_size`, `chance`,
+they also keep the fixed top and the even wall. They and `fixed-top` have no `roots`; every other cone pack has the mod's. To try them with the new shape, copy the mod's `top`, `cell_size`, `chance`,
 `ceiling_margin`, `wall_noise`, `rim` and `upper` into them.
 
 ### Ravine packs (set aside for now)

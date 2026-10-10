@@ -523,6 +523,14 @@
             "weight": 15
           }
         ]
+      },
+      "root_wood": {
+        "bark": {
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:jungle_wood"
+          }
+        }
       }
     },
     {
@@ -783,6 +791,14 @@
             }
           }
         ]
+      },
+      "root_wood": {
+        "bark": {
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:mangrove_wood"
+          }
+        }
       }
     },
     {
@@ -908,5 +924,65 @@
     "upper": {
       "clear_radius": 20
     }
+  },
+  "roots": {
+    "great": {
+      "count": {
+        "min_inclusive": 3,
+        "max_inclusive": 5
+      },
+      "radius": 4.5,
+      "end_radius": 3.5,
+      "fall": 0.5,
+      "touch_chance": 0.5
+    },
+    "crossing": {
+      "count": {
+        "min_inclusive": 1,
+        "max_inclusive": 2
+      },
+      "radius": 3.5
+    },
+    "branches": {
+      "every": 150,
+      "by_height": {
+        "bottom": 3,
+        "top": 0.5
+      },
+      "shrink": 0.65,
+      "depth": 2,
+      "reach": 60
+    },
+    "links": {
+      "chance": 0.5,
+      "radius": 2,
+      "max_slope": 0.6
+    },
+    "floor_run": 60,
+    "winding": 0.6,
+    "min_radius": 1.5,
+    "wood": {
+      "bark": {
+        "type": "minecraft:noise_provider",
+        "seed": 1094861640,
+        "noise": {
+          "firstOctave": -4,
+          "amplitudes": [
+            1.0
+          ]
+        },
+        "scale": 1.0,
+        "states": [
+          {
+            "Name": "minecraft:jungle_wood"
+          },
+          {
+            "Name": "minecraft:mangrove_wood"
+          }
+        ]
+      }
+    },
+    "wood_reach": 48,
+    "wood_blend": 16
   }
 }

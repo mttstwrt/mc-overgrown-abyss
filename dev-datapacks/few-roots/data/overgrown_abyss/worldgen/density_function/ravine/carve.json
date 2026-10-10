@@ -945,8 +945,8 @@
   "roots": {
     "great": {
       "count": {
-        "min_inclusive": 3,
-        "max_inclusive": 5
+        "min_inclusive": 2,
+        "max_inclusive": 3
       },
       "radius": 4.5,
       "end_radius": 3.5,
@@ -955,13 +955,13 @@
     },
     "crossing": {
       "count": {
-        "min_inclusive": 1,
-        "max_inclusive": 2
+        "min_inclusive": 0,
+        "max_inclusive": 1
       },
       "radius": 3.5
     },
     "branches": {
-      "every": 150,
+      "every": 400,
       "by_height": {
         "bottom": 3,
         "top": 0.5
@@ -971,7 +971,7 @@
       "reach": 60
     },
     "links": {
-      "chance": 0.5,
+      "chance": 0.25,
       "radius": 2,
       "max_slope": 0.6
     },

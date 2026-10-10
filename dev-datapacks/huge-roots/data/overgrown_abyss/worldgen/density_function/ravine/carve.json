@@ -948,8 +948,8 @@
         "min_inclusive": 3,
         "max_inclusive": 5
       },
-      "radius": 4.5,
-      "end_radius": 3.5,
+      "radius": 7,
+      "end_radius": 5.5,
       "fall": 0.5,
       "touch_chance": 0.5
     },
@@ -958,7 +958,7 @@
         "min_inclusive": 1,
         "max_inclusive": 2
       },
-      "radius": 3.5
+      "radius": 5.5
     },
     "branches": {
       "every": 150,
@@ -972,12 +972,12 @@
     },
     "links": {
       "chance": 0.5,
-      "radius": 2,
+      "radius": 3,
       "max_slope": 0.6
     },
     "floor_run": 60,
     "winding": 0.6,
-    "min_radius": 1.5,
+    "min_radius": 2,
     "wood": {
       "bark": {
         "type": "minecraft:noise_provider",

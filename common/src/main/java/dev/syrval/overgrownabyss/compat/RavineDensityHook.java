@@ -259,6 +259,12 @@ public final class RavineDensityHook {
                     ravine.curvature().maxBend(), ravine.curvature().maxWiggle(), ravine.curvature().maxLean(), ravine.curvature().maxBow());
         });
         s.cone().ifPresent(cone -> OvergrownAbyss.LOGGER.info("Cone: {}, wall noise {}", cone, s.wallNoise().layers()));
+        s.roots().ifPresentOrElse(
+                roots -> OvergrownAbyss.LOGGER.info(
+                        "Roots: {}, {}, {}, {}, floor run {}, winding {}, min radius {}, wood reach {}, wood blend {}",
+                        roots.great(), roots.crossing(), roots.branches(), roots.links(), roots.floorRun(), roots.winding(), roots.minRadius(),
+                        roots.woodReach(), roots.woodBlend()),
+                () -> OvergrownAbyss.LOGGER.info("Roots: none"));
     }
 
     /**
