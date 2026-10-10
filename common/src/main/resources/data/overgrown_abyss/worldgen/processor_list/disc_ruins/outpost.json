@@ -131,7 +131,7 @@
     },
     {
       "processor_type": "minecraft:protected_blocks",
-      "value": "#minecraft:features_cannot_replace"
+      "value": "#overgrown_abyss:ruins_cannot_replace"
     }
   ]
 }
