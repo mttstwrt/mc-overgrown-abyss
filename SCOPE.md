@@ -2170,43 +2170,42 @@ canopy, of the last two inside it 28%, of the first two outside it 12%, and of t
 **Measured** on a NeoForge dedicated server, seed 11, new worlds, the four holes within reach of the origin, each generated
 whole and read back from its region files: 45 jungle discs, 29 lush, 15 mangrove. Columns under a higher disc, beside a
 lower one near enough for its trees to stand up past the rim, or in the wall are left out. "Under canopy" is a leaf three
-blocks or more over the ground (over the rim's top, outside it). "Before" is the `bare-rims` pack, which has the same giants
-(next section) and the same draws for every tree, so the two columns differ only by what this round added.
+blocks or more over the ground (over the rim's top, outside it). "Before" is the `bare-rims` pack, which has everything else
+the mod's file has (the giants and the uneven ground of the next two sections) and the same draws for every tree, so the two
+columns differ only by what this round added. Both were run again after each later change, and these are the last runs.
 
 | | Before (`bare-rims`) | After |
 |---|---|---|
-| Jungle, under canopy: 10 to 4 blocks inside the rim | 42% | 37% |
-| 4 to 2 inside | 39% | 28% |
-| the last 2 inside | 28% | 26% |
-| the first 2 outside | 12% | 20% |
-| 2 to 4 outside | 3% | 10% |
-| 4 to 6 outside | 0.2% | 1.0% |
-| Jungle, leaves at the rim's own height: the last 2 inside | 11% | 29% |
-| the first 2 outside | 1% | 38% |
-| 2 to 4 outside | 0% | 19% |
-| Jungle, columns with a trunk: outer 10 blocks against further in | 1.08 | 0.76 |
-| Jungle, a whole disc's ground under canopy: all discs; those under 30 in radius | 40%; 34% | 36%; 33% |
-| Mangrove, leaves at the rim's own height: the first 2 outside; 2 to 4 outside | 0%; 0% | 16%; 7% |
-| Rim columns with something hanging in the 10 blocks under the lip: jungle | 22% | 46% |
-| mangrove | 16% | 40% |
-| lush | 18% | 39% |
-| Longest curtain of vines from a lip: jungle, mangrove, lush | 9, 11, 6 | 24, 23, 13 |
+| Jungle, under canopy: 10 to 4 blocks inside the rim | 40% | 32% |
+| 4 to 2 inside | 35% | 26% |
+| the last 2 inside | 25% | 25% |
+| the first 2 outside | 11% | 18% |
+| 2 to 4 outside | 2% | 9% |
+| 4 to 6 outside | 0.0% | 0.9% |
+| Jungle, leaves at the rim's own height: the last 2 inside | 11% | 26% |
+| the first 2 outside | 1% | 36% |
+| 2 to 4 outside | 0% | 18% |
+| Jungle, columns with a trunk: outer 10 blocks against further in | 1.03 | 0.71 |
+| Jungle, a whole disc's ground under canopy: all discs; those under 30 in radius | 37%; 31% | 34%; 28% |
+| Mangrove, under canopy: the last 2 inside; the first 2 outside; 2 to 4 outside | 43%; 21%; 9% | 41%; 20%; 10% |
+| Mangrove, leaves at the rim's own height: the first 2 outside; 2 to 4 outside | 0%; 0% | 18%; 7% |
+| Rim columns with something hanging in the 10 blocks under the lip: jungle | 19% | 46% |
+| mangrove | 15% | 39% |
+| lush | 16% | 37% |
+| Longest curtain of vines from a lip: jungle, mangrove, lush | 9, 11, 9 | 24, 22, 19 |
 | Jungle ground with a block at foot or head height: all of it together | 32% | 33% |
-| by disc (21): least, middle, most | 20%, 32%, 48% | 15%, 34%, 44% |
+| by disc (21): least, middle, most | 23%, 32%, 54% | 15%, 33%, 47% |
 | the 7 discs that drew a wildness under 0.8; the 5 over 1.15 | | 28%; 37% |
-| Mangrove ground blocked: all of it together | 28% | 25% |
+| Mangrove ground blocked: all of it together | 28% | 26% |
 | Warnings or errors from the mod | 0 | 0 |
 
-So a jungle disc's canopy now falls away over some fourteen blocks (37%, 28%, 26%, 20%, 10%, 1%) where it stopped in four
-(39%, 28%, 12%, 3%), with bushes at the rim's own height along two fifths of the edge and a clear lip along about half
-of it.
+So a jungle disc's canopy now falls away over some fourteen blocks (32%, 26%, 25%, 18%, 9%, 1%) where it stopped in four
+(35%, 25%, 11%, 2%), with bushes at the rim's own height along a third of the edge and a clear lip along about half of
+it. A mangrove disc's canopy is what it was, as meant, with bushes, roots and vines on its rim.
 
-The "after" column was measured while the mangrove's trees still had their fade, so it has no line for the mangrove's
-canopy: that should now be what it was before, with its rim's bushes, roots and vines added, and has not been run since.
-
-One of the four holes was also generated on Fabric. It agrees with NeoForge's own numbers for that hole to within a few
-points on every line (canopy 33%, 21%, 18%, 15%, 7% against 32%, 21%, 24%, 20%, 8%; something hanging on 52% of the
-jungle's rim on both), with no warning or error.
+One of the four holes was also generated on Fabric each time. It agrees with NeoForge's own numbers for that hole to
+within a few points on every line (in the last run: canopy 26%, 19%, 21%, 16%, 4% against 30%, 21%, 22%, 18%, 9%; something
+hanging on 53% of the jungle's rim against 49%), with no warning or error.
 
 **Verification.** 232 unit tests pass (`./gradlew build`, both loader jars). New with this round: rim places lie outside
 the platform beside a top block, on every side, about one for every `every` columns; the fade's weight, that its width
@@ -2266,6 +2265,64 @@ files.
 Not verified: how any of it looks. Mine and unjudged: every block these are made of, how many there are, and that a
 mangrove disc gets so few mushrooms (its groves leave little clear air). `no-giants` and `many-giants` are the packs.
 
+### Wilder discs, part 3: mounds and outcrops
+
+The third round of the same plan: the one idea the owner picked for a disc's shape.
+
+**What changed.** A theme has `ground`, with two optional parts. `mounds` (`height`, `size`, `cover`) are rises of the
+theme's own ground: a block high at their edges, climbing by less than a block for each block across, so two columns side
+by side never differ by more than a block and a mound is walked up without a jump. `outcrops` (`height`, `size`, `cover`,
+`block`) are lumps of a block of their own with sides as steep as they come.
+
+The platform does not change, and nor do the terrain function, the domes, the stems, the biomes or the roots. The ground
+is more blocks on top (`DiscGround`), written at the end of carving as the roots are and only into air, so a stem that comes
+down on a platform, or the wall where a disc lies in it, stays. The palette's top layers lie on a mound's surface, and what
+was the platform's top under it takes the layers below. What a theme grows and what it inherits stand on the ground.
+
+The ground stays on the rock within 4 blocks of the rim (whose side shows the palette's layers, the look the owner asked
+for on 2026-10-08), under each ruin and 2 blocks round it, and at water and right beside it; from each of those it may
+rise by a block for each block further, so a mound that one of them cuts into ends in a slope. The first build reckoned
+how near water was from the two smooth values that make ponds and streams, which was cheap and wrong: on a disc with many
+ponds it never allowed more than a block anywhere. It now looks for the nearest column that would hold water, and only
+where those values say water may be near.
+
+The mod's own: jungle mounds up to 3 over 0.3 of the top with a few outcrops of mossy stone up to 4; lush mounds up to 2
+over 0.25 with outcrops of stone and moss up to 5; mangrove hummocks 1 high between its ponds; crystal spires of calcite
+and amethyst up to 6.
+
+**Measured,** the same four holes at seed 11.
+
+| | Lush | Jungle | Mangrove | Crystal |
+|---|---|---|---|---|
+| Share of a top raised, as the settings and the layout give it | 21% | 21% | 9% | 4% |
+| of which outcrop | 3.3% | 1.1% | none | all |
+| Highest | 5 | 4 | 1 | 6 |
+| Neighbouring columns more than a block apart (the sides of outcrops) | 1.3% | 0.6% | 0.03% | not counted |
+
+Less of a top is raised than `cover` says because of where the ground stays level, most of all on a mangrove disc.
+
+On a NeoForge dedicated server, read back from the region files:
+
+- Every block of ground expected is there, but for two things. Round ruins the ground is level, which the reckoning
+  outside the game does not know: all 1,394 blocks missing on jungle and mangrove discs are within 14 blocks of a ruin's
+  piece. And on lush discs the clay pools that lush caves put down took some: 859 of the 994 missing there are water.
+- None of the discs' own water is running. The 14 blocks of running water found at a disc's top, in two of the holes, are
+  falling water with water over them: the level's own, coming in from above.
+- No small plant stands on air on a jungle or mangrove disc. On lush discs 34 do, against 28 in two holes made without
+  mounds; those are lush caves' own.
+- Jungle ground with a block at foot or head height, counted from the ground: 32.1% with mounds and 31.9% without (two
+  holes made both ways). That count does not see an outcrop, which is ground to it; the line in the table above does.
+- A hole's 784 chunks take 30 to 48 s as before.
+- One hole on Fabric: the same within a few blocks on every count. No warning or error from the mod on either loader.
+
+237 unit tests pass (`./gradlew build`, both loader jars); `DiscGroundTest` is new.
+
+**Not verified.** Nothing was looked at in game. Whether an outcrop stands where it is a nuisance, and whether mounds this
+low read as mounds under trees, are the owner's to judge; `flat-discs` and `rugged-discs` are the two ends.
+
+**Mine and unjudged:** every number; that the ground stays level round ruins (so a ruin never stands on a mound, and a
+disc full of ruins is nearly flat); what outcrops are made of.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -2284,10 +2341,10 @@ mangrove disc gets so few mushrooms (its groves leave little clear air). `no-gia
    Lootr's lists for chests that refill.
 8. The owner's goals of 2026-10-09 (section 9, with the levers of each): suggested next the penalty for going up or down
    too fast, then the disc made for ruins, then fights that reset and traps. The owner has not set that order.
-9. Wilder discs: look at the rims and the giants in game (`bare-rims`, `heavy-rims`, `no-giants` and `many-giants` to
-   compare) and settle how much hangs over a rim, the edge trees, `wildness`, and what the giants are made of. Then the
-   three rounds left of the plan the owner approved on 2026-10-10: mounds and outcrops, falls with plunge pools and
-   cascades, wall springs.
+9. Wilder discs: look at the rims, the giants and the ground in game (`bare-rims`, `heavy-rims`, `no-giants`,
+   `many-giants`, `flat-discs` and `rugged-discs` to compare) and settle how much hangs over a rim, the edge trees,
+   `wildness`, what the giants are made of, and how rough the ground should be. Then the two rounds left of the plan the
+   owner approved on 2026-10-10: falls with plunge pools and cascades, and wall springs.
 10. Roots: look at them in game (`huge-roots`, `many-roots`, `few-roots` and `no-roots` to compare), settle how many and how
    thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
    them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
