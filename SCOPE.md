@@ -46,6 +46,7 @@ Layers, mapped to code:
 | City placement | Custom structure-placement type at the ravine cell centre | `ravine-core` in `common` | Yes |
 | Wall ruins (later) | Jigsaw structures anchored on ledges | JSON in `common` | Yes |
 | Disc ruins | Custom `overgrown_abyss:disc_ruins` structure and placement: one piece of a template pool at each place the discs' own code finds for a ruin | Sites in `common/…/ravine`, structure and placement in `common/…/compat`, pools and processors in JSON | Yes |
+| Roots | Winding wooden roots grown once for each hole and written into each chunk with the discs' materials; a block tag keeps the mod's structures from building over them | Growing and blocks in `common/…/ravine`, written by `compat/DiscPainter`, numbers and the tag in JSON | Yes |
 
 Custom Java is limited to: density-function type(s), a structure-placement type, the fluid-override mixin, the
 density-wrap mixin, and the `BiomeInjector` glue. Everything else is data.
@@ -2012,6 +2013,112 @@ Known and left: camps, pillars, the statue and rubble have no chest; Artifacts' 
 chests through the jungle temple's table, so a pack that wants them there adds a modifier for the mod's tables.
 The numbers this is balanced by are in the table of levers in section 9, with those of the ideas that are not built yet.
 
+### Roots that wind through the hole
+
+Owner (2026-10-09): "Lets work on the generated roots feature in the chasms that has been sidelined for a while. The goal is
+to create large winding roots that tie that chasm together, something like deep root depths in elden ring. The roots can
+serve as a way for players to walk between discs. the roots should be a mix of mangrove and jungle wood". Asked four
+things, they chose: a few roots cross the clear middle; walking links are partial, with gaps left for players to bridge; a
+root takes the wood of the disc nearest to it; and of the bottom, in their words, "They are intended to cut through city
+buildings, and most roots should be visible curving and swooping around the edges of the cavern. The roots should appear
+fairly well connected throughout the cavern and be common nearer to the bottom".
+
+My reading, not confirmed: "cavern" there is the whole hole's cut, as they used it for the walls on 2026-10-07, so roots keep
+to the wall from the mouth down and gather in the bell over the city. What the code called a root before this is the rock
+column a hanging disc hangs from (`Disc.Support.Hanging`, `discs.root_spread`), which is off; it keeps its names.
+
+**What was built.** Settings are the `roots` block of `carve.json` and a theme's `root_wood`; `dev-datapacks/README.md`
+describes each lever.
+
+- **Roots are blocks, written with the discs' materials.** A hole's roots are grown once with its discs (`RootLayout`, held
+  in `CellDiscs`), as lines of knots a block apart with a radius at each. `RootBlocks` gives a chunk the blocks within that
+  radius, and `DiscPainter` writes them at the end of carving, after the discs and their water. No mixin and no density
+  function were added. Each chunk works from the hole's roots alone, so the order chunks generate in does not matter.
+- **How one grows** (`RootWalk`): a block at a time from its start through the stops it is given, turning no tighter than
+  its thickness allows towards its stop, a slow wander to either side, the wall it runs along, and away from the clear air
+  round the axis. A root that comes near a stop on rock is taken straight to it; one that goes forty blocks and more
+  without coming nearer gives the stop up.
+- **Four kinds** (`RootRoutes`). A great root leaves the wall under the mouth and goes round the hole as it comes down, a leg
+  at a time, each leg out to the wall or in to lie against a disc's rim with its top level with the rim's; in the bell it
+  keeps to the wall, lands on the floor and runs on along it, sinking, before it dives. A crossing root spans the hole from
+  wall to wall, sagging through the clear air, which no other root enters. A link climbs from the top of one disc round
+  the outside of the rim of a disc above, never steeper than `max_slope`. A branch leaves another root for another root, a
+  disc's rim, the floor or the wall, more often the nearer the floor.
+- **Wood by the nearest disc** (`RootBlocks.mixAt`): the jungle theme's wood is jungle wood and the mangrove theme's is
+  mangrove wood, offered from as far as a place is from the disc; the settings' own wood, both in patches, is offered from
+  `wood_reach` 48 away everywhere. The nearest has all of a stretch where the next is `wood_blend` 16 further, half where
+  they are level, and a shared stretch is one wood or the other by patches along the root. Both woods have bark on every
+  face, so a root needs no direction.
+- **Roots cut through the city, in data.** All six lists of rules the mod's structures use ended with vanilla's
+  `protected_blocks` on `#minecraft:features_cannot_replace`. That rule reads the block already in the world and drops the
+  piece's own block if the tag has it (read from the 1.21.1 bytecode of `ProtectedBlockProcessor`). The lists now name
+  `#overgrown_abyss:ruins_cannot_replace`, vanilla's tag plus the two woods. Roots are in the chunk before any structure, so
+  the city and the mod's ruins on discs build round them.
+
+**Found on the way, and what was done about it.** These came from drawing real holes' roots outside the game before
+anything was placed.
+
+- **A root cannot go round the discs to get down.** The discs of a layer leave almost none of the ring open between them,
+  and the only open way down is the clear middle. A great root that bent round every disc went round the hole at one
+  height, missed every stop below it, and then fell straight through the rock to the floor. So great and crossing roots
+  do not bend round anything: they grow through a platform or stem in their way, as through the city. Links and branches
+  still bend round. This is not what the plan said, which was that every root bends round discs.
+- **Rims in the wall.** A link that follows a rim into the wall would run on inside the rock. A root that is to be walked
+  is now given up where its middle is more than half a block into rock, or where being held out of the clear air made it
+  steeper than its limit.
+- **Domes open the wall.** A root is started or ended in the wall only where the wall has rock; where a disc's dome has
+  opened it, the next place round is tried.
+- **A great root is touched to a rim only inside the hole's own wall,** not back in the room a dome opens behind it, where
+  it went out of sight and came back.
+
+**The choices that were mine.** Every count and size; that great roots go through discs; that a disc's ruins are not kept
+clear of roots, which pass through them as through the city; `touch_chance` 0.5 and the walk a great root gives being
+whatever its legs happen to make; that only roots from the wall start at the top, so none can be walked on to from the
+surface; and that nothing grows on a root yet.
+
+**Measured outside the game** with the mod's numbers, on level ground, three holes of each depth:
+
+| | 150 deep | 294 deep |
+|---|---|---|
+| Roots in a hole | 45 to 63 | 92 to 126 |
+| Great roots, and their length | 3 to 4, 460 to 760 blocks each | 3 to 4, 880 to 1,320 |
+| Crossing roots | 1 or 2 | 1 or 2 |
+| Branches | 29 to 45 | 56 to 84 |
+| Links, of the discs drawn for one | 10 to 12 of 20 or 21 | 31 to 42 of 50 to 59 |
+| Blocks of root | 124,000 to 168,000 | 221,000 to 310,000 |
+| Root in the lowest, middle and highest third of the hole | 59 to 67%, 26 to 33%, 5 to 10% | 52 to 64%, 25 to 33%, 10 to 15% |
+| Roots that end in rock or in another root | all but 1 of 164 | all of 326 |
+| Growing a hole's roots, once | 20 to 63 ms | 28 to 41 ms |
+| The paint pass for roots, mean over a hole's chunks, and the worst chunk | 26 to 36 microseconds, 2.75 ms | 58 to 78 microseconds, 1.43 ms |
+
+A link's steepest four blocks are at 0.61 against a limit of 0.6.
+
+**Verification.**
+
+- Unit tests, 229, pass, and both loaders' jars build (`./gradlew build`). The 28 new ones are in `RootSettingsTest`,
+  `RootLayoutTest`, `RootBlocksTest` and `compat/RootFilesTest`; what each covers is in the commit that added it.
+- The ruins on discs did not move: the hole below has the same 26 pieces as before the roots, on both loaders.
+- Dedicated dev servers in the sandbox, seed 11, the hole at x=-1572 z=2594 (top y=134), 784 chunks generated by
+  `forceload` and read back from the region files. The root blocks expected there, 144,890, were worked out outside the game
+  from vanilla's terrain for that seed and the mod's file, and each was looked up in the saved world:
+
+| | NeoForge 21.1.252 | Fabric 0.19.5 |
+|---|---|---|
+| Expected root blocks that are the expected wood | 144,879 | 144,875 |
+| The rest | 10 dirt, 1 bamboo | 12 dirt, 3 bamboo |
+| Root blocks inside the boxes of the city's 67 pieces, and how many are still root | 11,656, all | 11,656, all |
+| Root blocks inside the boxes of disc ruins' pieces, and how many are still root | 134, all | 134, all |
+| Root blocks under the cavern roof with a block of a building beside them | 1,148 | 1,151 |
+| The log | the `Roots:` line with the mod's numbers; no error | the same |
+
+  The dirt is what a tree puts under its trunk. Slices of the NeoForge world were drawn and looked at: roots run across the
+  city's floor and through its buildings.
+
+Not verified: nothing was looked at in game, so how the roots look, whether the links can in fact be walked, and whether a
+hole reads as tied together are all open. Not run: the owner's pack, Larion, or Dungeons and Taverns' city. Not looked
+into: what a mineshaft does to a root it meets (the hole has 334 pieces of them and none of the expected blocks was lost
+to one); and fire, since wood burns and lava in the wall or lightning at the mouth could light a root.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -2030,6 +2137,10 @@ The numbers this is balanced by are in the table of levers in section 9, with th
    Lootr's lists for chests that refill.
 8. The owner's goals of 2026-10-09 (section 9, with the levers of each): suggested next the penalty for going up or down
    too fast, then the disc made for ruins, then fights that reset and traps. The owner has not set that order.
+9. Roots: look at them in game (`huge-roots`, `many-roots`, `few-roots` and `no-roots` to compare), settle how many and how
+   thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
+   them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
+   code; and whether a disc's ruins should keep clear of them.
 
 ## 9. Future additions (owner wishlist)
 
@@ -2171,6 +2282,9 @@ an item says was read from a jar is known; nothing of theirs was run for these i
 | Room between discs | `cone`: `layer_spacing`, `spacing`, `stack_chance`, `rider_chance`; `discs`: `min_radius`, `max_radius` | 20, 56, 0.4, 0.5; 20 and 64 |
 | Room over a disc | `discs`: `height_ratio`, `min_height` | 0.45 and 14, so 29 over the widest disc |
 | The clear middle of a hole | `cone.clear_radius` at the floor, `cone.upper.clear_radius` at the top | 8 and 20: from 16 blocks across to 40 |
+| What crosses the clear middle | `roots.crossing.count` and `radius` | 1 or 2 roots a hole, 7 blocks across |
+| How much of a hole can be walked | `roots.links`: `chance`, `max_slope`; `roots.great.touch_chance` | 0.5 and 0.6, which gives about a third of the discs a link up to them; 0.5 |
+| How many roots, and how thick | `roots.great`: `count`, `radius`, `end_radius`; `roots.branches`: `every`, `by_height` | 3 to 5, 4.5 to 3.5; 150, 3 at the floor to 0.5 at the top |
 
 Levers in the owner's pack and not in the mod: Lootr's `refresh_value`, `refresh_loot_tables` and `refresh_modids`; a loot
 modifier that names the mod's tables; a datapack over any of the files above.

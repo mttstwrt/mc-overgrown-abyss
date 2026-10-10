@@ -229,7 +229,7 @@ are blocks written over whatever is there: a root runs into the wall, through a 
 floor. The city and the mod's own ruins build round them (their rules leave alone the blocks of the tag
 `#overgrown_abyss:ruins_cannot_replace`, which holds the two woods; a pack that makes roots of other blocks adds them there).
 Measured outside the game with the mod's numbers, on level ground: a hole 150 deep has 45 to 63 roots and 124,000 to 168,000
-blocks of root, one 294 deep has 92 to 126 roots and 221,000 to 310,000 blocks, two thirds of it in the lowest third of
+blocks of root, one 294 deep has 92 to 126 roots and 221,000 to 310,000 blocks, over half of it in the lowest third of
 the hole.
 
 - `great`: the roots that run from the wall under the mouth to the floor. `count` 3 to 5 a hole. `radius` 4.5 where one
