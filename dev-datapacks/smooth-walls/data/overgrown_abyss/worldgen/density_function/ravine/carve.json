@@ -58,6 +58,14 @@
           "every": 55
         },
         {
+          "feature": "overgrown_abyss:disc/glow_lichen_high",
+          "every": 24,
+          "patches": {
+            "size": 24,
+            "cover": 0.7
+          }
+        },
+        {
           "feature": "overgrown_abyss:disc/moss_ceiling",
           "every": 55,
           "on": "underside"
@@ -65,6 +73,11 @@
         {
           "feature": "overgrown_abyss:disc/glow_berries_over_drop",
           "every": 20,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_lichen_high",
+          "every": 24,
           "on": "underside"
         },
         {
@@ -510,7 +523,7 @@
         },
         {
           "feature": "overgrown_abyss:disc/shroomlight_in_leaves",
-          "every": 2
+          "every": 1
         },
         {
           "feature": "overgrown_abyss:disc/vines_hanging",
@@ -518,7 +531,19 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_canopy",
-          "every": 24
+          "every": 24,
+          "patches": {
+            "size": 24,
+            "cover": 0.5
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_lichen_high",
+          "every": 24,
+          "patches": {
+            "size": 24,
+            "cover": 0.7
+          }
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
@@ -528,6 +553,11 @@
         {
           "feature": "overgrown_abyss:disc/glow_berries_over_drop",
           "every": 16,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_lichen_high",
+          "every": 24,
           "on": "underside"
         },
         {
@@ -906,7 +936,11 @@
         },
         {
           "feature": "overgrown_abyss:disc/froglight_in_leaves",
-          "every": 40
+          "every": 20,
+          "patches": {
+            "size": 40,
+            "cover": 0.5
+          }
         },
         {
           "feature": "overgrown_abyss:disc/lily_pads",
@@ -915,7 +949,12 @@
         },
         {
           "feature": "overgrown_abyss:disc/sea_pickles",
-          "every": 60,
+          "every": 120,
+          "on": "water"
+        },
+        {
+          "feature": "overgrown_abyss:disc/sea_pickles_midpond",
+          "every": 6,
           "on": "water"
         },
         {
@@ -924,7 +963,19 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_canopy",
-          "every": 30
+          "every": 30,
+          "patches": {
+            "size": 40,
+            "cover": 0.5
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_lichen_high",
+          "every": 24,
+          "patches": {
+            "size": 40,
+            "cover": 0.7
+          }
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
@@ -943,6 +994,11 @@
             "size": 10,
             "cover": 0.5
           }
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_lichen_high",
+          "every": 24,
+          "on": "underside"
         },
         {
           "feature": "overgrown_abyss:disc/mangrove_roots_hanging",
@@ -1497,7 +1553,18 @@
       }
     },
     "wood_reach": 48,
-    "wood_blend": 16
+    "wood_blend": 16,
+    "growth": [
+      {
+        "feature": "overgrown_abyss:disc/glow_lichen_high",
+        "every": 8
+      },
+      {
+        "feature": "overgrown_abyss:disc/glow_berries_over_drop",
+        "every": 20,
+        "min_radius": 2.5
+      }
+    ]
   },
   "falls": {
     "count": {

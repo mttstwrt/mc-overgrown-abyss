@@ -89,6 +89,18 @@ class RootFilesTest {
     }
 
     @Test
+    void everythingTheModsRootsGrowHasAFeatureFileOfTheModsOwn() throws IOException {
+        var growth = json(CARVE).getAsJsonObject("roots").getAsJsonArray("growth");
+        assertNotNull(growth, "the mod's own roots grow something");
+        assertFalse(growth.isEmpty());
+        for (JsonElement each : growth) {
+            String feature = each.getAsJsonObject().get("feature").getAsString();
+            assertTrue(feature.startsWith("overgrown_abyss:"), feature + " is not the mod's own");
+            json("/data/overgrown_abyss/worldgen/configured_feature/" + feature.substring("overgrown_abyss:".length()) + ".json");
+        }
+    }
+
+    @Test
     void everyBlockARootIsMadeOfIsOneAStructureLeavesAlone() throws IOException {
         JsonObject carve = json(CARVE);
         var woods = new HashSet<String>();

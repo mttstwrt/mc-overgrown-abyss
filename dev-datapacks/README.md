@@ -214,13 +214,22 @@ mangrove's has no block light and monsters can spawn on it (`docs/TUNING.md`, "L
   the underside of a disc glows where it stands high over the next and stays dim where it is the next one's roof.
 - `shroomlight_in_leaves` (jungle) and `froglight_in_leaves` (mangrove, all three colours): a light in place of a leaf deep
   in a crown, one with a leaf or a log on all six sides, at least 10 blocks over the ground. Most places tried have no crown
-  thick enough over them, which is why the jungle's `every` is 2. The trees hang no lights of their own any more, and no
-  froglights lie in the mud.
+  thick enough over them, which is why the jungle's `every` is 1, a try in every column. The trees hang no lights of
+  their own any more, and no froglights lie in the mud.
 - `sea_pickles` (mangrove): on the beds of the ponds and streams, one to three to a block and most often one, which is
-  light 6, 9 and 12.
+  light 6, 9 and 12. Beside a bank these light the bank, so there are few.
+- `sea_pickles_midpond` (mangrove): single pickles in the middles of ponds, only where every block within 4 steps holds
+  water. Their light of 6 falls short of any bank, so they cost monsters nothing, and there are many.
+- `glow_lichen_high` (jungle, mangrove and lush, on the top and under the disc, and under the hole's roots): glow lichen
+  on whatever is overhead and has 8 open blocks under it: a dome's ceiling and leaning wall, the underside of a platform
+  or a root. From the ground it looks up to 32 blocks for a place. Lichen gives 7, so from there none of it reaches the
+  ground. What it will hold to is the tag `#overgrown_abyss:holds_lichen`; a pack that makes discs or roots of other
+  blocks adds them there.
 
 The numbers to change are each growth's `every` (larger is fewer), and in the two `*_in_leaves` files the `y_spread`, which
-is the least a light is over the ground.
+is the least a light is over the ground. Several of these have `patches`, which gathers them into groves: the mangrove's
+froglights, berry vines and lichen share the groves of its trees (`size` 40), and the jungle's and the lush disc's berry
+vines and lichen have groves of `size` 24.
 
 Both are thinned so that a player can walk through. The numbers to change are the `every` of the bushes, bamboo and trees in
 each theme's `growth` (larger is thinner) and, for the mangrove's groves, their `cover` (smaller leaves more clearing); ferns,
@@ -390,6 +399,12 @@ the hole.
   its discs: jungle wood on the jungle theme, mangrove wood on the mangrove one, none on lush, crystal and lava. A root within
   `wood_reach` 48 blocks of such a disc takes its wood; between two different woods it is one or the other in patches along
   the root, the share shifting over `wood_blend` 16 blocks.
+- `growth`: what hangs under the roots, a list as on a theme: a `feature`, `every` (blocks of a root's underside for each
+  place tried) and, if wanted, `min_radius`, the thinnest root it grows under. The underside is the lowest part of a
+  root's round, not its flanks, and the feature is placed in the open block beneath; a root that lies on the ground, on
+  a platform or in the wall has none. The mod's: `glow_lichen_high` for every 8 blocks, and the lit vine
+  `glow_berries_over_drop` for every 20 under roots of radius 2.5 or more, which hangs only over 15 open blocks. Round a
+  thinner root the vine's light would reach the root's top. Without the list nothing hangs there.
 
 ### Falls
 
@@ -531,14 +546,17 @@ and say how many of its pieces' lowest layers lie in the ground.
 - `no-giants`: the mod's file without the giant mushrooms, pads and glowing bulbs.
 - `many-giants`: the mod's file with four times as many of each (every `every` a quarter). For finding them and judging them.
 
-- `no-lights`: the mod's file without glowing bulbs, lights in the leaves and sea pickles, and with a copy of
-  `glow_berries_hanging.json` in which no vine has a berry, and none of the second vine under discs. A disc at its darkest:
-  what light is left is the game's own glow berries in the hole's lush caves, lava, and a ruin's lamps. Measured: 93% of a
-  jungle disc's standing ground has no block light, 89% of a mangrove's and 94% of a lush disc's, where the mod's own file
-  gives 67%, 58% and 64%.
-- `many-lights`: the mod's file with twice the lights in the leaves on the jungle and three times on the mangrove (`every` 1
-  and 13), twice the bulbs, the sea pickles and the lit vines under discs, and a berry on one vine in five. For judging how
-  much light is too much again: 51%, 40% and 44% dark. These two packs each carry one feature file beside `carve.json`.
+- `no-lights`: the mod's file without glowing bulbs, lights in the leaves, sea pickles, lichen overhead and anything under
+  the roots, and with a copy of `glow_berries_hanging.json` in which no vine has a berry, and none of the second vine under
+  discs. A disc at its darkest: what light is left is the game's own glow berries in the hole's lush caves, lava, and a
+  ruin's lamps. Measured, standing ground with no block light on jungle, mangrove and lush discs: 93%, 90% and 94%, where the mod's
+  own file gives 67%, 58% and 64%.
+- `many-lights`: the mod's file with twice of every light of its own (each `every` halved, on discs and under roots; the
+  jungle's lights in leaves are at their most already) and a berry on one vine in five. For judging how much light is too
+  much again: 53%, 45% and 44% dark. These two packs each carry one feature file beside `carve.json`.
+- `even-lights`: the mod's file with no `patches` on its lights in leaves, berry vines and lichen, so they are spread
+  evenly over a disc and not gathered into groves. For choosing between the two looks in game. Measured: 67%, 57% and 64% dark, and
+  of what is seen 44%, 45% and 47% lit where the mod's own file gives 43%, 44% and 46%.
 
 - `huge-roots`: the mod's file with roots half as thick again: great roots of radius 7 down to 5.5 (14 blocks across to 11),
   crossing roots 5.5, links 3, nothing under 2.

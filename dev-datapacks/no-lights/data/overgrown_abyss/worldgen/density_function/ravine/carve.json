@@ -501,7 +501,11 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_canopy",
-          "every": 24
+          "every": 24,
+          "patches": {
+            "size": 24,
+            "cover": 0.5
+          }
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
@@ -889,7 +893,11 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_canopy",
-          "every": 30
+          "every": 30,
+          "patches": {
+            "size": 40,
+            "cover": 0.5
+          }
         },
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
