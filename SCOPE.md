@@ -2698,6 +2698,147 @@ game's rules say of it is all there is. The client; the owner's pack, where anot
 
 Mine and unjudged: the cube's `weight` and group size.
 
+### Less light on the discs, and lights only inside leaves
+
+The owner on 2026-10-11: "Lets look at de-densifying the light sources in the chasm. Frog lights, shroom lights, and glow
+berries are too frequent and prevent mobs from spawning most places. I would also like light source blocks like shroom
+lights or frog lights to only spawn within at least one layer of leaves, not at the edges. This should help reduce total
+light and occurances." And while it was being measured: "We can also raise the height of the avarage light source further
+away from the ground." On the first setting, the same day: "I think this reduces light a little too much, especially
+underneath discs where mobs couldn't spawn anyway. I think the goal for jungle and lush should be somewhere between 60-70,
+mangrove should be a little lower, most mobs can't spawn in water anyway so we can allow more sea pickles. The underside
+of discs can be allowed a little bit more light especially if they are far above platforms below them. The goal is still
+a fantasy look overall."
+
+**What was measured first.** The four holes at seed 11 were generated on a NeoForge dev server and read back from the
+region files, block light included. Counted: standing places (a block with a whole top under two blocks a body fits in)
+that have no block light, which is what the overworld's monsters want before anything else
+(`monster_spawn_block_light_limit` 0). A light of the lab's own, spread through the saved blocks one level a block as the
+game spreads it, came out equal to the game's in 99.96% of the blocks light passes through, so a kind of light could be
+taken out of a saved world and the rest counted without the game.
+
+| Dark standing places, before | Jungle | Mangrove | Lush | Crystal | Lava | The hole's own lush caves |
+|---|---|---|---|---|---|---|
+| As generated | 9% | 6% | 14% | 5% | 28% | 39% |
+| Without shroomlights and froglights | 23% | 20% | 21% | 6% | 35% | 39% |
+| Without glow berries | 39% | 26% | 64% | 17% | 50% | 73% |
+| Without either | 97% | 71% | 96% | 20% | 67% | 73% |
+| And without sea pickles or glow lichen | 98% | 100% | 97% | 20% | 71% | 77% |
+
+- **Berries were the larger half.** In four holes 30,000 vines bore berries, about half of all there were, and a vine's
+  berries were anywhere along it. On a jungle disc most hung under the platforms (a vine for every 8 blocks of underside),
+  which are the roofs over the discs below; on a lush disc they were its parent biome's.
+- **A light's height decides what it costs.** Light falls by one a block, so a light 3 blocks over the ground lights 265
+  places and one 10 over it 41. The shroomlights and froglights hung under the lowest leaves of small trees, lay in the
+  mud, and made up a quarter of each bulb's ball from 2 blocks up: 3210 shroomlights and 1368 froglights.
+- **Sea pickles** alone kept more than a quarter of a mangrove disc lit: up to four to a block, as bright as a froglight.
+- **Thick crowns are few on the jungle, common on the mangrove.** A leaf with a leaf or log on all six sides: 11% of the
+  jungle's leaves and half the mangrove's; over 4% and 13% of the open ground there is one within 32 blocks.
+
+**What changed,** all of it in data.
+
+- **Lights in leaves.** `shroomlight_in_leaves` (jungle) and `froglight_in_leaves` (mangrove) are growths of their own:
+  from a place on the ground they go 10 blocks up, then on up through air, leaves and wood for at most 22 more to the
+  first leaf that has a leaf or a log on all six sides (the new tag `#overgrown_abyss:hides_light`), and put the light in
+  its place: a try for every 2 columns of jungle ground and every 40 of mangrove. The trees' own `attached_to_leaves` lights are gone from all five tree files, and `froglight_bulbs`, the
+  froglights in the mud, is gone altogether; `froglight_in_leaves` has its place in the mangrove's list. The other new
+  entries (the jungle's lights before its hanging vines, the lush disc's moss before its rim growth, the second vine
+  under a disc after the first) are put in where they belong, so what each list holds after them stands elsewhere than
+  it did.
+- **Bulbs.** Their lights are what the tree feature calls foliage, a cross of five on the top of the stalk, and six
+  `attached_to_leaves` decorators, one for each direction, put a leaf on every side of a light that has air there. The
+  stalk is 10 to 14 blocks where it was 5 to 9, and no bulb grows with under 9 blocks of room. `every` 450, 450 and 300
+  on the lush disc, where it was 600, 600 and 400, since fewer places have the room.
+- **Berries.** `glow_berries_hanging`, which is every vine the mod hung until now, gives one vine in fourteen a berry, as
+  a block more at its top; no other block of such a vine bears one. The jungle's and the mangrove's vines are as many and
+  as long as they were.
+- **Under a disc, where it is far to the ground.** `glow_berries_over_drop` is a second vine, grown on the underside of
+  jungle, mangrove and lush discs: it is hung only where the 15 blocks under it are open air, and has berries in its top
+  block or two on five vines in eight. A berry gives 14, so from there none of its light reaches ground straight below.
+- **The lush disc's ceiling is the mod's.** Its parent's `lush_caves_ceiling_vegetation` and `cave_vines` are left out
+  (`without_features`), and `moss_ceiling` grows in their place, over the disc and under it: vanilla's own
+  `moss_patch_ceiling` with the mod's vine in it where vanilla's has one that bears berries on one block in five.
+- **Sea pickles:** as many patches as there were, and one to three to a block, most often one, where a block had up to
+  four as often as one.
+- Every testing pack made from the mod's file has the same changes. New: `no-lights` and `many-lights`, which were run on
+  NeoForge too: jungle, mangrove and lush discs 93%, 89% and 94% dark with the first and 51%, 40% and 44% with the second.
+
+**Two settings on the way.** The very first, lights from 8 blocks up with a berry on one vine in twenty, left the jungle
+66% dark, the mangrove 58% and the lush disc 36%, the last because the parent's mossy ceiling brings berry vines of its
+own, which had not been seen until the vines were counted by where their berries were. The one shown to the owner had a
+berry on one vine in forty, a light in leaves for every 3 columns of jungle, a patch of one or two pickles for every 140
+blocks of water, and no second vine under discs: 79%, 72% and 79% dark, and 923 lit vines under the platforms of the
+discs' own biomes where the mod had had 9,866. That was the "little too much". What it took to come back to the owner's
+marks was tried on the saved world first: one vine in twenty, fourteen and ten gave the jungle 71%, 65% and 60%, the lush
+disc 66%, 59% and 52%, and the mangrove 67%, 64% and 62%; and how many pickles to a block counts for more than how many
+patches (alone they light 6% of a mangrove disc as first set, 15% at one to three to a block, 28% at one to four).
+
+**Read from the 1.21.1 game** (decompiled, not assumed): `SimpleBlockFeature` sets its block with no test of what is
+there but `canSurvive`, which is what lets a light take a leaf's place with no code; `AttachedToLeavesDecorator` goes by
+the places the foliage placer filled, whatever it filled them with, takes one direction a block from its list, and sets
+its block only in air; `BlockColumnFeature` with `prioritize_tip` cuts its first layers first where there is no room, so
+a vine with no room has no berry; `EnvironmentScanPlacement` stops at the first block its `allowed_search_condition`
+refuses; a blob of `radius` 2 and `height` 0 is one layer, three across, with its corners left out;
+`TreeDecoratorType` has a private constructor, so a decorator of the mod's own would have needed an access widener or a
+mixin, and nothing here does.
+
+**Measured after,** the same four holes, both loaders:
+
+| Dark standing places | Jungle | Mangrove | Lush | Crystal | Lava | The hole's own lush caves |
+|---|---|---|---|---|---|---|
+| NeoForge | 67% | 58% | 64% | 16% | 59% | 39% |
+| Fabric | 67% | 55% | 63% | 16% | 58% | 40% |
+
+| In four holes, NeoForge | Before | After |
+|---|---|---|
+| Shroomlights | 3210 | 1205 |
+| Froglights | 1368 | 222 |
+| Blocks of sea pickles | 1269 | 1251 |
+| Blocks of vine with berries, the game's own in the hole's lush caves among them | 41,477 | 22,274 |
+| Vines with berries in the discs' own biomes | 16,700 | 4,900 |
+| Of those, under a platform | 9,866 | 3,738 |
+| Bulbs: jungle, mangrove, lush | 86, 37, 117 | 53, 19, 74 |
+| Lights in leaves: jungle, mangrove | | 278, 69 |
+
+- Every light in a tree is closed in: of 579, none has a side that is not leaf or wood. Nine in ten are 10 to 26
+  blocks over the ground under them.
+- A bulb's five lights are 9 to 14 blocks up on all but a few. Of the 3375 sides its lights turn outward (not to the
+  stalk or another light), 25 are not leaf, and 34 of 3354 on Fabric: a vine, water or a cave vine was there
+  before the bulb, and a decorator leaves what is not air. Where a light took a vine's place, the vine over and under it
+  fell afterwards and left air.
+- What each kind still costs, as the dark share with only that kind left: shroomlights and froglights 90%, 91% and
+  94% (jungle, mangrove, lush); berries 77%, 78% and 70%; and sea pickles, with neither of those, 85% on the mangrove.
+- Light over a drop is nearly free and not quite: about 8,500 vines with berries hang over 15 blocks of open air, the
+  game's own in the cavern among them, and without their berries the jungle, mangrove and lush discs would be 3, 4 and 2
+  points darker. Light goes sideways too, to a neighbour's rim or a mound.
+- No warning or error from the mod on either loader. 246 unit tests pass and both loaders' jars build;
+  `DiscThemeTest` now holds that the lush disc leaves out its parent's two ceiling features.
+
+**Not reached,** and why the last column of the table did not move: the hole's own air is `minecraft:lush_caves`
+(`environment.cavern_biome`), a biome the level can make, so the game decorates it itself and hangs its glow berries on
+the cavern's roof, the hole's wall and under the lowest discs: about 13,000 vines with berries in four holes, against
+about 4,600 of the mod's. They cost a jungle or lush disc two to four points of dark ground and a mangrove disc, which
+lies low in a hole, up to ten. No file of the mod's thins those short of replacing vanilla's own, which would thin every
+lush cave in the world. It would take a cavern biome of the mod's that grows a chosen part of the lush caves' features, as
+a disc's biome does. Also as they were: the crystal disc, lit by an amethyst cluster for every 7 blocks; the lava disc; and
+the shroomlights a ruin gets where its borrowed piece has a sea lantern (about 40 in four holes), which stand bare.
+The lush disc's vines, now the mod's, are the long kind throughout, where the parent's vines in its moss were short:
+about a tenth more blocks of vine in a hole than before.
+
+**Not verified.** Nothing was looked at in game, so not how a bulb or a light behind leaves looks, nor whether discs are
+now too dark to like. No spawn was watched: a server with no player spawns nothing, so "can spawn" here is the game's
+light rule applied to the saved light, and the sky's light, which also counts by day, was left out. Not the owner's
+pack: there the parent biomes are another mod's and the ruins' borrowed pieces another's again, and either may bring
+lights that vanilla's do not. Leaves round a light keep the distance to a log their tree gave them and are not asked
+again until a block beside them changes; that a few at the far edge of a wide crown may then decay is reasoned, not
+seen.
+
+**The owner's:** the marks, 60 to 70 dark on jungle and lush discs and a little lower on the mangrove; more pickles;
+more light under a disc that is far over the next. **Mine and unjudged:** which lights make up the difference, so about
+six lights in the leaves of a jungle disc, the bulbs' height and that they are fewer, one vine in fourteen, pickles
+one to three to a block; that "far" is 15 blocks, which is as far as the game lets a feature look; and that the lush
+disc's moss and vines are now the mod's.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -2874,7 +3015,9 @@ and `docs/TUNING.md` says for those of the wilder discs how far each goes and wh
 | How overgrown one disc is beside another | a theme's `wildness`: `min`, `max` | 0.5 to 1.4 on jungle and mangrove |
 | What hangs over a disc's rim, and how much | growths with `"on": "rim"`: `every`, `patches` | bushes, small trees, leaf tufts, roots and vines; a clear lip along about half of a jungle rim |
 | Where a disc's trees stop | a growth's `rim_fade`: `width`, `to`, `wander`, `reach` | the jungle's trees: 10, 0.15, 0.8, 0.25; the mangrove's none |
-| How many giants | the `every` of `giant_*` and `glow_bulb*` in a theme's `growth` | about four to a jungle or lush disc, five to a mangrove disc |
+| How many giants | the `every` of `giant_*` and `glow_bulb*` in a theme's `growth` | about three or four to a jungle disc, four to a mangrove disc, two or three bulbs to a lush one |
+| How dark a disc is, and so where monsters can spawn | the `every` of `*_in_leaves`, `glow_bulb*`, `sea_pickles` and `moss_ceiling`; the share of vines with a berry in `glow_berries_hanging.json`; the lights' height in their files (`docs/TUNING.md`, "Light") | about two thirds of the standing ground on a jungle or lush disc has no block light and a little over half on a mangrove's, where under a tenth had |
+| How much glows under a disc | the `every` of `glow_berries_over_drop`, on the underside | a lit vine for every 26 blocks of jungle underside that has 15 blocks of open air under it |
 | How rough a disc's ground is | a theme's `ground`: `mounds` and `outcrops`, each `height`, `size`, `cover` | a fifth of a jungle or lush top raised, a tenth of a mangrove's |
 | How many falls, and how far they go on | `falls`: `count`, `chain`, `max_steps`, `min_drop`, `curtain` | 2 to 4 a hole; 0.6 and 4; 10; one in five on large discs |
 | How many springs | `falls.springs.count` | 1 or 2 a hole |
