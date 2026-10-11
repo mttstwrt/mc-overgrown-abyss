@@ -2839,6 +2839,115 @@ six lights in the leaves of a jungle disc, the bulbs' height and that they are f
 one to three to a block; that "far" is 15 blocks, which is as far as the game lets a feature look; and that the lush
 disc's moss and vines are now the mod's.
 
+### Readable discs and roots: lichen overhead, lit pond middles, growth under roots, and groves
+
+The owner on 2026-10-11, with the light round in game: "With the latest changes we have increased mob spawning and the
+cavern looks less 'over-done' than it did. However we also sacrificed some readability, mangrove discs read as black masses
+and the large roots are very difficult to see outside of the chasm center. What are some ideas for balancing readability,
+fantasy visuals, mob spawning, without looking like 'too much'?"
+
+**What the saved worlds said.** A second count beside dark ground: of the blocks with an open face, the share whose open
+side has block light 5 or more. It had fallen from 81% to 38% on the mangrove disc (its leaves from 91% to 38%), from 83%
+and 81% to 40% and 43% on the jungle and lush discs, and on the roots outside the middle of the hole, where the sky does not
+reach, from 46% to 35%, with 29% of their bark in no light of any kind.
+
+A light stops spawning only where it reaches a standing place, so the question was where a light can sit and reach
+none. The game's light runs the same both ways, so a light at every standing place, spread by the lab, marks every block
+from which one would be reached. What is left: 36 to 39% of the rock, mud and underside faces of the disc biomes for a
+light of 7 (glow lichen) and 13 to 17% for one of 14; a third of the mangrove's pond bed for a single sea pickle, and
+a tenth by a rule a feature can check (water for 4 steps all round); a fifth of the roots' bark, nearly all of it
+underneath, since a root's own top is a standing place.
+
+**Offered and picked.** Eleven ideas in three groups. Picked: a glowing rock backdrop and glowing ponds for the discs;
+lichen in free places only and lit vines under the roots; lights gathered into glades; and a mark of about 55% of seen
+surface lit. Passed over: berry vines on high ceilings, an outline of lichen on a disc's rim, lichen all along the roots
+(which would light their tops), paler bark, and keeping lights spread evenly. Also offered and not taken up: spawners in
+ruins with a light rule of their own, so that fights need not depend on darkness.
+
+**What changed, in data.**
+
+- `glow_lichen_high`: glow lichen on whatever is overhead. From the place it is given it looks up through air, leaves
+  and wood, 32 blocks at most, for an open block under something of the new tag `#overgrown_abyss:holds_lichen` (stone,
+  the dirts and muds, the mossy masonry, mangrove roots, the two woods of the hole's roots), and takes it only if the 8
+  blocks under it are open. Lichen gives 7, and the game's feature may spread it a block. One file for three uses: a
+  theme's `growth` on the top (a dome's ceiling and leaning wall), `"on": "underside"`, and under roots.
+- `sea_pickles_midpond`: a single pickle, light 6, only where every block within 4 steps along x and z holds water,
+  which keeps its light short of every bank.
+- `roots.growth`: lichen for every 8 blocks of a root's underside and the lit vine `glow_berries_over_drop` for every 20,
+  the vine only under roots of radius 2.5 or more.
+- Groves (`patches`): the mangrove's froglights, its berry vines over the ground and its lichen overhead share the groves
+  of its trees (`size` 40); the jungle's berry vines and lichen, and the lush disc's lichen, have groves of `size` 24.
+- Tuned back to the dark-ground marks, and here the plan the owner approved was left in two places, both because of
+  what was measured (below): the jungle's lights in leaves are spread evenly, a try in every column, and the mangrove's
+  pickles anywhere in the water are half as many (`every` 120) while its froglights are three times as many
+  (`every` 20).
+- The testing packs made from the mod's file have the same changes; `no-lights` and `many-lights` take in the new
+  kinds, and `even-lights` is new: the mod's file with nothing gathered.
+
+**What changed, in code.** Roots had no growth of their own. `RootSettings` has `growth`, a list of
+`Growth(feature, every, min_radius)`; `RootBlocks.forEachGrowth` gives, for each root block of a chunk that has no root
+under it and lies on the lowest part of its root's round, the block beneath, drawn for from the cell's hash and the
+block's three coordinates (`RavineCells.unitAt` with a `y`); `RavineCarve` and `RavineFootprint` pass it on as
+`forEachRootGrowth`; and `DiscGrower` places the feature there through the same sink and the same test it uses under a
+disc, last of all growth. No mixin, no registry, nothing new of the game's touched.
+
+**Found on the way.**
+
+- **The mark of 55% cannot be met for nothing, and I had told the owner it could.** With lichen in every block from
+  which it reaches no standing place, the jungle, mangrove and lush discs come to 48%, 50% and 49% of seen surface lit.
+  A fifth to a quarter of what is seen is the ground, which the first mark keeps dark (11 to 14% of it is lit 5+), and
+  a quarter of a jungle or mangrove disc is leaves, which hold no lichen. As built the count is 43%, 44% and 46%; with
+  the ground left out of it, 53%, 52% and 58%.
+- **Where lichen is free, it is mostly light already.** The high ceilings and the undersides over a drop are where the
+  lit vines of the round before hang. The first 37,000 blocks of lichen added 2.5 to 3.5 points; as built there are
+  50,000 in four holes.
+- **Gathering lights costs readability.** With froglights and berry vines in groves of their own, the mangrove's leaves
+  fell from 40% lit to 29% and the froglights from 79 to 41: a light takes only under a thick crown, and groves laid
+  without regard to the trees missed them. Given the size of the trees' own groves they took again. On the jungle a
+  light takes in one try of seventy, so every column is tried and nothing is left to gather.
+- **What each kind of light gives** in seen surface for a point of dark ground, by putting each out in the lab's light:
+  lichen 3 to 4; lights in leaves and bulbs 0.9 on the jungle and 1.4 on the mangrove, where they light 4 points of
+  leaves for each; berries about 1; sea pickles 0.25, since beside a bank they light the bank. The mangrove's pickles
+  were costing it 12.8 points of dark ground for 3.2 of seen surface, which is why half of them went to froglights.
+- A pickle is not water to a block test: with plain water asked for all round, each pickle placed shut out its
+  neighbours and a pond held a handful. The test asks for the fluid.
+
+**Measured after,** the four holes at seed 11:
+
+| | Jungle | Mangrove | Lush |
+|---|---|---|---|
+| Dark standing places, NeoForge; Fabric | 67%; 66% | 58%; 58% | 64%; 63% |
+| Seen blocks lit 5+, NeoForge; Fabric | 43%; 43% | 44%; 44% | 46%; 46% |
+| The same of leaves, NeoForge; Fabric | 44%; 45% | 51%; 52% | 55%; 60% |
+| Lights in leaves (NeoForge) | 421 | 222 | |
+
+| Roots outside the middle, NeoForge | After the light round | Now | Without the lichen | Without the vines |
+|---|---|---|---|---|
+| Bark lit 5+ | 35% | 47% | 40% | 38% |
+| With no light of any kind | 29% | 20% | 28% | 27% |
+
+On Fabric the roots come to the same 47% and 20%. Before the light round they were at 46% and 23%, so the roots are
+now as well lit as they ever were, by lights that reach no ground.
+
+- Free comes to about a point: put out in the lab's light, the lichen costs 0.9 to 1.3 points of dark ground (light
+  goes sideways too), the pickles in pond middles nothing, the vines under roots 0.1 to 0.4.
+- Every light in leaves is still closed in (none of 995 has an open side); a bulb's are as they were.
+- With the packs on NeoForge, dark ground and seen surface lit (jungle, mangrove, lush): `no-lights` 93%, 90%, 94% and
+  7%, 12%, 6%; `many-lights` 53%, 45%, 44% and 52%, 53%, 58%; `even-lights` 67%, 57%, 64% and 44%, 45%, 47%. So the
+  groves cost about a point of seen surface against an even spread at the same dark ground, and twice of every light
+  comes near the mark of 55% at thirteen to twenty points of dark ground.
+- 251 unit tests pass (five new, for growth under roots and its settings), both loaders' jars build, and no server
+  logged a warning or error from the mod.
+
+**Not verified.** Nothing was looked at in game: not whether lichen this thick reads as too much, nor whether groves
+look better than an even spread, which the count says they do not light as well. The count itself is the lab's, of
+block light on open faces; it knows nothing of what is seen from where, and it leaves water out, so a pond's glow is
+not in it. No spawn was watched.
+
+**Mine and unjudged:** every number; that the lichen is as thick as it is; the two departures from the plan above;
+that the mark of 55% was left unmet and the dark-ground marks kept. **The owner's to say:** whether to count the mark
+without the ground, give up dark ground for it, or leave it.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -3018,6 +3127,7 @@ and `docs/TUNING.md` says for those of the wilder discs how far each goes and wh
 | How many giants | the `every` of `giant_*` and `glow_bulb*` in a theme's `growth` | about three or four to a jungle disc, four to a mangrove disc, two or three bulbs to a lush one |
 | How dark a disc is, and so where monsters can spawn | the `every` of `*_in_leaves`, `glow_bulb*`, `sea_pickles` and `moss_ceiling`; the share of vines with a berry in `glow_berries_hanging.json`; the lights' height in their files (`docs/TUNING.md`, "Light") | about two thirds of the standing ground on a jungle or lush disc has no block light and a little over half on a mangrove's, where under a tenth had |
 | How much glows under a disc | the `every` of `glow_berries_over_drop`, on the underside | a lit vine for every 26 blocks of jungle underside that has 15 blocks of open air under it |
+| How well a disc and the roots are seen | the `every` of `glow_lichen_high` (top, underside, `roots.growth`), of `sea_pickles_midpond` and of the vine in `roots.growth`; `patches` on the light entries | 43 to 46% of a disc's seen surface lit 5+, half of a mangrove's leaves, and 47% of the roots' bark outside the middle |
 | How rough a disc's ground is | a theme's `ground`: `mounds` and `outcrops`, each `height`, `size`, `cover` | a fifth of a jungle or lush top raised, a tenth of a mangrove's |
 | How many falls, and how far they go on | `falls`: `count`, `chain`, `max_steps`, `min_drop`, `curtain` | 2 to 4 a hole; 0.6 and 4; 10; one in five on large discs |
 | How many springs | `falls.springs.count` | 1 or 2 a hole |
