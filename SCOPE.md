@@ -2606,7 +2606,8 @@ an item says was read from a jar is known; nothing of theirs was run for these i
 - **Order suggested:** treasure (built), then the penalty for going up or down too fast, then the disc made for ruins, then
   fights and traps, which lean on the penalty. The owner agreed to the first.
 
-**The levers there are today.** All in `ravine/carve.json` unless it says otherwise; `dev-datapacks/README.md` describes each.
+**The levers there are today.** All in `ravine/carve.json` unless it says otherwise; `dev-datapacks/README.md` describes each,
+and `docs/TUNING.md` says for those of the wilder discs how far each goes and which way to turn it for which look.
 
 | What it balances | Setting | As shipped |
 |---|---|---|
@@ -2627,7 +2628,7 @@ an item says was read from a jar is known; nothing of theirs was run for these i
 | How overgrown one disc is beside another | a theme's `wildness`: `min`, `max` | 0.5 to 1.4 on jungle and mangrove |
 | What hangs over a disc's rim, and how much | growths with `"on": "rim"`: `every`, `patches` | bushes, small trees, leaf tufts, roots and vines; a clear lip along about half of a jungle rim |
 | Where a disc's trees stop | a growth's `rim_fade`: `width`, `to`, `wander`, `reach` | the jungle's trees: 10, 0.15, 0.8, 0.25; the mangrove's none |
-| How many giants | the `every` of `giant_*` and `glow_bulb*` in a theme's `growth` | about six to a jungle disc, four to a lush or mangrove disc |
+| How many giants | the `every` of `giant_*` and `glow_bulb*` in a theme's `growth` | about four to a jungle or lush disc, five to a mangrove disc |
 | How rough a disc's ground is | a theme's `ground`: `mounds` and `outcrops`, each `height`, `size`, `cover` | a fifth of a jungle or lush top raised, a tenth of a mangrove's |
 | How many falls, and how far they go on | `falls`: `count`, `chain`, `max_steps`, `min_drop`, `curtain` | 2 to 4 a hole; 0.6 and 4; 10; one in five on large discs |
 | How many springs | `falls.springs.count` | 1 or 2 a hole |

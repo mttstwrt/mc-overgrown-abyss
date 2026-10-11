@@ -13,6 +13,9 @@ settings without rebuilding the mod. They are not shipped with the mod.
 A pack replaces the whole `carve.json`, so when the mod's schema changes an old pack stops loading; regenerate it from
 the mod's file. The log line `Ravine settings:` at world load shows which values are live.
 
+For the settings that make discs wilder (rims, treeline, wildness, giants, ground, falls, springs), `docs/TUNING.md` has
+each one's limits and which way to turn it for which look.
+
 ## Packs
 
 The mod's own hole is now the cone: a single round hole, `base_radius` 150 at the floor (a little wider than the city cavern's
