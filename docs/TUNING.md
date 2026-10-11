@@ -42,7 +42,7 @@ of levers in SCOPE.md section 9, and `dev-datapacks/README.md` describes every s
 | Too many falls, or too few | `falls.count` | the range itself |
 | Falls run on too far from disc to disc | `falls.chain`, `falls.max_steps` | down |
 | Wide falls are too common, or never seen | `falls.curtain.chance`, `min_radius` | chance down or up; radius down lets smaller discs have one |
-| A theme never starts a fall | that theme's `water` | it needs a pond or stream that reaches the bank; lush and crystal have no water |
+| A theme never starts a fall | that theme's `water` | it needs a pond or stream that reaches the bank; lush and crystal have no water, and lava's ponds start no falls |
 | Springs are not noticed | `falls.springs.count` | up |
 
 ## Wildness: how discs of one theme differ
@@ -53,7 +53,7 @@ is a glade and not bare ground.
 
 | Setting | Shipped | May be |
 |---|---|---|
-| `min`, `max` | 0.5 and 1.4 on jungle and mangrove; none on lush and crystal (every disc alike) | 0 to 4, `min` not over `max` |
+| `min`, `max` | 0.5 and 1.4 on jungle and mangrove; none on lush, crystal and lava (every disc alike) | 0 to 4, `min` not over `max` |
 
 - `max` is the lever for whether the thickest disc can be walked through: it multiplies trees and bushes too.
 - Measured, jungle ground with a block at foot or head height: 32% before this round, 33% with it; 28% on the discs that
@@ -137,11 +137,11 @@ Entries at the head of a theme's `growth`, before its trees: a cap needs the air
 `ground` on a theme, two optional parts. Both are blocks put on top of the platform; the platform, its dome and its rim do
 not change.
 
-| Setting | Jungle | Lush | Mangrove | Crystal | May be |
-|---|---|---|---|---|---|
-| `mounds`: `height`, `size`, `cover` | 3, 22, 0.3 | 2, 18, 0.25 | 1, 12, 0.25 | | 1 to 8; 4 to 128; 0.05 to 1 |
-| `outcrops`: `height`, `size`, `cover` | 4, 7, 0.03 | 5, 8, 0.05 | | 6, 5, 0.08 | 1 to 12; 4 to 128; 0.01 to 1 |
-| Share of a top raised, measured | 21% | 21% | 9% | 4% | |
+| Setting | Jungle | Lush | Mangrove | Crystal | Lava | May be |
+|---|---|---|---|---|---|---|
+| `mounds`: `height`, `size`, `cover` | 3, 22, 0.3 | 2, 18, 0.25 | 1, 12, 0.25 | | 2, 16, 0.3 | 1 to 8; 4 to 128; 0.05 to 1 |
+| `outcrops`: `height`, `size`, `cover` | 4, 7, 0.03 | 5, 8, 0.05 | | 6, 5, 0.08 | 5, 6, 0.05 | 1 to 12; 4 to 128; 0.01 to 1 |
+| Share of a top raised, measured | 21% | 21% | 9% | 4% | not measured | |
 
 - A mound is a block high at its edge and climbs by less than a block for each block across, so it is walked up without a
   jump. Its height comes from its width, about a block and a tenth of `size`: with `size` 22 most are 2 or 3 high, with 12
@@ -203,6 +203,51 @@ not change.
 - Vanilla puts springs of its own in the hole's wall as well, so a hole had the odd fall from the wall before this.
 - A spring's pool is not joined to a fall. The end to look at: `many-springs` (6 to 8 a hole).
 
+## The lava disc
+
+Added after the round above (SCOPE.md, "A lava disc"). Its levers are in the `disc_lava` entry of `disc_themes`. Like the
+rest, every number is a first guess and none of it has been looked at in game. The owner's second word on it
+(2026-10-11): rarer, only low in a hole, and without its obsidian trees for now. And the third, the same day: `weight`
+"around 2", and magma cubes among its spawns.
+
+| Setting | Shipped | May be | Turning it |
+|---|---|---|---|
+| `weight` | 2 | 0 to 1000 | how many of the discs it may be given to are lava discs. Measured on vanilla terrain: about one disc in twenty-six, 1.2 to a hole; 1.5 gives 0.9 to a hole, 3 gives 1.7 |
+| `only.height.max` | 0.3 | 0 to 1 | how high in a hole a lava disc may be, from the lowest disc (0) to the highest (1). 0.3 is the bottom row and what stands on it, two rows in a deep hole; 0.4 lets in the second row of a hole of four. Take `only` out for any height |
+| `by_height` | none | 0 to 1000 each end | likelier low or high without ruling a height out, as the mangrove has. It was 3 at the bottom to 0.1 at the top until the limit took its place |
+| `water.ponds` | 0.45 | 0 to 0.9 | the share of the top that is pond before the three rules below take theirs. Under about 0.4 the ponds are apart; over it they join into a lake with islands |
+| `water.pond_size` | 14 | 4 to 128 | blocks from one pond to the next; larger gives fewer, wider ponds |
+| `water.bank` | 6 | 2 to 32 | blocks of rock kept inside the rim. The other themes have 3; lava has more because a lower disc's trees stand right outside the rim |
+| `water.clear` | 6 | 0 to 16, lava only | blocks kept from other discs' ground at about the lava's height, and from roots. 0 for lava wherever a pond lies |
+| `water.depth` | 1 | 1 or 2 | 2 is safe while nothing grows in the lava. Keep at 1 where trees stand in it: a tree's foot is one block |
+| `water.stream_width` | none | 0 to 8 | rivers of lava; not tried |
+| `growth` | none | as on any theme | the obsidian trees are out for now. To put them back: `"growth": [{"feature": "overgrown_abyss:disc/obsidian_tree", "every": 30, "on": "lava"}]`, where `every` is blocks of lava for each place tried; about a third of the places grew a tree |
+| in the tree's file, `obsidian_tree.json` (kept) | trunk 5 to 9, crown radius 2 | as any tree | `trunk_provider` and `dirt_provider` are the trunk and its foot: obsidian |
+| in the tree's file: `foliage_provider` | magma 3, glowstone 1 | any weights, any blocks | the crown. The two `weight`s are how much of it glows: about one block in four is glowstone |
+| `palette.top`, first layer | basalt, obsidian, smooth basalt in patches | any provider | `states` is an order, as on the jungle disc; `firstOctave` -4 makes patches about 8 blocks apart |
+| in the biome's file, `worldgen/biome/disc_lava.json`: the `minecraft:magma_cube` entry of `spawners.monster` | `weight` 100, 2 to 5 at a time | as any spawn entry | vanilla's numbers for its basalt deltas. `weight` is against the 515 of the cave's monsters listed with it: down for fewer cubes, take the entry out for none |
+
+- Lava is what is left of the ponds: measured outside the game over 16 holes, 67% of them, which is 20% of a lava disc's
+  top (58% and 17% when lava discs lay at every height). On vanilla terrain one lava disc in ten is left with under
+  20 blocks of it, most of those with none: a small disc has no room for a pond inside a `bank` of 6.
+- Rare means that many holes have none: 20 of 58 holes of vanilla terrain, where 2 of 58 had none before. `weight` is the
+  lever.
+- Magma cubes are what spawns on a lit lava disc. The game spawns one in any light, on any difficulty but peaceful
+  (`MagmaCube.checkMagmaCubeSpawnRules`), where the cave's monsters of the same list want no block light at all
+  (`Monster.isDarkEnoughToSpawn`), and lava lights its disc. So torches do not keep the cubes off, and a lava disc that
+  came out with no lava has the cave's monsters as well. Not seen in game: nothing spawns on a server without a player.
+- The level's own water gets at lava low in a hole. In the four holes looked at, one lava disc of four had a fall from a
+  pocket of water in the rock over it, which had turned 143 of its 309 blocks of lava to obsidian. Nothing in the file
+  keeps that off.
+- Why the rules: the game's lava lights what burns within three blocks, and discs of one ring run into each other. In
+  four holes, the mod's file with `clear` 0 had 2337 blocks within lava's reach that it can set alight, three quarters
+  of them the hole's wooden roots; with `clear` 6 it has 52, for 54% of the lava.
+- What the rules do not reach: what hangs from a disc higher up (vines, glow berries), and what vanilla builds in a hole,
+  such as the props of a mineshaft.
+- A pack that turns `doFireTick` off needs none of it, and can have `clear` 0.
+- The two ends: `many-lava` (about two fifths of the discs low in a hole) and `loose-lava` (the same with `clear` 0 and
+  `bank` 3).
+
 ## Fixed in the code, so not levers yet
 
 These are numbers of mine in Java. Each would be a small change to move into `carve.json` if it turns out to want turning.
@@ -218,3 +263,5 @@ These are numbers of mine in Java. Each would be a small change to move into `ca
 | How far a wall may lean in under a spring | half a block for a block's rise | `DiscFalls.UPRIGHT` |
 | How far round from straight behind a disc a spring may be | 0.6 radians either way | `DiscFalls.SPRING_ARC` |
 | Top growth kept this far inside the rim | 1.5 blocks | `DiscGrowth.EDGE_CLEAR` |
+| How near the lava's height another disc's top has to be for the lava to keep clear of it | 6 blocks over or under | `DiscLava.LEVEL_WITH` |
+| That a disc of lava has no falls or springs | none | `DiscFalls.Grower.starts`, `pool` |

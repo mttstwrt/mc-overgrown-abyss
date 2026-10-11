@@ -2452,6 +2452,252 @@ vanilla already puts in the hole's wall is the owner's to judge; `many-springs` 
 **Mine and unjudged:** how many; that a spring sits low on the wall where the wall is upright and not where it would
 show most; the pool's size; the blocks of the tag.
 
+### A lava disc
+
+The owner on 2026-10-10: "Lets add a lava disc to our available disc biomes. This one should be mostly basalt and obsidian,
+featuring lava ponds. I also want to add osbidian trees standing in the lava in the same shape as acacia trees."
+
+**What changed, in data.** A fifth theme, `disc_lava`, last in `disc_themes`, with a biome file of its own that inherits
+nothing (hot, no rain, a cave's spawns) and is tagged an overworld biome as the others are.
+
+- Made of: a top in patches of basalt, obsidian and smooth basalt (one `noise_provider`); a layer of obsidian under it,
+  which is every pond's bed; a body of basalt; an underside of smooth basalt and obsidian with some magma; a stem of
+  basalt with some obsidian and magma. Mounds up to 2 and columns of basalt up to 5.
+- `water` with `"fluid": "lava"`: ponds over 0.45 of the top, no streams, 1 deep.
+- `obsidian_tree.json`: vanilla's acacia (`forking_trunk_placer` 5, 2, 2 and `acacia_foliage_placer` radius 2) with
+  obsidian for its trunk and the block under it, and a crown of magma and glowstone (first all obsidian; see "The
+  crowns" below). Grown `"on": "lava"`, a place for every 30 blocks of lava.
+- Where: `weight` 1, `by_height` 3 at the bottom to 0.1 at the top. No limits by size or distance.
+- No ruins, nothing under it or on its rim, no wood of its own for roots.
+
+**What changed, in code.** Three things JSON could not do.
+
+- A disc's ponds were water and nothing else. `DiscWater` has `fluid` (`water` or `lava`), which the painter writes.
+- Nothing of vanilla's grows through lava: a tree places a log only in air or a block of `#replaceable_by_trees`, which
+  holds water and not lava (read in the decompiled `TreeFeature` and `TrunkPlacer` of 1.21.1). So a growth has a fifth
+  surface, `lava`: the open block over a pond of lava. A tree started there puts its `dirt_provider` block under its
+  trunk as any tree does, which is the lava's top block, and stands on the pond's bed. That is why the lava is 1 deep.
+- Lava has to keep away from water and from what burns (below): `DiscFalls` starts no fall on a disc of lava and lands
+  none there, nor a spring, and `DiscLava` leaves lava out near other discs and roots, by `water.clear`.
+
+**Fire, which the first build did not think of.** The game's lava lights what burns from its own height to three blocks
+over it and three out (`LavaFluid.randomTick`, under the `doFireTick` rule). Discs of one ring run into each other, and
+roots go where they like. In the first world a mangrove stood with its roots in a lava pond.
+
+So `clear` 6: lava is left out within 6 blocks of the platform of any other disc whose top is within 6 blocks of the
+lava's height, unless that disc holds lava too, and within 6 blocks of a root. And `bank` 6 where the other themes have
+3, for the trees of a lower disc that stand right outside the rim. Only the two things that place by the lava ask
+(`DiscBlocks.forEachWater` and the `lava` surface of `DiscGrowth`); ground and ruins still keep off the whole pond. The
+first try gave roots near a lava disc a wood that does not burn (blackstone, as `root_wood`); that was dropped, since
+where two discs are about as near a root is one wood or the other in patches, and the lava keeping off roots covers it.
+
+**Measured.** Outside the game, 16 holes of the mod's own settings (seed 11, a level from -40 to 160):
+
+| | |
+|---|---|
+| Lava discs | 121 of 1063, 11.4%; 5 to 11 in every hole |
+| Over 64 holes in a vanilla-height level (`DiscThemeTest`): share of all discs, of the lowest three tenths, of the highest | 9.5%, 13.8%, 4.3% |
+| Pond, as a share of a lava disc's top | 30% |
+| Lava after `clear`, as a share of the ponds; of the top | 58%; 17% |
+| Lava discs left with under 20 blocks of lava | 17 of 121 |
+| With `clear` 0 and `bank` 4: lava within 6 blocks of the ground of a disc about level with it; of a root | 35%; 12% |
+
+In the game, four holes at seed 11 on a dedicated server (centres -2597,1241; -2774,2476; -1721,1715; -1572,2594), each
+with a square 27 chunks on a side force-loaded and the saved world read back. NeoForge and Fabric gave the same lava, block for
+block (2637 on both), and no warning or error from the mod on either.
+
+| | The mod's file | The same with `clear` 0, NeoForge |
+|---|---|---|
+| Lava blocks on lava discs | 2637 | 4874 |
+| Discs with lava | 9 | 10 |
+| Obsidian trees standing in it | 32 | 67 |
+| Blocks lava can set alight within its reach | 52 (51 on Fabric) | 2337 |
+| of which the hole's wooden roots | none | about 1800 |
+| Water in a block beside lava | none | none |
+| Lava not still, at pond level | none | none |
+
+- What is left of the 52: 28 are the props and planks of a vanilla mineshaft that crosses one disc's dome. The rest are
+  10 jungle leaves, 3 mangrove leaves and 11 vines, on four discs. They were not looked into one by one; by the rule's
+  terms they belong to a disc more than 6 blocks higher or lower than the lava, or hang from one above.
+  What lava can set alight is the game's own list (`ignitedByLava`, 274 blocks), not a guess at it.
+- Of the open ground in the lava biome: obsidian 36%, basalt 36%, smooth basalt 15%, lava 12%. (Counted again with the
+  crowns left out. The first count took the tops of the crowns, then obsidian, for ground and gave obsidian 38%.)
+- About one place in three grows a tree (32 for 2637 blocks of lava at one place in 30): a tree wants a column 5 by 5 of
+  open air over its foot, and a mound or another crown is often in it.
+- The only lava on a lava disc that is not still (45 blocks, in both columns of the table) is one of vanilla's own flows:
+  from a source by the surface, 18 blocks down through a tree's crown on to the disc's ground, where it spreads. Vanilla
+  puts lava in and round a hole as it does anywhere: 142,000 blocks of it in these chunks.
+
+**Faults the runs found.**
+
+- Fire, above. It cost a build and nearly half the lava.
+- At 0.35 of the top the ponds were small and a large disc had 5% lava; at 0.45 with the first pond size the lava of one
+  disc was a single lake. 0.45 with ponds 14 apart is what is shipped: ponds that join in places.
+- The top's patches were first as large as the jungle's (`firstOctave` -5) and a small disc came out all obsidian. -4.
+- A test of falls, unrelated: `aFallComesDownInAPoolOnADiscsTopOrOnTheFloor` held that a fall lands at the height of the
+  disc under its own column. A lip lets water down every open column beside it, and where two of those lie either side
+  of a step of the bowl below, the fall is reckoned to the lower. A fifth theme re-drew the themes and brought such a
+  fall up. The test now allows the step; the code is as it was.
+
+**Tests.** 246 unit tests pass (`:common:test`), 3 of them new and 4 extended for this: the fluid and `clear` in the
+codec; lava reported in the same columns as water; places over lava in the open block above, and none for a growth that
+wants the other fluid; no falls, pools or springs on a hole of lava discs where the same hole of water discs has over a
+hundred; the mod's own lava clear of every other disc's ground and every root, with a tree only where lava was written.
+The game's loader takes all 37 feature files. `DevPacksTest` takes all 30 packs.
+
+Not verified: how any of it looks in game, which only pictures drawn from the saved blocks stand in for. Fire itself:
+the game lights nothing without a player within 128 blocks, so no fire was watched; what was counted is what lava could
+reach. The client. The owner's pack.
+
+Mine and unjudged: every number; that lava discs gather low; magma in the underside and stem; no ruins and no spawns
+of its own; and above all the trade of lava for safety from fire. `many-lava` and `loose-lava` are the packs for
+judging it, and a pack with `doFireTick` off can have `clear` 0.
+
+**The crowns, later the same day.** The owner, after the above: "lets make the leaves of the obsidian trees out of magma
+and glowstone". Data only: the tree's `foliage_provider` is a `weighted_state_provider`, magma 3 to glowstone 1, the
+way vanilla mixes the two leaves of its azalea tree. Trunk and foot stay obsidian. The 3 to 1 is mine. Neither block
+burns, so nothing of the fire rule moves; magma does burn whoever walks on a crown.
+
+The four holes at seed 11 again, on dedicated servers, NeoForge twice and Fabric once. No warning or error from the mod.
+
+| | NeoForge | NeoForge again | Fabric | With obsidian crowns |
+|---|---|---|---|---|
+| Crown blocks | 2933 | 3094 | 2942 | not counted |
+| of them glowstone | 762, 26% | 807, 26% | 768, 26% | none |
+| Separate crowns | 40 | 39 | 41 | not counted |
+| Trees, by the count used above | 30 | 32 | 29 | 32 |
+| Lava blocks on lava discs | 2610 | 2609 | 2610 | 2637 |
+| Blocks lava can set alight within its reach | 53 | 52 | 52 | 52, 51 |
+| Water in a block beside lava | none | none | none | none |
+| Lava on a lava disc that is not still | 17 | 17 | 17 | 45 |
+
+- The trees are other trees than before. A crown block now takes a draw, and all of one chunk's own growth takes its
+  draws from one run of them (`DiscGrower.growThemesOwn`), so what grows after a crown in that chunk comes out
+  another height, and a place or two grows a tree that did not, or the other way round. The ponds are where they
+  were: the lava differs by the trees' feet and by where vanilla's one flow lands. It met a crown before and spread
+  on the ground; in the first run here, the only one whose 17 were looked at one by one, it falls straight on to a
+  pond and runs three blocks over it, a block above the pond's own lava, which is all still.
+- **The same seed no longer gives the same obsidian trees.** A crown block is drawn only where the block is free, so
+  a cave vine from the dome or a neighbour's crown in the way shifts every draw after it, and which was there first
+  depends on the order the chunks generated in. Between the two NeoForge runs the trees of two discs differ (905
+  blocks in 9 chunks), between NeoForge and Fabric those of one (584 blocks in 5). With obsidian crowns the two
+  loaders had the same lava block for block; that is gone. A `noise_provider` for the crown would keep it (it picks by
+  place and takes no draw) at the cost of a mix set by an order of states and found by measuring. Not done, because:
+- **Nothing that grows here is the same twice, crowns or no.** The two NeoForge runs of the one seed differ in the kind
+  of block in 2625 of 3893 chunks, 1.64 million blocks, 1.14 million of them more than two chunks from any lava disc;
+  NeoForge against Fabric is the same again (1.60 million). It is all what features place: vines, cave vines, moss
+  and clay, leaves and logs (vanilla's dark oaks and birches on the surface among them), dripstone, sculk, ore and
+  the granite, diorite and andesite blobs. The rock, the discs and the ponds agree: solid ground against air is 894
+  blocks of it (cave air 523, dirt 293, the obsidian of trunks 50, the wood of roots 17; not traced), and the ponds'
+  lava is within a block. A feature that crosses into the
+  next chunk finds what that chunk's features left or did not, by which generated first, and a feature whose draws
+  depend on what it finds then shifts the rest of its chunk. The earlier runs showed it too and it was not followed
+  up: the same lava on both loaders, but 52 and 51 leaves and vines within its reach. The build before this change
+  was not run twice on one loader, so that it was as large then is reasoned, not measured. Not looked into further:
+  whether vanilla alone, with no hole, differs as much; and whether drawing each place of `growThemesOwn` from its
+  own seed would be worth re-rolling every disc's trees for.
+
+246 unit tests pass and both loaders' jars build with the new file; the game's loader takes it
+(`DiscFeatureFilesTest`). Not verified: the look in game, the client, the owner's pack.
+
+**Rarer, kept low, and without its trees (2026-10-11).** The owner: "lets remove the lava disc's trees for now and make
+lava discs more rare, as well as restrict them to the lower levels of the chasm". Data only.
+
+- The theme's `growth` is gone, in the mod's file and in the 22 packs that carry the theme. `obsidian_tree.json` and the
+  `lava` surface of a growth stay, so putting the trees back is one entry (`docs/TUNING.md` has it).
+- `weight` 1.5 and `only.height.max` 0.3, where it had `weight` 1 and `by_height` 3 to 0.1. A limit rules a height out,
+  which a ramp cannot. With the top ruled out the ramp had little left to do, so it went: `weight` now says how many and
+  the limit how high. Height runs from a hole's lowest disc to its highest.
+- `many-lava` and `loose-lava` keep their `weight` 12 and take the limit: about two fifths of the low discs.
+
+Measured outside the game on the ground of vanilla terrain: every hole within ten cells of the origin at seeds 11, 162
+and 20261003, which is 58 holes of 1779 discs, their tops from y=85 to y=158.
+
+| | Before | Now |
+|---|---|---|
+| Lava discs | 198, 11.1% | 52, 2.9% |
+| To a hole; the most in one | 3.4; 7 | 0.9; 3 |
+| Holes with none | 2 of 58 | 24 of 58 |
+| Discs low enough to be one; of those, lava | all; 11.1% | 714, 40%; 7.3% |
+| Lava discs with under 20 blocks of lava; of those with none | 26; 15 | 4; 3 |
+| Blocks of lava to a lava disc | 718 | 792 |
+
+- The low three tenths hold two fifths of the discs, because a hole is widest at the bottom. Which rows that is was read
+  from where discs lie along the height in holes of fixed depth: in a hole of three or four rows, as three of the four
+  at seed 11 are, the bottom row and what stands on it, and a little of the second row, whose main body begins just
+  over 0.3; in a hole of six rows the bottom two.
+- Other weights at the same limit: 2 gives 69 lava discs, 1.2 to a hole, none in 20 holes; 3 gives 100, 1.7, none in 11.
+  A limit of 0.4 at weight 2 gives 100, none in 14.
+- Being low costs a lava disc no lava by the mod's own rules: 3 of 52 are left with none, where 15 of 198 were.
+
+In the game: the four holes at seed 11 on dedicated servers, NeoForge and Fabric, as before. No warning or error from
+the mod on either, and the two agree block for block in where the lava biome lies and in the lava.
+
+| | NeoForge | Fabric |
+|---|---|---|
+| Lava discs, hole by hole | 1, 0, 1, 2 | the same |
+| Highest block of the lava biome, against the highest of any disc's | y=27 of 95; none; y=19 of 71; y=39 of 119 | the same |
+| Still lava in the lava biome | 807 | 807 |
+| Glowstone anywhere in the four squares | none | none |
+
+- The four are the discs the holes rebuilt outside the game have, at the same places: of radius 17, 52, 37 and 20, at
+  0.18, 0.08, 0.23 and 0.13 of their hole's height. Before, these four holes had 9 discs with lava.
+- Two of the four have no lava. The one of radius 17 has no pond: there is no room for one inside a `bank` of 6. The one
+  of radius 37 has 1257 columns of pond and `clear` leaves none of them. Over the 58 holes that is 3 lava discs of 52, so
+  this is four holes' luck; but it is what the owner would find at seed 11.
+- **The level's own water gets at the lava.** The mod wrote 966 columns of lava and the saved worlds hold 807. Of the
+  rest, 143 are on the disc of radius 20, which has 163 left of 309: a pocket of water in the rock over its dome, cut
+  open by the dome, falls on to its top and runs across it, and lava that water touches turns to obsidian. The earlier
+  count of "water in a block beside lava: none" could not see this, since by the time a world is saved the lava is
+  already obsidian. One disc of four; how often it happens was not measured, and whether a low disc gets more of it than
+  a high one is not known. (The other 16 columns, on the large disc, are obsidian, basalt and gravel with no water near;
+  not looked into.)
+
+246 unit tests pass and both loaders' jars build. `DiscThemeTest` now holds that every lava disc is inside its limit,
+that the limit is no higher than 0.4, that lava is under one disc in twenty and that the theme grows nothing.
+`DiscLavaTest` gives the mod's lava disc its trees back for the test, so that a growth over lava is still held to where
+the lava lies.
+
+Not verified: the look in game, the client, the owner's pack. Fire, as before.
+
+Mine and unjudged: 1.5 and 0.3; that the ramp went; that the two lava packs took the limit. At these numbers two holes
+in five have no lava disc, which may be rarer than was meant; `weight` 3 keeps the limit and halves that.
+
+**A weight of 2, and magma cubes (later on 2026-10-11).** The owner, after the above: "lets set weight to around 2, and
+then add magma cubes to the spawn list". Data only.
+
+- `weight` 2, in the mod's file and the 20 packs that have the mod's own lava theme. The two lava packs keep 12.
+- `disc_lava.json`: `minecraft:magma_cube` among `spawners.monster`, `weight` 100 and 2 to 5 at a time. Those are the
+  numbers vanilla's `basalt_deltas` has for it (read from the 1.21.1 jar); taking them is my choice. The cave's monsters
+  listed with it come to 515.
+- What the entry does, read in the decompiled game and not watched: a magma cube spawns in any light, on any difficulty
+  but peaceful (`MagmaCube.checkMagmaCubeSpawnRules`). The rest of the list spawns by `Monster.checkMonsterSpawnRules`,
+  which in the overworld wants no block light at all (`monster_spawn_block_light_limit` 0). Lava lights the ground round
+  it, so near a lava disc's ponds the cubes are what spawns, and torches do not keep them off; out of the lava's light,
+  and on a lava disc that came out without lava, the cave's monsters spawn too.
+
+On the same 58 holes of vanilla terrain:
+
+| | `weight` 1.5 | `weight` 2 |
+|---|---|---|
+| Lava discs | 52, 2.9% | 69, 3.9% |
+| To a hole; the most in one | 0.9; 3 | 1.2; 3 |
+| Holes with none | 24 of 58 | 20 of 58 |
+| Lava discs with under 20 blocks of lava; of those with none | 4; 3 | 7; 5 |
+
+In the game, the four holes at seed 11 again, NeoForge and Fabric: 1, 0, 1 and 3 lava discs, 1283 blocks of still lava
+on both, the lava biome and the lava the same block for block on the two, no glowstone, and no warning or error from
+the mod. The one disc more than at 1.5 is at the bottom of the deepest hole, radius 21, and has all 476 columns of lava
+the mod wrote for it. The other four are as they were: two without lava, and the one the level's water falls on.
+
+246 unit tests pass and both loaders' jars build. `DiscThemeTest` reads the lava biome's spawns with the game's own
+codec and holds that magma cubes are among its monsters.
+
+Not verified: a magma cube spawning. A server with no player spawns nothing, so that the entry loads and what the
+game's rules say of it is all there is. The client; the owner's pack, where another mod may change a biome's spawns.
+
+Mine and unjudged: the cube's `weight` and group size.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
