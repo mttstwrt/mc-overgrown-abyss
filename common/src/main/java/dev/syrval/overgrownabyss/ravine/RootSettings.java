@@ -2,7 +2,11 @@ package dev.syrval.overgrownabyss.ravine;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.List;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.InclusiveRange;
+import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 
 /**
  * The great roots of a cone: winding wooden roots that run down its wall from under the mouth to the floor, touch the rims
@@ -22,13 +26,18 @@ import net.minecraft.util.InclusiveRange;
  * @param wood      what a root is made of where no disc near it says otherwise (see {@link DiscTheme#rootWood()})
  * @param woodReach blocks from a disc within which a root takes that disc's wood
  * @param woodBlend blocks over which one disc's wood gives way to another's where a root is between the two
+ * @param growth    what hangs under the roots, in the order listed
  */
 public record RootSettings(
         Great great, Crossing crossing, Branches branches, Links links, float floorRun, float winding, float minRadius,
-        RootWood wood, float woodReach, float woodBlend) {
+        RootWood wood, float woodReach, float woodBlend, List<Growth> growth) {
 
     // Blocks are sampled at whole coordinates, so a root much thinner than this has gaps along it.
     private static final float THINNEST = 1;
+
+    public RootSettings {
+        growth = List.copyOf(growth);
+    }
 
     /**
      * @param count       how many a hole has
@@ -89,6 +98,22 @@ public record RootSettings(
         ).apply(i, Links::new));
     }
 
+    /**
+     * A feature grown under roots: on average one for every {@code every} blocks of their underside, which is the lowest
+     * part of a root's round and not its flanks. It is placed in the open block under the root, so it must be one that hangs
+     * from there. Nothing grows under a root that lies on the ground, on a platform or in the wall.
+     *
+     * @param minRadius the thinnest root it grows under. A light under a root shines round it onto its top, where a
+     *                  player walks and a monster may stand, unless the root is thick enough to be in the way
+     */
+    public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, float minRadius) {
+        static final Codec<Growth> CODEC = RecordCodecBuilder.create(i -> i.group(
+                ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(Growth::feature),
+                Codec.intRange(1, 100_000).fieldOf("every").forGetter(Growth::every),
+                Codec.floatRange(0, 16).optionalFieldOf("min_radius", 0F).forGetter(Growth::minRadius)
+        ).apply(i, Growth::new));
+    }
+
     public static final Codec<RootSettings> CODEC = RecordCodecBuilder.create(i -> i.group(
             Great.CODEC.fieldOf("great").forGetter(RootSettings::great),
             Crossing.CODEC.fieldOf("crossing").forGetter(RootSettings::crossing),
@@ -99,6 +124,7 @@ public record RootSettings(
             Codec.floatRange(THINNEST, 8).fieldOf("min_radius").forGetter(RootSettings::minRadius),
             RootWood.CODEC.fieldOf("wood").forGetter(RootSettings::wood),
             Codec.floatRange(4, 256).fieldOf("wood_reach").forGetter(RootSettings::woodReach),
-            Codec.floatRange(1, 128).fieldOf("wood_blend").forGetter(RootSettings::woodBlend)
+            Codec.floatRange(1, 128).fieldOf("wood_blend").forGetter(RootSettings::woodBlend),
+            Growth.CODEC.listOf().optionalFieldOf("growth", List.of()).forGetter(RootSettings::growth)
     ).apply(i, RootSettings::new));
 }

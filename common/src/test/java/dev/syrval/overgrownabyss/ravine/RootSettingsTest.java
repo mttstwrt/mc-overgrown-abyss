@@ -62,6 +62,29 @@ class RootSettingsTest {
     }
 
     @Test
+    void whatHangsUnderRootsIsReadWithItsRateAndTheThinnestRootItGrowsUnder() {
+        JsonObject json = json();
+        json.add("growth", JsonParser.parseString("""
+                [{"feature": "overgrown_abyss:disc/glow_lichen_high", "every": 12},
+                 {"feature": "overgrown_abyss:disc/glow_berries_over_drop", "every": 40, "min_radius": 2.5}]
+                """));
+        RootSettings roots = RootSettings.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+        assertEquals(2, roots.growth().size());
+        assertEquals(12, roots.growth().get(0).every());
+        assertEquals(0F, roots.growth().get(0).minRadius(), "under any root where none is given");
+        assertEquals(2.5F, roots.growth().get(1).minRadius());
+        assertEquals("overgrown_abyss:disc/glow_berries_over_drop", roots.growth().get(1).feature().location().toString());
+        var written = RootSettings.CODEC.encodeStart(JsonOps.INSTANCE, roots).getOrThrow();
+        assertEquals(roots.growth(), RootSettings.CODEC.parse(JsonOps.INSTANCE, written).getOrThrow().growth());
+        assertTrue(RootSettings.CODEC.parse(JsonOps.INSTANCE, json()).getOrThrow().growth().isEmpty(), "and nothing where the list is left out");
+        JsonObject never = json();
+        never.add("growth", JsonParser.parseString("""
+                [{"feature": "overgrown_abyss:disc/glow_lichen_high", "every": 0}]
+                """));
+        assertTrue(RootSettings.CODEC.parse(JsonOps.INSTANCE, never).isError(), "one for every none is no rate");
+    }
+
+    @Test
     void branchesComeEvenlyWhereNoRampIsGiven() {
         JsonObject json = json();
         json.getAsJsonObject("branches").remove("by_height");

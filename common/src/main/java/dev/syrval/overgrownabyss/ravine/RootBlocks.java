@@ -12,12 +12,18 @@ import java.util.Optional;
  * <p>A stretch of root takes the wood of the disc nearest to it whose theme names one (see {@link DiscTheme#rootWood()}), or
  * the settings' own wood where none is within reach. Where two different woods are about as near, it is one or the other in
  * patches along the root, more of the nearer the nearer it is.
+ *
+ * <p>Also the places under those blocks where the roots grow something (see {@link RootSettings.Growth}).
  */
 final class RootBlocks {
     private static final int CHUNK_SIZE = 16;
     private static final int WOOD_HASH_BASE = 1_200_000;
+    private static final int GROWTH_HASH_BASE = 1_400_000;
     // Blocks along a root from one patch of a wood to the next, about, where two woods share it.
     private static final double PATCH = 10;
+    // A root's underside is where a block lies at least this share of the root's radius under the line down its middle: the
+    // lowest part of its round. From its flanks a light would shine onto its top.
+    private static final double UNDER = 0.7;
 
     private RootBlocks() {}
 
@@ -28,8 +34,63 @@ final class RootBlocks {
     static void forEach(RavineSettings settings, RavineCell cell, CellDiscs cellDiscs, int minX, int minZ, int minY, int maxY, DiscBlockSink sink) {
         RootLayout layout = cellDiscs.roots();
         List<RootLayout.Stretch> stretches = layout.near(minX, minZ);
-        if (stretches.isEmpty() || settings.roots().isEmpty()) {
+        Optional<Slab> slab = slabOf(settings, layout, stretches, minX, minZ, minY, maxY);
+        if (slab.isEmpty()) {
             return;
+        }
+        // The wood of a stretch is the same for every block of it, so it is worked out once, and only for stretches that
+        // turn out to hold a block of this chunk.
+        RootWood[] woods = new RootWood[stretches.size()];
+        slab.get().forEach((x, y, z, inside, stretch) -> {
+            if (woods[stretch] == null) {
+                woods[stretch] = woodOf(settings, cell, cellDiscs, layout, stretches.get(stretch));
+            }
+            sink.accept(x, y, z, woods[stretch].blockAt(inside));
+        });
+    }
+
+    /**
+     * The places under the roots of the chunk whose lowest corner is {@code (minX, minZ)} where something is grown (see
+     * {@link RootSettings.Growth}), each with what is grown there. A place is the block under a root block that has no root
+     * under it and lies on its root's underside, drawn for from the cell's hash and the block's own coordinates, so the
+     * places are the same whatever order chunks generate in. Whether a place is open is for the caller to ask of the world:
+     * a root runs into the wall, a platform and the floor alike.
+     */
+    static void forEachGrowth(RavineSettings settings, RavineCell cell, CellDiscs cellDiscs, int minX, int minZ, int minY, int maxY, DiscGrowthSink sink) {
+        if (settings.roots().isEmpty() || settings.roots().get().growth().isEmpty()) {
+            return;
+        }
+        RootLayout layout = cellDiscs.roots();
+        List<RootLayout.Stretch> stretches = layout.near(minX, minZ);
+        Optional<Slab> slab = slabOf(settings, layout, stretches, minX, minZ, minY, maxY);
+        if (slab.isEmpty()) {
+            return;
+        }
+        List<RootSettings.Growth> growth = settings.roots().get().growth();
+        // One growth at a time, in the order listed, as on a disc: what is listed later finds what was listed earlier there.
+        for (int g = 0; g < growth.size(); g++) {
+            RootSettings.Growth each = growth.get(g);
+            int index = GROWTH_HASH_BASE + g;
+            slab.get().forEachLowest((x, y, z, inside, stretch) -> {
+                List<Root.Knot> knots = layout.roots().get(stretches.get(stretch).root()).knots();
+                Root.Knot from = knots.get(stretches.get(stretch).knot());
+                Root.Knot to = knots.get(stretches.get(stretch).knot() + 1);
+                double along = alongOf(from, to, x, y, z);
+                double radius = from.radius() + along * (to.radius() - from.radius());
+                double under = from.y() + along * (to.y() - from.y()) - y;
+                if (y > minY && radius >= each.minRadius() && under >= UNDER * radius
+                        && RavineCells.unitAt(cell.hash(), index, x, y, z) * each.every() < 1) {
+                    sink.accept(x, y - 1, z, each.feature(), DiscTheme.Surface.UNDERSIDE);
+                }
+            });
+        }
+    }
+
+    // The part of the chunk its roots reach, with every block of them taken; empty where no root comes near.
+    private static Optional<Slab> slabOf(
+            RavineSettings settings, RootLayout layout, List<RootLayout.Stretch> stretches, int minX, int minZ, int minY, int maxY) {
+        if (stretches.isEmpty() || settings.roots().isEmpty()) {
+            return Optional.empty();
         }
         double lowest = Double.POSITIVE_INFINITY;
         double highest = Double.NEGATIVE_INFINITY;
@@ -42,21 +103,22 @@ final class RootBlocks {
         int bottom = Math.max(minY, (int) Math.ceil(lowest));
         int top = Math.min(maxY - 1, (int) Math.floor(highest));
         if (top < bottom) {
-            return;
+            return Optional.empty();
         }
         var slab = new Slab(minX, minZ, bottom, top);
         for (int i = 0; i < stretches.size(); i++) {
             slab.take(endsOf(layout, stretches.get(i)), i);
         }
-        // The wood of a stretch is the same for every block of it, so it is worked out once, and only for stretches that
-        // turn out to hold a block of this chunk.
-        RootWood[] woods = new RootWood[stretches.size()];
-        slab.forEach((x, y, z, inside, stretch) -> {
-            if (woods[stretch] == null) {
-                woods[stretch] = woodOf(settings, cell, cellDiscs, layout, stretches.get(stretch));
-            }
-            sink.accept(x, y, z, woods[stretch].blockAt(inside));
-        });
+        return Optional.of(slab);
+    }
+
+    // How far along the line from one knot to the next the point of it nearest to a block is: 0 at the first, 1 at the second.
+    private static double alongOf(Root.Knot from, Root.Knot to, int x, int y, int z) {
+        double alongX = to.x() - from.x();
+        double alongY = to.y() - from.y();
+        double alongZ = to.z() - from.z();
+        double length = alongX * alongX + alongY * alongY + alongZ * alongZ;
+        return length < 1e-12 ? 0 : Math.clamp(((x - from.x()) * alongX + (y - from.y()) * alongY + (z - from.z()) * alongZ) / length, 0, 1);
     }
 
     private static List<Root.Knot> endsOf(RootLayout layout, RootLayout.Stretch stretch) {
@@ -175,6 +237,16 @@ final class RootBlocks {
             for (int at = 0; at < inside.length; at++) {
                 if (inside[at] >= 0) {
                     sink.accept(minX + at % CHUNK_SIZE, bottom + at / (CHUNK_SIZE * CHUNK_SIZE), minZ + at / CHUNK_SIZE % CHUNK_SIZE, inside[at], stretch[at]);
+                }
+            }
+        }
+
+        // The same, of the blocks with no root under them.
+        void forEachLowest(SlabSink sink) {
+            int level = CHUNK_SIZE * CHUNK_SIZE;
+            for (int at = 0; at < inside.length; at++) {
+                if (inside[at] >= 0 && (at < level || inside[at - level] < 0)) {
+                    sink.accept(minX + at % CHUNK_SIZE, bottom + at / level, minZ + at / CHUNK_SIZE % CHUNK_SIZE, inside[at], stretch[at]);
                 }
             }
         }

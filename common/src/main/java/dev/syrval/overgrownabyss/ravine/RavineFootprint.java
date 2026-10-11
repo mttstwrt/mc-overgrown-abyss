@@ -49,6 +49,9 @@ public interface RavineFootprint {
         public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {}
 
         @Override
+        public void forEachRootGrowth(int minX, int minZ, int minY, int maxY, DiscGrowthSink sink) {}
+
+        @Override
         public void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink) {}
 
         @Override
@@ -98,6 +101,12 @@ public interface RavineFootprint {
 
     /** Calls {@code sink} with every place where a disc's theme grows something in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachGrowth(int minX, int minZ, DiscGrowthSink sink);
+
+    /**
+     * Calls {@code sink} with every place under a root where a hole's roots grow something in the chunk whose lowest corner is
+     * {@code (minX, minZ)}, between {@code minY} and {@code maxY} (exclusive).
+     */
+    void forEachRootGrowth(int minX, int minZ, int minY, int maxY, DiscGrowthSink sink);
 
     /**
      * Calls {@code sink} with every disc whose theme inherits a biome's features and whose space reaches into the chunk whose
@@ -203,6 +212,13 @@ public interface RavineFootprint {
             public void forEachGrowth(int minX, int minZ, DiscGrowthSink sink) {
                 for (Region region : copy) {
                     region.carve().forEachGrowth(minX, minZ, sink);
+                }
+            }
+
+            @Override
+            public void forEachRootGrowth(int minX, int minZ, int minY, int maxY, DiscGrowthSink sink) {
+                for (Region region : copy) {
+                    region.carve().forEachRootGrowth(minX, minZ, minY, maxY, sink);
                 }
             }
 

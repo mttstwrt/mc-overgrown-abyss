@@ -23,7 +23,7 @@ class RootLayoutTest {
             new RootSettings.Crossing(new InclusiveRange<>(1, 2), 3.5F),
             new RootSettings.Branches(150, new DiscTheme.Ramp(3, 0.5F), 0.65F, 2, 60),
             new RootSettings.Links(0.5F, 2, 0.6F),
-            60, 0.6F, 1.5F, WOOD, 48, 16);
+            60, 0.6F, 1.5F, WOOD, 48, 16, List.of());
     /** The cone the mod ships, with roots, in a level of vanilla's height and in a taller one. */
     static final RavineSettings SETTINGS = rooted(ConeShapeTest.LOW_SETTINGS, ROOTS);
     static final RavineBounds VANILLA = new RavineBounds(-40, 100);

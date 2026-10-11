@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.compat;
 
 import dev.syrval.overgrownabyss.OvergrownAbyss;
+import dev.syrval.overgrownabyss.ravine.DiscGrowthSink;
 import dev.syrval.overgrownabyss.ravine.DiscPlot;
 import dev.syrval.overgrownabyss.ravine.DiscSpringSink;
 import dev.syrval.overgrownabyss.ravine.DiscTheme;
@@ -33,7 +34,8 @@ import net.minecraft.world.level.levelgen.placement.PlacementModifier;
 /**
  * Grows things on the discs of one chunk: what each disc's theme asks for itself, and then the features of the biome the
  * theme inherits from (see {@code DiscTheme}). A disc's biome is not one the level's biome source can produce, so vanilla
- * never runs a feature list for it; this does, in vanilla's own way but with each disc as the ground.
+ * never runs a feature list for it; this does, in vanilla's own way but with each disc as the ground. What hangs under a
+ * hole's roots (see {@code RootSettings.Growth}) is grown here too, after the discs.
  */
 public final class DiscGrower {
     // Keeps these draws apart from vanilla's own decoration draws for the same chunk.
@@ -51,10 +53,13 @@ public final class DiscGrower {
         ChunkPos chunkPos = chunk.getPos();
         var draws = new WorldgenRandom(new XoroshiroRandomSource(level.getSeed() ^ SALT));
         long decorationSeed = draws.setDecorationSeed(level.getSeed() ^ SALT, chunkPos.getMinBlockX(), chunkPos.getMinBlockZ());
+        DiscGrowthSink place = placing(level, generator, draws);
         // A theme's own growth is its trees, and vanilla too grows a biome's trees before its grass: grass that came first
         // would hold the very blocks the trees start in. What is inherited then fills in around them.
-        growThemesOwn(level, generator, footprint, chunkPos, draws);
+        footprint.forEachGrowth(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), place);
         growInherited(level, generator, footprint, chunkPos, draws, decorationSeed);
+        // Last of what grows, so that what hangs under a root finds a disc's trees already standing in its way.
+        footprint.forEachRootGrowth(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), level.getMinBuildHeight(), level.getMaxBuildHeight(), place);
         openSprings(level, generator, footprint, chunkPos, draws);
     }
 
@@ -141,19 +146,21 @@ public final class DiscGrower {
         places.filter(pos -> plot.owns(pos.getX(), pos.getY(), pos.getZ())).forEach(pos -> feature.place(level, generator, draws, pos));
     }
 
-    private static void growThemesOwn(WorldGenLevel level, ChunkGenerator generator, RavineFootprint footprint, ChunkPos chunkPos, WorldgenRandom draws) {
+    // Places a feature where a disc's theme or a hole's roots grow one, if the place is still what it was reckoned to be.
+    private static DiscGrowthSink placing(WorldGenLevel level, ChunkGenerator generator, WorldgenRandom draws) {
         Registry<ConfiguredFeature<?, ?>> features = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE);
-        footprint.forEachGrowth(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, y, z, feature, on) -> {
+        return (x, y, z, feature, on) -> {
             BlockPos pos = new BlockPos(x, y, z);
             if (level.isOutsideBuildHeight(pos) || !isOnItsSurface(level, pos, on)) {
                 return;
             }
             features.getHolder(feature).ifPresent(found -> found.value().place(level, generator, draws, pos));
-        });
+        };
     }
 
     // The place must be open and still be on the disc's own surface: another disc's platform or stem may have taken it, the
     // water of a pond is left out where something stands on the platform, and a rim inside the hole's wall has no open side.
+    // Under a root it is the same question as under a disc: a root runs into the wall, a platform and the floor alike.
     private static boolean isOnItsSurface(WorldGenLevel level, BlockPos pos, DiscTheme.Surface on) {
         return switch (on) {
             case TOP -> level.isEmptyBlock(pos) && isSturdy(level, pos.below(), Direction.UP);

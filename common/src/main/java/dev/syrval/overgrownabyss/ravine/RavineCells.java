@@ -93,6 +93,11 @@ public final class RavineCells {
         return unit(mix(mix(hash + x * 0xC2B2AE3D27D4EB4FL) + z * 0x165667B19E3779F9L), index);
     }
 
+    /** The {@code index}-th uniform value in {@code [0, 1)} drawn from a cell hash for one block. */
+    static double unitAt(long hash, int index, int x, int y, int z) {
+        return unit(mix(mix(mix(hash + x * 0xC2B2AE3D27D4EB4FL) + z * 0x165667B19E3779F9L) + y * 0x9E3779B97F4A7C15L), index);
+    }
+
     /**
      * The {@code index}-th smooth value in {@code [0, 1)} drawn from a cell hash: {@link #unitAt} at whole coordinates, blended
      * in between. Given block coordinates divided by a size, it changes little from one block to the next and is something

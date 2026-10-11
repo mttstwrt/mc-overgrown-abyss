@@ -7,10 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mojang.serialization.JsonOps;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +32,7 @@ class RootBlocksTest {
     static final RootWood MANGROVE = new RootWood(BlockStateProvider.simple(Blocks.MANGROVE_WOOD), Optional.empty());
     static final RootSettings ROOTS = new RootSettings(
             RootLayoutTest.ROOTS.great(), RootLayoutTest.ROOTS.crossing(), RootLayoutTest.ROOTS.branches(), RootLayoutTest.ROOTS.links(),
-            60, 0.6F, 1.5F, OWN, 48, 16);
+            60, 0.6F, 1.5F, OWN, 48, 16, List.of());
     static final RavineSettings SETTINGS = RootLayoutTest.rooted(ConeShapeTest.LOW_SETTINGS, ROOTS);
     static final RavineBounds BOUNDS = RootLayoutTest.VANILLA;
 
@@ -237,6 +242,94 @@ class RootBlocksTest {
         assertTrue(own > 0, "and the settings' own wood where no disc is near, such as on the floor: " + own);
     }
 
+    private static final ResourceKey<ConfiguredFeature<?, ?>> LICHEN = feature("disc/glow_lichen_high");
+    private static final ResourceKey<ConfiguredFeature<?, ?>> VINE = feature("disc/glow_berries_over_drop");
+
+    private static ResourceKey<ConfiguredFeature<?, ?>> feature(String path) {
+        return ResourceKey.create(Registries.CONFIGURED_FEATURE, ResourceLocation.fromNamespaceAndPath("overgrown_abyss", path));
+    }
+
+    // The same roots, with things hung under them.
+    private static RavineSettings growing(RootSettings.Growth... growth) {
+        return RootLayoutTest.rooted(ConeShapeTest.LOW_SETTINGS, new RootSettings(
+                ROOTS.great(), ROOTS.crossing(), ROOTS.branches(), ROOTS.links(), ROOTS.floorRun(), ROOTS.winding(), ROOTS.minRadius(), ROOTS.wood(),
+                ROOTS.woodReach(), ROOTS.woodBlend(), List.of(growth)));
+    }
+
+    private record Place(Block at, ResourceKey<ConfiguredFeature<?, ?>> feature) {}
+
+    /** Every place under the roots of a hole where something grows, chunk by chunk from one corner or from the other. */
+    private static List<Place> grown(RavineSettings settings, RavineCell cell, boolean backwards) {
+        CellDiscs discs = CellDiscs.of(settings, BOUNDS, cell);
+        double reach = settings.maxReach();
+        var chunks = new ArrayList<int[]>();
+        for (int chunkX = Math.floorDiv((int) Math.floor(cell.centreX() - reach), 16); chunkX <= Math.floorDiv((int) Math.floor(cell.centreX() + reach), 16); chunkX++) {
+            for (int chunkZ = Math.floorDiv((int) Math.floor(cell.centreZ() - reach), 16); chunkZ <= Math.floorDiv((int) Math.floor(cell.centreZ() + reach), 16); chunkZ++) {
+                chunks.add(new int[] {chunkX * 16, chunkZ * 16});
+            }
+        }
+        var places = new ArrayList<Place>();
+        for (int[] chunk : backwards ? chunks.reversed() : chunks) {
+            RootBlocks.forEachGrowth(settings, cell, discs, chunk[0], chunk[1], -128, 320, (x, y, z, feature, on) -> {
+                assertTrue(x >= chunk[0] && x < chunk[0] + 16 && z >= chunk[1] && z < chunk[1] + 16, "outside its chunk");
+                assertSame(DiscTheme.Surface.UNDERSIDE, on);
+                places.add(new Place(new Block(x, y, z), feature));
+            });
+        }
+        return places;
+    }
+
+    @Test
+    void whatHangsUnderARootStartsInTheBlockUnderItsLowestPart() {
+        RavineCell c = cell(2);
+        Map<Block, BlockStateProvider> roots = paintAll(c, CellDiscs.of(SETTINGS, BOUNDS, c));
+        List<Place> places = grown(growing(new RootSettings.Growth(LICHEN, 1, 0)), c, false);
+        assertTrue(places.size() > 200, places.size() + " places");
+        assertEquals(places.size(), new HashSet<>(places).size(), "a place given twice");
+        for (Place place : places) {
+            Block at = place.at();
+            assertTrue(roots.containsKey(new Block(at.x(), at.y() + 1, at.z())), "no root over " + at);
+            assertTrue(!roots.containsKey(at), "inside a root: " + at);
+            assertSame(LICHEN, place.feature());
+        }
+        // A root's flanks have blocks with no root under them too, and a light there would shine onto its top.
+        long lowest = roots.keySet().stream().filter(block -> !roots.containsKey(new Block(block.x(), block.y() - 1, block.z()))).count();
+        assertTrue(places.size() < lowest * 0.9 && places.size() > lowest * 0.25, places.size() + " places under " + lowest + " blocks with no root below");
+        assertTrue(grown(SETTINGS, c, false).isEmpty(), "and nothing where the roots grow nothing");
+    }
+
+    @Test
+    void oneGrowsForEverySoManyBlocksOfUndersideAndOnlyUnderRootsThickEnough() {
+        RavineCell c = cell(2);
+        var all = new HashSet<>(grown(growing(new RootSettings.Growth(LICHEN, 1, 0)), c, false));
+        List<Place> few = grown(growing(new RootSettings.Growth(LICHEN, 8, 0)), c, false);
+        assertTrue(all.containsAll(few), "a larger `every` takes some of the same places away and adds none");
+        assertEquals(all.size() / 8.0, few.size(), all.size() / 8.0 * 0.25, "one for every 8");
+        // A great root is 4.5 at the wall and 3.5 at the floor; its branches and the links are thinner.
+        List<Place> thick = grown(growing(new RootSettings.Growth(LICHEN, 1, 3.6F)), c, false);
+        assertTrue(!thick.isEmpty() && thick.size() < all.size() / 2 && all.containsAll(thick), thick.size() + " of " + all.size() + " under roots of 3.6 or more");
+        assertTrue(grown(growing(new RootSettings.Growth(LICHEN, 1, 16)), c, false).isEmpty(), "no root is that thick");
+    }
+
+    @Test
+    void thePlacesAreTheSameInAnyOrderOfChunksAndGrowthsComeInTheOrderListed() {
+        RavineCell c = cell(2);
+        RavineSettings two = growing(new RootSettings.Growth(LICHEN, 3, 0), new RootSettings.Growth(VINE, 5, 2.5F));
+        List<Place> forwards = grown(two, c, false);
+        List<Place> backwards = grown(two, c, true);
+        assertEquals(new HashSet<>(forwards), new HashSet<>(backwards));
+        assertEquals(forwards.size(), backwards.size());
+        assertTrue(forwards.stream().anyMatch(place -> place.feature() == VINE) && forwards.stream().anyMatch(place -> place.feature() == LICHEN));
+        // Each growth has draws of its own, so a block may be given to both; within a chunk the first listed comes first.
+        CellDiscs discs = CellDiscs.of(two, BOUNDS, c);
+        Root.Knot knot = discs.roots().roots().getFirst().knots().get(discs.roots().roots().getFirst().knots().size() / 2);
+        var inOne = new ArrayList<ResourceKey<ConfiguredFeature<?, ?>>>();
+        RootBlocks.forEachGrowth(two, c, discs, Math.floorDiv((int) Math.floor(knot.x()), 16) * 16, Math.floorDiv((int) Math.floor(knot.z()), 16) * 16, -128, 320,
+                (x, y, z, feature, on) -> inOne.add(feature));
+        assertTrue(inOne.contains(LICHEN), "the chunk has places");
+        assertTrue(inOne.lastIndexOf(LICHEN) < (inOne.contains(VINE) ? inOne.indexOf(VINE) : inOne.size()), "lichen before vines");
+    }
+
     @Test
     void aCarveHasRootBlocksOnlyOnceBoundAndOnlyWithRootsInItsSettings() {
         RavineCell c = cell(0);
@@ -246,6 +339,11 @@ class RootBlocksTest {
         assertEquals(0, count(carve(SETTINGS), minX, minZ), "an unbound carve has none");
         assertTrue(count(carve(SETTINGS).bind(7L, BOUNDS), minX, minZ) > 50, "a bound carve with roots has them");
         assertEquals(0, count(carve(ConeShapeTest.LOW_SETTINGS).bind(7L, BOUNDS), minX, minZ), "no roots in the settings");
+        int[] places = {0};
+        carve(growing(new RootSettings.Growth(LICHEN, 1, 0))).bind(7L, BOUNDS).forEachRootGrowth(minX, minZ, -128, 320, (x, y, z, feature, on) -> places[0]++);
+        assertTrue(places[0] > 0, "and a bound carve whose roots grow something has places for it");
+        carve(SETTINGS).bind(7L, BOUNDS).forEachRootGrowth(minX, minZ, -128, 320, (x, y, z, feature, on) -> places[0] = -1);
+        assertTrue(places[0] > 0, "which roots that grow nothing have none of");
     }
 
     private static RavineCarve carve(RavineSettings settings) {
