@@ -22,7 +22,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.GenerationStep;
@@ -169,10 +172,13 @@ class DiscThemeTest {
     void theModsOwnThemesGatherWhereTheirRampsAndLimitsSay() throws Exception {
         RavineSettings settings = shipped();
         DiscTheme crystal = settings.discThemes().stream().filter(t -> t.biome().orElseThrow().location().getPath().equals("disc_crystal")).findFirst().orElseThrow();
+        DiscTheme lava = settings.discThemes().stream().filter(DiscTheme::holdsLava).findFirst().orElseThrow();
         var all = new HashMap<String, Integer>();
         var central = new HashMap<String, Integer>();
         var outlying = new HashMap<String, Integer>();
         var wideAndLow = new HashMap<String, Integer>();
+        var low = new HashMap<String, Integer>();
+        var high = new HashMap<String, Integer>();
         int crystalBehindALargerDisc = 0;
         for (int cx = -4; cx < 4; cx++) {
             for (int cz = -4; cz < 4; cz++) {
@@ -194,6 +200,14 @@ class DiscThemeTest {
                     if (t.size() > 0.6 && t.height() < 0.4) {
                         wideAndLow.merge(name, 1, Integer::sum);
                     }
+                    if (t.height() < 0.3) {
+                        low.merge(name, 1, Integer::sum);
+                    } else if (t.height() > 0.7) {
+                        high.merge(name, 1, Integer::sum);
+                    }
+                    if (theme == lava) {
+                        assertTrue(lava.only().allow(t), "a lava disc outside its limits: " + t);
+                    }
                     if (theme == crystal) {
                         assertTrue(crystal.only().allow(t), "a crystal disc outside its limits: " + t);
                         Disc d = discs.get(i);
@@ -212,14 +226,17 @@ class DiscThemeTest {
                 }
             }
         }
-        String counts = "all " + all + ", central " + central + ", small and outlying " + outlying + ", wide and low " + wideAndLow;
+        String counts = "all " + all + ", central " + central + ", small and outlying " + outlying + ", wide and low " + wideAndLow
+                + ", low " + low + ", high " + high;
         int crystals = all.getOrDefault("disc_crystal", 0);
-        assertEquals(4, all.size(), "all four themes turn up: " + counts);
+        assertEquals(5, all.size(), "all five themes turn up: " + counts);
         assertTrue(share(central, "disc_jungle") > share(outlying, "disc_jungle") + 0.15, "jungle should gather in the middle: " + counts);
         assertEquals(0, central.getOrDefault("disc_crystal", 0), "no crystal in the middle: " + counts);
         assertTrue(share(all, "disc_crystal") > 0.04 && share(all, "disc_crystal") < 0.15, "crystal stays rare over all: " + counts);
         assertTrue(share(outlying, "disc_crystal") > 0.12, "and is found on the small outlying discs: " + counts);
         assertTrue(share(wideAndLow, "disc_mangrove") > share(all, "disc_mangrove") + 0.1, "mangrove takes the wide low discs: " + counts);
+        assertTrue(share(all, "disc_lava") > 0.01 && share(all, "disc_lava") < 0.05, "lava is a rare find over all: " + counts);
+        assertTrue(lava.only().height().max() <= 0.4, "and is kept to the lower levels of a hole: " + lava.only());
         assertTrue(crystalBehindALargerDisc > 0.75 * crystals, crystalBehindALargerDisc + " of " + crystals + " crystal discs stand behind a larger disc of another theme: " + counts);
     }
 
@@ -368,7 +385,7 @@ class DiscThemeTest {
         assertEquals(DiscTheme.Surface.WATER, parsed.growth().get(2).on());
         assertTrue(parsed.growth().get(0).patches().isEmpty(), "spread evenly unless given patches");
         assertEquals(Optional.of(new DiscTheme.Patches(32, 0.25F)), parsed.growth().get(2).patches());
-        assertEquals(Optional.of(new DiscWater(0.25F, 14, 2, 36, 1, 4)), parsed.water());
+        assertEquals(Optional.of(new DiscWater(0.25F, 14, 2, 36, 1, 4, DiscWater.Fluid.WATER, 0)), parsed.water());
         assertEquals(Optional.of(new DiscTheme.RimFade(10, 0.25F, 0.75F, 0.25F)), parsed.growth().get(3).rimFade());
         assertTrue(parsed.growth().get(0).rimFade().isEmpty(), "as thick at the rim as anywhere unless given a fade");
         assertEquals(DiscTheme.Surface.RIM, parsed.growth().get(4).on());
@@ -496,7 +513,7 @@ class DiscThemeTest {
     @Test
     void whatGrowsInWaterStartsOnTheBedOfAPondAndNowhereElse() throws Exception {
         RavineSettings base = shipped();
-        var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
+        var water = new DiscWater(0.4F, 12, 2, 40, 2, 3, DiscWater.Fluid.WATER, 0);
         var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER, Optional.empty(), Optional.empty());
         var stone = new DiscPalette(List.of(), List.of(), base.discThemes().get(0).palette().body(), DiscPalette.UNPAINTED.stem());
         var swamp = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(water), List.of(inWater), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
@@ -527,6 +544,48 @@ class DiscThemeTest {
         }
         assertTrue(wet > 100, wet + " columns of water");
         assertTrue(places[0] > 0.5 * wet / 4 && places[0] < 1.6 * wet / 4, places[0] + " places in " + wet + " columns of water, one in 4 asked for");
+    }
+
+    @Test
+    void whatGrowsOverLavaStartsInTheOpenBlockAboveItAndNowhereElse() throws Exception {
+        RavineSettings base = shipped();
+        var lava = new DiscWater(0.4F, 12, 0, 40, 1, 3, DiscWater.Fluid.LAVA, 0);
+        var overLava = new DiscTheme.Growth(feature("overgrown_abyss:disc/obsidian_tree"), 4, DiscTheme.Surface.LAVA, Optional.empty(), Optional.empty());
+        // Neither finds what it grows in: the one wants water where there is lava, the other lava where there is water.
+        var inWater = new DiscTheme.Growth(feature("minecraft:mangrove"), 4, DiscTheme.Surface.WATER, Optional.empty(), Optional.empty());
+        var stone = new DiscPalette(List.of(), List.of(), base.discThemes().get(0).palette().body(), DiscPalette.UNPAINTED.stem());
+        for (boolean molten : new boolean[] {true, false}) {
+            var held = molten ? lava : new DiscWater(0.4F, 12, 0, 40, 1, 3, DiscWater.Fluid.WATER, 0);
+            var theme = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, stone, Optional.of(held),
+                    List.of(molten ? inWater : overLava, molten ? overLava : inWater), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
+            assertEquals(molten, theme.holdsLava());
+            RavineSettings settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
+                    base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
+            RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
+            CellDiscs cellDiscs = CellDiscs.of(settings, VANILLA, cell);
+            Disc d = cellDiscs.layout().discs().get(0);
+            int[] places = {0};
+            int pond = 0;
+            for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - d.radius()), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + d.radius()), 16); chunkX++) {
+                for (int chunkZ = Math.floorDiv((int) Math.floor(d.z() - d.radius()), 16); chunkZ <= Math.floorDiv((int) Math.floor(d.z() + d.radius()), 16); chunkZ++) {
+                    DiscGrowth.forEach(settings, cell, cellDiscs, chunkX * 16, chunkZ * 16, (x, y, z, feature, on) -> {
+                        assertEquals(molten ? DiscTheme.Surface.LAVA : DiscTheme.Surface.WATER, on);
+                        double fromAxis = Math.hypot(x - d.x(), z - d.z());
+                        // Other discs grow things in these chunks too; this disc's are the ones at its own pond's height.
+                        if (fromAxis <= d.radius() && held.depthAt(d, cell.hash(), 0, x, z) > 0 && y == d.topBlockAt(fromAxis) + (molten ? 1 : 0)) {
+                            places[0]++;
+                        }
+                    });
+                }
+            }
+            for (int x = (int) Math.floor(d.x() - d.radius()); x <= d.x() + d.radius(); x++) {
+                for (int z = (int) Math.floor(d.z() - d.radius()); z <= d.z() + d.radius(); z++) {
+                    pond += held.depthAt(d, cell.hash(), 0, x, z) > 0 ? 1 : 0;
+                }
+            }
+            assertTrue(pond > 100, pond + " columns of pond");
+            assertTrue(places[0] > 0.5 * pond / 4 && places[0] < 1.6 * pond / 4, places[0] + " places in " + pond + " columns of pond, one in 4 asked for");
+        }
     }
 
     @Test
@@ -613,7 +672,7 @@ class DiscThemeTest {
     @Test
     void theModsOwnThemesInheritTheirBiomesAndGrowWhatTheirParentsMayNot() throws Exception {
         List<DiscTheme> themes = shipped().discThemes();
-        assertEquals(4, themes.size());
+        assertEquals(5, themes.size());
         var parents = new HashMap<String, String>();
         var leftOut = new HashMap<String, List<String>>();
         for (DiscTheme theme : themes) {
@@ -638,7 +697,8 @@ class DiscThemeTest {
                 assertEquals("overgrown_abyss", growth.feature().location().getNamespace(), name + " grows " + growth.feature().location());
                 String file = "/data/overgrown_abyss/worldgen/configured_feature/" + growth.feature().location().getPath() + ".json";
                 assertTrue(DiscThemeTest.class.getResource(file) != null, "no feature file " + file);
-                assertTrue(growth.on() != DiscTheme.Surface.WATER || theme.water().isPresent(), name + " grows something in water it does not have");
+                assertTrue(growth.on() != DiscTheme.Surface.WATER || theme.water().isPresent() && !theme.holdsLava(), name + " grows something in water it does not have");
+                assertTrue(growth.on() != DiscTheme.Surface.LAVA || theme.holdsLava(), name + " grows something over lava it does not have");
             }
         }
         assertEquals(Map.of("disc_lush", "minecraft:lush_caves", "disc_jungle", "minecraft:jungle", "disc_mangrove", "minecraft:mangrove_swamp"), parents);
@@ -677,6 +737,18 @@ class DiscThemeTest {
                 "the mangrove's trees are thinned towards the rim");
         assertTrue(themes.get(2).growth().stream().anyMatch(growth -> growth.on() == DiscTheme.Surface.WATER), "no mangrove stands in the water");
         assertTrue(themes.get(2).water().orElseThrow().ponds() > themes.get(1).water().orElseThrow().ponds(), "a swamp is wetter than a jungle");
+        DiscTheme lava = themes.get(4);
+        assertTrue(lava.holdsLava() && lava.water().orElseThrow().streamWidth() == 0, "the lava disc's ponds are of lava, and it has no streams");
+        // The owner took the obsidian trees out for now; their feature file stays, for putting them back.
+        assertTrue(lava.growth().isEmpty(), "something grows on the lava disc: " + lava.growth());
+        // Lava lights what burns three blocks from it, and a crown stands out past its trunk.
+        assertTrue(lava.water().orElseThrow().clear() >= 5 && lava.water().orElseThrow().bank() >= 5, "lava within reach of the disc next to it");
+        assertTrue(lava.rootWood().isEmpty(), "roots keep the wood of the hole: the lava keeps clear of them");
+        assertTrue(themes.subList(0, 4).stream().noneMatch(DiscTheme::holdsLava), "lava on another disc");
+        // The game spawns a magma cube in any light, where a cave's monsters want the dark that a pond of lava takes away.
+        String lavaBiome = new String(DiscThemeTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/biome/disc_lava.json").readAllBytes(), StandardCharsets.UTF_8);
+        MobSpawnSettings lavaSpawns = MobSpawnSettings.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString(lavaBiome)).getOrThrow();
+        assertTrue(lavaSpawns.getMobs(MobCategory.MONSTER).unwrap().stream().anyMatch(mob -> mob.type == EntityType.MAGMA_CUBE), "no magma cubes on the lava disc");
     }
 
     @Test

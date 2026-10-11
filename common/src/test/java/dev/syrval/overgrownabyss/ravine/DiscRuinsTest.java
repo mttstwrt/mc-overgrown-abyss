@@ -503,8 +503,8 @@ class DiscRuinsTest {
         DiscRuins ruins = ruins(1, 1_000_000, EVEN, kind("wide", 1, EVEN));
         RuinPieces pieces = pieces(ruins, List.of(piece("wide", 0, 1, 10, 3, 0)));
         RavineSettings dry = with(ruined(Optional.empty(), ruins));
-        RavineSettings streams = with(ruined(Optional.of(new DiscWater(0, 12, 2, 44, 2, 3)), ruins));
-        RavineSettings ponds = with(ruined(Optional.of(new DiscWater(0.9F, 12, 0, 40, 2, 3)), ruins));
+        RavineSettings streams = with(ruined(Optional.of(new DiscWater(0, 12, 2, 44, 2, 3, DiscWater.Fluid.WATER, 0)), ruins));
+        RavineSettings ponds = with(ruined(Optional.of(new DiscWater(0.9F, 12, 0, 40, 2, 3, DiscWater.Fluid.WATER, 0)), ruins));
         int onDry = 0;
         int overStreams = 0;
         int overPonds = 0;

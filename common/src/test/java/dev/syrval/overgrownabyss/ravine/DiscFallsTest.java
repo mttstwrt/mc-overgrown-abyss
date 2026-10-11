@@ -158,7 +158,10 @@ class DiscFallsTest {
                 int onto = fall.onto().getAsInt();
                 Disc under = discs.get(onto);
                 double fromAxis = Math.hypot(fall.x() - under.x(), fall.z() - under.z());
-                assertEquals(under.topBlockAt(fromAxis), landsOn, "it lands on the top of the disc under it");
+                // A lip lets its water go down each open column beside it. Where those lie either side of a step of the bowl
+                // under them, the fall is reckoned to the lower side.
+                int top = under.topBlockAt(fromAxis);
+                assertTrue(landsOn == top || landsOn == top - 1, fall + " lands at " + landsOn + ", and the top of the disc under it is at " + top);
                 assertTrue(under.floor() < from.floor(), "and that disc is a lower one");
                 List<DiscFalls.Column> pool = falls.columns().stream()
                         .filter(column -> column.disc() == onto && Math.hypot(column.x() - fall.x(), column.z() - fall.z()) <= 5.5).toList();
@@ -200,8 +203,8 @@ class DiscFallsTest {
                     assertEquals(column.cut(), cut);
                     assertEquals(column.lip(), lip);
                 });
-                DiscBlocks.forEachWater(hole.cell(), hole.discs(), minX, minZ, (x, surface, z, depth) -> own.merge(new At(surface, x, z), 1, Integer::sum));
-                DiscBlocks.forEachWater(hole.cell(), dry, minX, minZ, (x, surface, z, depth) -> ownWithoutFalls.merge(new At(surface, x, z), 1, Integer::sum));
+                DiscBlocks.forEachWater(hole.cell(), hole.discs(), minX, minZ, (x, surface, z, depth, fluid) -> own.merge(new At(surface, x, z), 1, Integer::sum));
+                DiscBlocks.forEachWater(hole.cell(), dry, minX, minZ, (x, surface, z, depth, fluid) -> ownWithoutFalls.merge(new At(surface, x, z), 1, Integer::sum));
                 DiscGrowth.forEach(settings, hole.cell(), hole.discs(), minX, minZ, (x, y, z, feature, on) -> {
                     for (DiscFalls.Column column : falls.columns()) {
                         // Under a disc is the one place a fall's water is nothing to what grows.
@@ -281,6 +284,48 @@ class DiscFallsTest {
         for (Hole hole : holes(with(Optional.of(MANY)))) {
             assertTrue(hole.discs().falls().springs().isEmpty(), "springs without the setting");
         }
+    }
+
+    @Test
+    void aDiscThatHoldsLavaStartsNoFallAndTakesNoPoolNorSpring() throws Exception {
+        var springs = new FallSettings.Springs(new InclusiveRange<>(3, 3), new InclusiveRange<>(3, 7), DiscThemeTest.feature("overgrown_abyss:disc/wall_spring"));
+        var falls = new FallSettings(MANY.count(), MANY.byHeight(), 1, 10, 1, MANY.pool(), 1, 4, Optional.empty(), Optional.of(springs));
+        RavineSettings base = with(Optional.of(falls));
+        // The mod's own swamp on every disc, and the same again with its ponds and streams turned to lava.
+        DiscTheme swamp = base.discThemes().get(2);
+        DiscWater water = swamp.water().orElseThrow();
+        var found = new HashMap<DiscWater.Fluid, Integer>();
+        for (DiscWater.Fluid fluid : DiscWater.Fluid.values()) {
+            var held = new DiscWater(water.ponds(), water.pondSize(), water.streamWidth(), water.streamSpacing(), water.depth(), water.bank(), fluid, 0);
+            var theme = new DiscTheme(swamp.biome(), swamp.inherits(), swamp.weight(), swamp.byHeight(), swamp.byDistance(), swamp.bySize(), swamp.only(), swamp.palette(),
+                    Optional.of(held), swamp.growth(), swamp.wildness(), swamp.ground(), swamp.ruins(), swamp.rootWood());
+            var settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), base.floor(), base.top(), base.cavernRadius(), base.cavernHeight(),
+                    base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
+            for (Hole hole : holes(settings)) {
+                DiscFalls made = hole.discs().falls();
+                found.merge(fluid, made.falls().size() + made.columns().size() + made.springs().size(), Integer::sum);
+            }
+        }
+        assertTrue(found.get(DiscWater.Fluid.WATER) > 100, found + ": few falls and springs among discs of water");
+        assertEquals(0, found.get(DiscWater.Fluid.LAVA), "falls, their water or springs among discs of lava");
+        // And among the mod's own themes, where a lava disc has discs of water over it and under it.
+        int lavaDiscs = 0;
+        for (Hole hole : holes(base)) {
+            List<Optional<DiscTheme>> themes = hole.discs().themes();
+            lavaDiscs += (int) themes.stream().filter(theme -> theme.orElseThrow().holdsLava()).count();
+            DiscFalls made = hole.discs().falls();
+            for (DiscFalls.Fall fall : made.falls()) {
+                assertTrue(!themes.get(fall.from()).orElseThrow().holdsLava(), "a fall starts on a lava disc: " + fall);
+                assertTrue(fall.onto().isEmpty() || !themes.get(fall.onto().getAsInt()).orElseThrow().holdsLava(), "a fall lands on a lava disc: " + fall);
+            }
+            for (DiscFalls.Column column : made.columns()) {
+                assertTrue(!themes.get(column.disc()).orElseThrow().holdsLava(), "a fall's water on a lava disc: " + column);
+            }
+            for (DiscFalls.Spring spring : made.springs()) {
+                assertTrue(!themes.get(spring.disc()).orElseThrow().holdsLava(), "a spring over a lava disc: " + spring);
+            }
+        }
+        assertTrue(lavaDiscs >= 6, lavaDiscs + " lava discs in six holes");
     }
 
     @Test

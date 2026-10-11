@@ -125,12 +125,14 @@ public record DiscTheme(
     }
 
     /**
-     * Where on a platform something grows: on the dry ground of its top, in the water of its top, under it, or on its rim,
-     * which is the open air right beside the platform's edge, where what is grown hangs down the side or leans out over it.
+     * Where on a platform something grows: on the dry ground of its top, in the water of its top, over the lava of its top,
+     * under it, or on its rim, which is the open air right beside the platform's edge, where what is grown hangs down the side
+     * or leans out over it.
      */
     public enum Surface implements StringRepresentable {
         TOP("top"),
         WATER("water"),
+        LAVA("lava"),
         UNDERSIDE("underside"),
         RIM("rim");
 
@@ -151,8 +153,10 @@ public record DiscTheme(
      * A feature grown on one surface of the platform: on average one for every {@code every} blocks of that surface. The feature
      * is placed in the open block on the surface (over dry ground, under the disc's lowest rock, or beside the rim's top block),
      * so it must be one that grows from there. In water it is placed in the lowest block of the water, as vanilla starts a tree
-     * that stands in water on its bed. Without {@code patches} it is spread evenly, and without {@code rimFade} as thickly at
-     * the rim as in the middle.
+     * that stands in water on its bed. Nothing of vanilla's grows through lava, so over lava it is placed in the open block
+     * above: a tree there puts its {@code dirt_provider} block in the lava's top block, as it does under any trunk, and so
+     * stands on the bed of lava that is one block deep. Without {@code patches} it is spread evenly, and without
+     * {@code rimFade} as thickly at the rim as in the middle.
      */
     public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, Surface on, Optional<Patches> patches, Optional<RimFade> rimFade) {
         static final Codec<Growth> CODEC = RecordCodecBuilder.<Growth>create(i -> i.group(
@@ -303,6 +307,11 @@ public record DiscTheme(
 
     public DiscTheme {
         growth = List.copyOf(growth);
+    }
+
+    /** Whether the theme's ponds and streams hold lava, which a fall's water is kept away from. */
+    boolean holdsLava() {
+        return water.filter(held -> held.fluid() == DiscWater.Fluid.LAVA).isPresent();
     }
 
     /** This theme's weight for a disc with these traits: none outside its limits. */

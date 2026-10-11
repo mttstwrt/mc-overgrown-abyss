@@ -1,13 +1,15 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.util.StringRepresentable;
 
 /**
  * Shallow water lying in the top of a disc: ponds, and streams that wind across it. Water takes the place of the top blocks
  * of the platform, so it is never deeper than {@code depth} and has the platform's own material under it. It is water that
  * cannot run off: none lies within {@code bank} blocks of the rim, nor in a column with lower ground beside it, which leaves
- * a low dam wherever the bowl steps down.
+ * a low dam wherever the bowl steps down. A theme may have lava lie there in its place, by the same rules.
  *
  * @param ponds         the share of the top that is pond, before the rim and the dams take their part
  * @param pondSize      blocks from one pond to the next, roughly; larger gives fewer, wider ponds
@@ -15,19 +17,49 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param streamSpacing blocks from one stream, or one bend of a stream, to the next, roughly
  * @param depth         how deep the middle of a pond is, in blocks; its edge and every stream are 1 deep
  * @param bank          blocks of dry ground kept inside the rim
+ * @param fluid         what the ponds and streams hold
+ * @param clear         blocks lava keeps from what the game would have it set alight: the ground of other discs about level
+ *                      with it, and the hole's roots (see {@link DiscLava}); 0 for lava that lies wherever a pond does
  */
-public record DiscWater(float ponds, float pondSize, float streamWidth, float streamSpacing, int depth, int bank) {
+public record DiscWater(float ponds, float pondSize, float streamWidth, float streamSpacing, int depth, int bank, Fluid fluid, int clear) {
     /** The deepest water a disc may hold; a platform must be thicker than this. */
     public static final int MAX_DEPTH = 2;
 
-    static final Codec<DiscWater> CODEC = RecordCodecBuilder.create(i -> i.group(
+    /** What lies in a disc's ponds and streams. Only water takes part in the hole's falls and springs (see {@link DiscFalls}). */
+    public enum Fluid implements StringRepresentable {
+        WATER("water"),
+        LAVA("lava");
+
+        static final Codec<Fluid> CODEC = StringRepresentable.fromEnum(Fluid::values);
+        private final String name;
+
+        Fluid(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
+    }
+
+    static final Codec<DiscWater> CODEC = RecordCodecBuilder.<DiscWater>create(i -> i.group(
             Codec.floatRange(0, 0.9F).optionalFieldOf("ponds", 0F).forGetter(DiscWater::ponds),
             Codec.floatRange(4, 128).optionalFieldOf("pond_size", 12F).forGetter(DiscWater::pondSize),
             Codec.floatRange(0, 8).optionalFieldOf("stream_width", 0F).forGetter(DiscWater::streamWidth),
             Codec.floatRange(8, 256).optionalFieldOf("stream_spacing", 40F).forGetter(DiscWater::streamSpacing),
             Codec.intRange(1, MAX_DEPTH).optionalFieldOf("depth", MAX_DEPTH).forGetter(DiscWater::depth),
-            Codec.intRange(2, 32).optionalFieldOf("bank", 3).forGetter(DiscWater::bank)
-    ).apply(i, DiscWater::new));
+            Codec.intRange(2, 32).optionalFieldOf("bank", 3).forGetter(DiscWater::bank),
+            Fluid.CODEC.optionalFieldOf("fluid", Fluid.WATER).forGetter(DiscWater::fluid),
+            Codec.intRange(0, DiscLava.MAX_CLEAR).optionalFieldOf("clear", 0).forGetter(DiscWater::clear)
+    ).apply(i, DiscWater::new)).validate(DiscWater::validate);
+
+    // Water sets nothing alight, and a fall is led from a pond wherever the pond lies.
+    private static DataResult<DiscWater> validate(DiscWater water) {
+        return water.fluid == Fluid.WATER && water.clear > 0
+                ? DataResult.error(() -> "only lava keeps clear of what burns")
+                : DataResult.success(water);
+    }
 
     private static final int HASH_BASE = 400_000;
     // Where a stream's value changes by less than this over the spacing of the streams, it marks no line to follow.

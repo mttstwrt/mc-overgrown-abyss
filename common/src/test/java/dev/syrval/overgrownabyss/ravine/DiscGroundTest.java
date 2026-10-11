@@ -110,7 +110,7 @@ class DiscGroundTest {
 
     @Test
     void noGroundStandsOverADiscsWaterNorRightBesideIt() throws Exception {
-        var water = new DiscWater(0.3F, 14, 2, 30, 2, 3);
+        var water = new DiscWater(0.3F, 14, 2, 30, 2, 3, DiscWater.Fluid.WATER, 0);
         RavineSettings settings = with(theme(BOTH, Optional.of(water)));
         RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
         CellDiscs cellDiscs = CellDiscs.of(settings, DiscThemeTest.VANILLA, cell);

@@ -24,6 +24,7 @@ final class DiscGrowth {
     static void forEach(RavineSettings settings, RavineCell cell, CellDiscs discs, int minX, int minZ, DiscGrowthSink sink) {
         List<Disc> all = discs.layout().discs();
         DiscShape shape = settings.discs();
+        var lava = new DiscLava(discs, minX, minZ);
         for (int i = 0; i < all.size(); i++) {
             Optional<DiscTheme> theme = discs.themes().get(i);
             if (theme.isEmpty() || theme.get().growth().isEmpty()) {
@@ -53,7 +54,7 @@ final class DiscGrowth {
                         if (draw >= wildness * each.weightAt(cell.hash(), i, disc, x, z)) {
                             continue;
                         }
-                        OptionalInt y = placeOn(each.on(), theme.get(), disc, ground, shape, cell.hash(), i, x, z, fromAxis);
+                        OptionalInt y = placeOn(each.on(), theme.get(), disc, ground, shape, lava, cell.hash(), i, x, z, fromAxis);
                         // Nothing is started in a fall's water or by it, on a disc or over its lip, to stand in the water's way.
                         if (y.isPresent() && !(each.on() != DiscTheme.Surface.UNDERSIDE && discs.falls().isNear(x, y.getAsInt(), z))) {
                             sink.accept(x, y.getAsInt(), z, each.feature(), each.on());
@@ -65,18 +66,31 @@ final class DiscGrowth {
     }
 
     // The block a growth starts in: the open one over the ground or under the disc's lowest rock (the stem's flare under
-    // most of a standing disc), the lowest block of water, or the open one beside the top block of the rim.
+    // most of a standing disc), the lowest block of water, the open one over lava, or the open one beside the top block of
+    // the rim.
     private static OptionalInt placeOn(
-            DiscTheme.Surface on, DiscTheme theme, Disc disc, DiscGround ground, DiscShape shape, long hash, int index, int x, int z, double fromAxis) {
+            DiscTheme.Surface on, DiscTheme theme, Disc disc, DiscGround ground, DiscShape shape, DiscLava lava, long hash, int index, int x, int z,
+            double fromAxis) {
         return switch (on) {
             case TOP -> OptionalInt.of(ground.topBlockAt(x, z) + 1);
             case UNDERSIDE -> disc.hangBlockAt(shape, fromAxis);
             case WATER -> {
-                int depth = theme.water().map(water -> water.depthAt(disc, hash, index, x, z)).orElse(0);
+                int depth = depthOf(DiscWater.Fluid.WATER, theme, disc, hash, index, x, z);
                 yield depth > 0 ? OptionalInt.of(disc.topBlockAt(fromAxis) - depth + 1) : OptionalInt.empty();
+            }
+            case LAVA -> {
+                int surface = disc.topBlockAt(fromAxis);
+                boolean held = depthOf(DiscWater.Fluid.LAVA, theme, disc, hash, index, x, z) > 0
+                        && lava.liesClear(index, x, surface, z, theme.water().map(DiscWater::clear).orElse(0));
+                yield held ? OptionalInt.of(surface + 1) : OptionalInt.empty();
             }
             case RIM -> fromAxis < disc.radius() ? OptionalInt.empty() : besideRim(disc, x, z);
         };
+    }
+
+    // How deep a theme's ponds and streams are in a column, if that is what they hold.
+    private static int depthOf(DiscWater.Fluid fluid, DiscTheme theme, Disc disc, long hash, int index, int x, int z) {
+        return theme.water().filter(water -> water.fluid() == fluid).map(water -> water.depthAt(disc, hash, index, x, z)).orElse(0);
     }
 
     // The height of the highest top block among the platform's columns next to this one, which is outside the platform; empty

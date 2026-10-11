@@ -45,14 +45,19 @@ public final class DiscPainter {
                     }
                 });
         BlockState water = Blocks.WATER.defaultBlockState();
-        footprint.forEachDiscWater(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, surface, z, depth) -> {
+        BlockState lava = Blocks.LAVA.defaultBlockState();
+        footprint.forEachDiscWater(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, surface, z, depth, fluid) -> {
             // Only under open air. Where a stem or a root stands on the platform, or the rock of the wall lies on it, the
             // ground painted above stays; so do the sides and beds that hold the water in.
             if (chunk.isOutsideBuildHeight(surface + 1) || !chunk.getBlockState(pos.set(x, surface + 1, z)).isAir()) {
                 return;
             }
+            BlockState held = switch (fluid) {
+                case WATER -> water;
+                case LAVA -> lava;
+            };
             for (int below = 0; below < depth; below++) {
-                chunk.setBlockState(pos.set(x, surface - below, z), water, false);
+                chunk.setBlockState(pos.set(x, surface - below, z), held, false);
             }
         });
         BlockState air = Blocks.AIR.defaultBlockState();

@@ -89,9 +89,14 @@ in its middle. Its numbers:
   `stream_spacing` about how far apart streams and their bends are. `depth` (1 or 2, default 2) is how deep the middle of a pond
   is; pond edges and streams are 1 deep. `bank` (default 3) keeps the water that many blocks from the rim. Water never runs:
   none is put where the ground beside it is lower, which leaves a one-block dam wherever the bowl steps down. A theme with water
-  needs a palette for the ground that holds it (`depth` + 1 blocks of `top`, or a `body`).
+  needs a palette for the ground that holds it (`depth` + 1 blocks of `top`, or a `body`). `"fluid": "lava"` fills the same
+  ponds and streams with lava instead (`water` is the default). A disc that holds lava has no part in the hole's falls: it
+  starts none, none lands on it, and no spring comes out of the wall behind it. `clear` (0 to 16, default 0, lava only)
+  leaves the lava out within that many blocks of what the game would have it set alight: the ground of any other disc
+  whose top is within 6 blocks of the lava's height, unless that disc holds lava too, and any root. See the lava disc below.
 - `growth`: configured features of the theme's own, each placed on average once per `every` blocks of where it grows: `on` is
-  `top` (dry ground, the default), `water` (the bed of a pond or stream, where a mangrove starts) or `underside` (under the
+  `top` (dry ground, the default), `water` (the bed of a pond or stream, where a mangrove starts), `lava` (the open block
+  over a pond or stream of lava; see the lava disc below for why not its bed) or `underside` (under the
   disc's lowest rock, which under most of a standing disc is the flare of its stem). They are placed in the order listed, so
   vines listed after trees find the trees there, and before what the theme inherits, as vanilla grows a biome's trees before
   its grass.
@@ -212,6 +217,49 @@ grass, carpet and flowers do not block and can stay thick, while an azalea and a
 measured for blocked ground since the jungle's trees were thinned and the ground cover added.
 - `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and kept to small discs
   in the outer half, which the layout puts behind larger discs.
+- `disc_lava` inherits nothing and is made by hand: basalt and obsidian with ponds of lava. It is rare and is
+  kept low in a hole (the owner, 2026-10-11): about one disc in twenty-six, none of them higher than three tenths of the
+  way from the hole's lowest disc to its highest (`weight` 2, `only.height.max` 0.3). On vanilla terrain that is the
+  bottom row of discs and what stands on it, and in a deep hole the bottom two rows; a hole has one or two, and one hole
+  in three has none.
+  - `weight` is how many: 1.5 gives a quarter fewer, 3 nearly half as many again. `only.height.max` is how high: 0.4 lets in
+    the second row of a hole of four. It had `by_height` 3 to 0.1 and no limit before, which was one disc in nine at
+    any height.
+  - Its top is a patchwork (one `noise_provider`, as on the jungle disc, in smaller patches) of obsidian, basalt and smooth
+    basalt: of the ground that is not lava, about two fifths each of the first two and a sixth of the third. Under that a layer of obsidian, which is the bed of every pond; then
+    basalt; and an underside of smooth basalt and obsidian with a magma block here and there. At the rim those show as
+    four bands. Its stem is basalt with some obsidian and magma.
+  - `water` with `"fluid": "lava"`: ponds over 0.45 of the top before anything is taken away, no streams, 1 deep. The lava
+    is still and held in on every side, as a disc's water is, and it lights the disc.
+  - Nothing grows on it. The obsidian trees that stood in its lava are out for now (the owner, 2026-10-11); their file,
+    `obsidian_tree.json`, is kept. To put them back, give the theme
+    `"growth": [{"feature": "overgrown_abyss:disc/obsidian_tree", "every": 30, "on": "lava"}]`.
+    - The tree is vanilla's acacia in other blocks: the forked trunk, 5 to 9 tall, of obsidian, and the flat crown of
+      magma blocks with about one block in four glowstone (its `foliage_provider`, two `weight`s of 3 and 1). The crown
+      glows, and its magma burns whoever walks on it.
+    - `every` 30 was a place for one for about every 30 blocks of lava, of which about a third grew: a tree wants a
+      column 5 by 5 of open air over its foot.
+    - Nothing of vanilla's grows through lava, so a feature over lava is started in the open block above it. A tree
+      puts its `dirt_provider` block under its trunk, which here is the lava's top block, and that is its foot: in lava
+      1 deep it stands on the pond's bed. In lava 2 deep (`depth` 2) the foot would have lava under it, so keep `depth`
+      at 1 where trees stand in it.
+  - Mounds up to 2 over 0.3 of the top, and columns of basalt up to 5 high (`outcrops`).
+  - Spawns, in its biome file: a cave's monsters and bats, and magma cubes (the owner, 2026-10-11) at the numbers
+    vanilla gives its basalt deltas, `weight` 100 and 2 to 5 at a time. The game spawns a magma cube in any light and
+    the others only in the dark, so on a disc lit by its lava the cubes are what spawns, torches or no.
+  - What it does not have: ruins, growth of any kind, a wood of its own for roots.
+  - Fire. The game's lava lights what burns within three blocks of it (the `doFireTick` rule), and discs of one ring run
+    into each other, so left alone over a third of this lava lay beside the next disc's ground and an eighth by a wooden root. Three settings
+    keep it apart, at the cost of lava:
+    - `clear` 6: no lava within 6 blocks of another disc's ground at about its height, or of a root.
+    - `bank` 6 (the others have 3): no lava within 6 blocks of its own rim, past which a lower disc's trees stand.
+    - no falls or springs (in the code): running water would turn the ponds to stone.
+    - What that leaves: about two thirds of the ponds, so about a fifth of a lava disc's top is lava, and about one
+      lava disc in thirteen has next to none and is a disc of basalt and columns (a little over half, a sixth and one
+      in seven when lava discs lay at every height). In four holes it then took the blocks lava
+      could set alight from 2337 to 52. What it does not cover: what hangs from a
+      disc higher up, and what vanilla builds in the hole (a mineshaft's props). SCOPE.md, "A lava disc", has the counts.
+    - To have lava wherever a pond lies and take the fires with it, set `clear` to 0 (the `loose-lava` pack).
 
 Jungle and mangrove grow their own trees because the parent's may not grow on a disc at all: an overworld overhaul such as
 William Wythers' Overhauled Overworld replaces those biomes with trees that only grow at certain heights above sea level and on
@@ -260,7 +308,8 @@ blocks round it, and at water and right beside it, and rises from each of those 
 So less of a top is raised than `cover` says, much less on a wet disc: measured over four holes, a fifth of a jungle or
 lush disc and a tenth of a mangrove disc. What grows on a disc and what it inherits stand on the ground, mounds included.
 The mod's own: jungle mounds up to 3 over 0.3 of the top with a few mossy stone outcrops up to 4; lush mounds up to 2 over
-0.25 with stone and moss outcrops up to 5; mangrove hummocks 1 high between its ponds; crystal spires of calcite and
+0.25 with stone and moss outcrops up to 5; mangrove hummocks 1 high between its ponds; lava mounds up to 2 over 0.3 with
+columns of basalt up to 5; crystal spires of calcite and
 amethyst up to 6.
 
 Three settings keep a disc's plants from ending in a wall at its edge and from looking like the disc next to it:
@@ -324,7 +373,7 @@ the hole.
 - `winding` 0.6: how far a root strays to either side of the straight way to where it is going. 0 is straight.
 - `wood`: what a root is made of where no disc says otherwise: `bark` for its outermost block and, if given, `core` for the
   rest. The mod's is jungle wood and mangrove wood in patches. A theme's `root_wood` (same form) is the wood of roots near
-  its discs: jungle wood on the jungle theme, mangrove wood on the mangrove one, none on lush and crystal. A root within
+  its discs: jungle wood on the jungle theme, mangrove wood on the mangrove one, none on lush, crystal and lava. A root within
   `wood_reach` 48 blocks of such a disc takes its wood; between two different woods it is one or the other in patches along
   the root, the share shifting over `wood_blend` 16 blocks.
 
@@ -336,9 +385,9 @@ a number of them, not each disc a chance of one, so they stay something to come 
 - `count` 2 to 4: how many falls a hole starts. Fewer where it has fewer places for one.
 - Where one starts: where a disc's own stream or pond comes up against the bank inside its rim, on the side of the hole's
   middle (the rest of a disc's rim is in the wall). So only a theme with `water` starts falls, and a wetter theme more of
-  them. `by_height` (0.5 at the lowest disc, 2 at the highest) makes a start likelier high up; `max_per_disc` 1.
+  them; a theme whose `water` is lava starts none. `by_height` (0.5 at the lowest disc, 2 at the highest) makes a start likelier high up; `max_per_disc` 1.
 - What one needs: `min_drop` 10 blocks of open air under its lip, and to come down either on the hole's floor or on the top
-  of a lower disc where there is room for a pool. Never on a ruin, a root, a stem or the wall. Most places have only the
+  of a lower disc where there is room for a pool. Never on a ruin, a root, a stem or the wall, nor on a disc that holds lava. Most places have only the
   floor under them, so half of a hole's falls, rounded up, are first looked for among those that land on a disc.
 - `pool`: `radius` 3, `depth` 2 in its middle and 1 at its edge, inside the disc's bank, on a disc whose palette gives its
   top 3 blocks of material (all of the mod's do; a disc with no theme has no pool, so nothing falls on it).
@@ -383,7 +432,7 @@ Ruins stand on some discs, and on more of them the lower in a hole the disc is. 
 at the middle of the hole's height, nearly always at the bottom and one time in four at the top (`chance` 0.6, `by_height`
 1.6 to 0.4), with a ruin for about every 3000 blocks of top, by the same measure more at the bottom and fewer at the top. A
 lush disc has them three times in ten and a mangrove disc one time in four, both with `by_height` 1.8 to 0.4 and a ruin for
-every 4000. A crystal disc has none. They are one structure, `overgrown_abyss:disc_ruins`, so
+every 4000. A crystal disc has none, nor a lava disc. They are one structure, `overgrown_abyss:disc_ruins`, so
 `/locate structure overgrown_abyss:disc_ruins` finds the nearest disc with one (it looks 100 chunks each way).
 
 The mod's own pieces are vanilla's templates, named by id and not copied, in two families:
@@ -458,6 +507,12 @@ and say how many of its pieces' lowest layers lie in the ground.
 - `flat-discs`: the mod's file without any `ground`: every disc's top the smooth bowl it was.
 - `rugged-discs`: the mod's file with mounds a block higher over 1.6 times as much of each top, and outcrops 2 higher
   over 2.5 times as much. For judging how far to go, and what it does to walking.
+
+- `many-lava`: the mod's file with the lava theme's `weight` 12: about two fifths of the discs low in a hole are lava discs,
+  and as in the mod's file none higher up. For finding one and judging it.
+- `loose-lava`: the same, with `clear` 0 and `bank` 3: lava wherever a pond lies, beside the next disc's trees and under
+  roots. For judging what keeping clear costs in lava against what it saves in fires; a player has to stay near for the
+  game to light any.
 
 - `no-giants`: the mod's file without the giant mushrooms, pads and glowing bulbs.
 - `many-giants`: the mod's file with four times as many of each (every `every` a quarter). For finding them and judging them.

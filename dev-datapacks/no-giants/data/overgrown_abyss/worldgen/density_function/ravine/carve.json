@@ -1095,6 +1095,232 @@
           }
         }
       }
+    },
+    {
+      "biome": "overgrown_abyss:disc_lava",
+      "weight": 2,
+      "only": {
+        "height": {
+          "max": 0.3
+        }
+      },
+      "palette": {
+        "top": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:noise_provider",
+              "seed": 1094861641,
+              "noise": {
+                "firstOctave": -4,
+                "amplitudes": [
+                  0.7,
+                  1.0,
+                  0.5,
+                  0.3
+                ]
+              },
+              "scale": 1.0,
+              "states": [
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:obsidian"
+                },
+                {
+                  "Name": "minecraft:basalt",
+                  "Properties": {
+                    "axis": "y"
+                  }
+                },
+                {
+                  "Name": "minecraft:basalt",
+                  "Properties": {
+                    "axis": "y"
+                  }
+                },
+                {
+                  "Name": "minecraft:basalt",
+                  "Properties": {
+                    "axis": "y"
+                  }
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                },
+                {
+                  "Name": "minecraft:smooth_basalt"
+                }
+              ]
+            }
+          },
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:simple_state_provider",
+              "state": {
+                "Name": "minecraft:obsidian"
+              }
+            }
+          }
+        ],
+        "underside": [
+          {
+            "thickness": 1,
+            "block": {
+              "type": "minecraft:weighted_state_provider",
+              "entries": [
+                {
+                  "data": {
+                    "Name": "minecraft:smooth_basalt"
+                  },
+                  "weight": 4
+                },
+                {
+                  "data": {
+                    "Name": "minecraft:obsidian"
+                  },
+                  "weight": 2
+                },
+                {
+                  "data": {
+                    "Name": "minecraft:magma_block"
+                  },
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        ],
+        "body": {
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:basalt",
+            "Properties": {
+              "axis": "y"
+            }
+          }
+        },
+        "stem": {
+          "surface": [
+            {
+              "thickness": 1,
+              "block": {
+                "type": "minecraft:weighted_state_provider",
+                "entries": [
+                  {
+                    "data": {
+                      "Name": "minecraft:basalt",
+                      "Properties": {
+                        "axis": "y"
+                      }
+                    },
+                    "weight": 6
+                  },
+                  {
+                    "data": {
+                      "Name": "minecraft:obsidian"
+                    },
+                    "weight": 2
+                  },
+                  {
+                    "data": {
+                      "Name": "minecraft:magma_block"
+                    },
+                    "weight": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "core": {
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:smooth_basalt"
+            }
+          }
+        }
+      },
+      "water": {
+        "fluid": "lava",
+        "ponds": 0.45,
+        "pond_size": 14,
+        "depth": 1,
+        "bank": 6,
+        "clear": 6
+      },
+      "ground": {
+        "mounds": {
+          "height": 2,
+          "size": 16,
+          "cover": 0.3
+        },
+        "outcrops": {
+          "height": 5,
+          "size": 6,
+          "cover": 0.05,
+          "block": {
+            "type": "minecraft:weighted_state_provider",
+            "entries": [
+              {
+                "data": {
+                  "Name": "minecraft:basalt",
+                  "Properties": {
+                    "axis": "y"
+                  }
+                },
+                "weight": 4
+              },
+              {
+                "data": {
+                  "Name": "minecraft:obsidian"
+                },
+                "weight": 1
+              }
+            ]
+          }
+        }
+      }
     }
   ],
   "environment": {

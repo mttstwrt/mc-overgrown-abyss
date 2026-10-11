@@ -158,6 +158,7 @@ public final class DiscGrower {
         return switch (on) {
             case TOP -> level.isEmptyBlock(pos) && isSturdy(level, pos.below(), Direction.UP);
             case WATER -> level.getBlockState(pos).is(Blocks.WATER) && isSturdy(level, pos.below(), Direction.UP);
+            case LAVA -> level.isEmptyBlock(pos) && level.getBlockState(pos.below()).is(Blocks.LAVA);
             case UNDERSIDE -> level.isEmptyBlock(pos) && isSturdy(level, pos.above(), Direction.DOWN);
             case RIM -> level.isEmptyBlock(pos)
                     && Direction.Plane.HORIZONTAL.stream().anyMatch(side -> isSturdy(level, pos.relative(side), side.getOpposite()));

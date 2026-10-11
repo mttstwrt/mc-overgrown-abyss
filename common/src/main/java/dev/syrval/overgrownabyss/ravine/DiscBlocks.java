@@ -43,6 +43,7 @@ final class DiscBlocks {
     /** The columns of the chunk whose lowest corner is {@code (minX, minZ)} where a disc's theme puts water in its top (see {@link DiscWater}). */
     static void forEachWater(RavineCell cell, CellDiscs cellDiscs, int minX, int minZ, DiscWaterSink sink) {
         List<Disc> discs = cellDiscs.layout().discs();
+        var lava = new DiscLava(cellDiscs, minX, minZ);
         for (int i = 0; i < discs.size(); i++) {
             Optional<DiscWater> water = cellDiscs.themes().get(i).flatMap(DiscTheme::water);
             if (water.isEmpty()) {
@@ -57,8 +58,9 @@ final class DiscBlocks {
                 for (int z = fromZ; z <= toZ; z++) {
                     // A fall's water takes the place of the disc's own where the two would meet: it may lie lower.
                     int depth = cellDiscs.falls().holds(i, x, z) ? 0 : water.get().depthAt(disc, cell.hash(), i, x, z);
-                    if (depth > 0) {
-                        sink.accept(x, disc.topBlockAt(Math.hypot(x - disc.x(), z - disc.z())), z, depth);
+                    int surface = disc.topBlockAt(Math.hypot(x - disc.x(), z - disc.z()));
+                    if (depth > 0 && lava.liesClear(i, x, surface, z, water.get().clear())) {
+                        sink.accept(x, surface, z, depth, water.get().fluid());
                     }
                 }
             }

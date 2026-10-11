@@ -182,7 +182,7 @@ class DiscBlocksTest {
 
     @Test
     void aChunksWaterIsItsShareOfEachDiscsPondsAndStreams() {
-        var water = new DiscWater(0.4F, 12, 2, 40, 2, 3);
+        var water = new DiscWater(0.4F, 12, 2, 40, 2, 3, DiscWater.Fluid.WATER, 0);
         var wet = new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
                 PALETTE, Optional.of(water), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
         RavineSettings settings = painted(ConeShapeTest.LOW, List.of(wet), DiscTest.SLIM);
@@ -195,8 +195,9 @@ class DiscBlocksTest {
             for (int chunkZ = Math.floorDiv((int) Math.floor(d.z() - d.radius()), 16); chunkZ <= Math.floorDiv((int) Math.floor(d.z() + d.radius()), 16); chunkZ++) {
                 int minX = chunkX * 16;
                 int minZ = chunkZ * 16;
-                DiscBlocks.forEachWater(cell, discs, minX, minZ, (x, surface, z, depth) -> {
+                DiscBlocks.forEachWater(cell, discs, minX, minZ, (x, surface, z, depth, fluid) -> {
                     assertTrue(x >= minX && x < minX + 16 && z >= minZ && z < minZ + 16, "outside its chunk");
+                    assertEquals(DiscWater.Fluid.WATER, fluid);
                     found.add(new Column(x, surface, z, depth));
                 });
             }
@@ -218,8 +219,22 @@ class DiscBlocksTest {
         assertTrue(expected.size() > 100, expected.size() + " columns of water on the disc");
         assertTrue(found.containsAll(expected), "every column of the disc's water is reported by the chunk it is in");
         var none = new ArrayList<Column>();
-        DiscBlocks.forEachWater(cell(STANDING, 0), CellDiscs.of(STANDING, BOUNDS, cell(STANDING, 0)), (int) d.x() & ~15, (int) d.z() & ~15, (x, surface, z, depth) -> none.add(new Column(x, surface, z, depth)));
+        DiscBlocks.forEachWater(cell(STANDING, 0), CellDiscs.of(STANDING, BOUNDS, cell(STANDING, 0)), (int) d.x() & ~15, (int) d.z() & ~15, (x, surface, z, depth, fluid) -> none.add(new Column(x, surface, z, depth)));
         assertTrue(none.isEmpty(), "a theme without water has none");
+        // The same ponds and streams of lava lie in the same columns.
+        var molten = new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
+                PALETTE, Optional.of(new DiscWater(0.4F, 12, 2, 40, 2, 3, DiscWater.Fluid.LAVA, 0)), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
+        RavineSettings hot = painted(ConeShapeTest.LOW, List.of(molten), DiscTest.SLIM);
+        var lava = new ArrayList<Column>();
+        for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - d.radius()), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + d.radius()), 16); chunkX++) {
+            for (int chunkZ = Math.floorDiv((int) Math.floor(d.z() - d.radius()), 16); chunkZ <= Math.floorDiv((int) Math.floor(d.z() + d.radius()), 16); chunkZ++) {
+                DiscBlocks.forEachWater(cell(hot, 1), CellDiscs.of(hot, BOUNDS, cell(hot, 1)), chunkX * 16, chunkZ * 16, (x, surface, z, depth, fluid) -> {
+                    assertEquals(DiscWater.Fluid.LAVA, fluid);
+                    lava.add(new Column(x, surface, z, depth));
+                });
+            }
+        }
+        assertEquals(found, lava);
     }
 
     @Test

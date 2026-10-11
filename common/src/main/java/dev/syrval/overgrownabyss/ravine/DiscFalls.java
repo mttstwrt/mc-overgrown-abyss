@@ -21,7 +21,7 @@ import net.minecraft.util.InclusiveRange;
  * through the bank, at the same level, to the platform's last column, the lip, which the game runs when the chunk comes
  * alive. Where it lands on a lower disc it is given a pool, and from the pool it may be led on to that disc's rim and over
  * again. A fall is only made where it comes down on a disc's top with room for a pool, or on the hole's floor: never on a
- * ruin, a root, a stem or the wall.
+ * ruin, a root, a stem or the wall. A disc whose theme has lava for water starts none and takes none, nor a spring.
  *
  * <p>All of a fall's water but what the game runs is water that cannot leave: every column of it has ground, or water of its
  * own level, on each side but a lip's open one, and a block of its platform under it. Ground that stands higher than the
@@ -364,7 +364,8 @@ final class DiscFalls {
         private List<Start> starts() {
             var found = new ArrayList<Start>();
             for (int i = 0; i < discs.size(); i++) {
-                Optional<DiscWater> water = themes.get(i).flatMap(DiscTheme::water);
+                // A fall is water. Lava led to a lip would run down on to whatever grows below.
+                Optional<DiscWater> water = themes.get(i).filter(theme -> !theme.holdsLava()).flatMap(DiscTheme::water);
                 if (water.isEmpty()) {
                     continue;
                 }
@@ -524,7 +525,8 @@ final class DiscFalls {
             Optional<DiscTheme> theme = themes.get(i);
             FallSettings.Pool pool = falls.pool();
             // Left as the terrain's own rock, the ground round the water could be a cave, and the water would drain into it.
-            if (theme.isEmpty() || !theme.get().palette().coversTop(pool.depth() + 1)) {
+            // And a pool among ponds of lava would turn them to stone.
+            if (theme.isEmpty() || theme.get().holdsLava() || !theme.get().palette().coversTop(pool.depth() + 1)) {
                 return Optional.empty();
             }
             double radius = byTheWall ? SPRING_POOL : Math.max(pool.radius(), width / 2.0 + 2);
