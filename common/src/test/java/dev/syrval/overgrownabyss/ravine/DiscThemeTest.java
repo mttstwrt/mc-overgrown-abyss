@@ -703,8 +703,14 @@ class DiscThemeTest {
         }
         assertEquals(Map.of("disc_lush", "minecraft:lush_caves", "disc_jungle", "minecraft:jungle", "disc_mangrove", "minecraft:mangrove_swamp"), parents);
         // A disc grows its own trees, since another pack may give the parent trees that cannot grow on one; the parent's are
-        // left out so that a disc is not twice as thick with trees where they can.
-        assertEquals(Map.of("disc_lush", List.of(), "disc_jungle", List.of("minecraft:trees_jungle"), "disc_mangrove", List.of("minecraft:trees_mangrove")), leftOut);
+        // left out so that a disc is not twice as thick with trees where they can. The lush disc's mossy ceiling and its vines
+        // are the mod's own for the berries' sake: vanilla's two bear them on one block in five, which lights the whole disc.
+        assertEquals(
+                Map.of(
+                        "disc_lush", List.of("minecraft:lush_caves_ceiling_vegetation", "minecraft:cave_vines"),
+                        "disc_jungle", List.of("minecraft:trees_jungle"),
+                        "disc_mangrove", List.of("minecraft:trees_mangrove")),
+                leftOut);
         DiscTheme lush = themes.get(0);
         assertTrue(lush.water().isEmpty() && lush.palette().top().isEmpty(), "the lush disc's ground is its parent's and nothing more");
         for (DiscTheme wet : List.of(themes.get(1), themes.get(2))) {

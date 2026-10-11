@@ -12,6 +12,30 @@
           "type": "minecraft:weighted_list",
           "distribution": [
             {
+              "data": 0,
+              "weight": 13
+            },
+            {
+              "data": 1,
+              "weight": 1
+            }
+          ]
+        },
+        "provider": {
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:cave_vines_plant",
+            "Properties": {
+              "berries": "true"
+            }
+          }
+        }
+      },
+      {
+        "height": {
+          "type": "minecraft:weighted_list",
+          "distribution": [
+            {
               "data": {
                 "type": "minecraft:uniform",
                 "max_inclusive": 19,
@@ -38,27 +62,13 @@
           ]
         },
         "provider": {
-          "type": "minecraft:weighted_state_provider",
-          "entries": [
-            {
-              "data": {
-                "Name": "minecraft:cave_vines_plant",
-                "Properties": {
-                  "berries": "false"
-                }
-              },
-              "weight": 4
-            },
-            {
-              "data": {
-                "Name": "minecraft:cave_vines_plant",
-                "Properties": {
-                  "berries": "true"
-                }
-              },
-              "weight": 1
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:cave_vines_plant",
+            "Properties": {
+              "berries": "false"
             }
-          ]
+          }
         }
       },
       {
@@ -67,29 +77,14 @@
           "type": "minecraft:randomized_int_state_provider",
           "property": "age",
           "source": {
-            "type": "minecraft:weighted_state_provider",
-            "entries": [
-              {
-                "data": {
-                  "Name": "minecraft:cave_vines",
-                  "Properties": {
-                    "age": "0",
-                    "berries": "false"
-                  }
-                },
-                "weight": 4
-              },
-              {
-                "data": {
-                  "Name": "minecraft:cave_vines",
-                  "Properties": {
-                    "age": "0",
-                    "berries": "true"
-                  }
-                },
-                "weight": 1
+            "type": "minecraft:simple_state_provider",
+            "state": {
+              "Name": "minecraft:cave_vines",
+              "Properties": {
+                "age": "0",
+                "berries": "false"
               }
-            ]
+            }
           },
           "values": {
             "type": "minecraft:uniform",

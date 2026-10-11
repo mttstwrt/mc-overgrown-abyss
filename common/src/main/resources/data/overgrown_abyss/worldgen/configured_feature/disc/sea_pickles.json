@@ -19,7 +19,7 @@
                     "waterlogged": "true"
                   }
                 },
-                "weight": 2
+                "weight": 6
               },
               {
                 "data": {
@@ -39,17 +39,7 @@
                     "waterlogged": "true"
                   }
                 },
-                "weight": 3
-              },
-              {
-                "data": {
-                  "Name": "minecraft:sea_pickle",
-                  "Properties": {
-                    "pickles": "4",
-                    "waterlogged": "true"
-                  }
-                },
-                "weight": 2
+                "weight": 1
               }
             ]
           }

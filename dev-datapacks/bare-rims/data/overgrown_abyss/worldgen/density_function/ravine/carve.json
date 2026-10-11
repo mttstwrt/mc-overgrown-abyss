@@ -33,7 +33,11 @@
     {
       "biome": "overgrown_abyss:disc_lush",
       "inherits": {
-        "biome": "minecraft:lush_caves"
+        "biome": "minecraft:lush_caves",
+        "without_features": [
+          "minecraft:lush_caves_ceiling_vegetation",
+          "minecraft:cave_vines"
+        ]
       },
       "weight": 4,
       "palette": {
@@ -47,7 +51,21 @@
       "growth": [
         {
           "feature": "overgrown_abyss:disc/glow_bulb",
-          "every": 400
+          "every": 300
+        },
+        {
+          "feature": "overgrown_abyss:disc/moss_ceiling",
+          "every": 55
+        },
+        {
+          "feature": "overgrown_abyss:disc/moss_ceiling",
+          "every": 55,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_berries_over_drop",
+          "every": 20,
+          "on": "underside"
         }
       ],
       "ground": {
@@ -430,7 +448,7 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_bulb",
-          "every": 600
+          "every": 450
         },
         {
           "feature": "overgrown_abyss:disc/jungle_tree_giant",
@@ -461,6 +479,10 @@
           "every": 90
         },
         {
+          "feature": "overgrown_abyss:disc/shroomlight_in_leaves",
+          "every": 2
+        },
+        {
           "feature": "overgrown_abyss:disc/vines_hanging",
           "every": 60
         },
@@ -471,6 +493,11 @@
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
           "every": 8,
+          "on": "underside"
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_berries_over_drop",
+          "every": 16,
           "on": "underside"
         },
         {
@@ -755,7 +782,7 @@
         },
         {
           "feature": "overgrown_abyss:disc/glow_bulb_swamp",
-          "every": 600
+          "every": 450
         },
         {
           "feature": "overgrown_abyss:disc/mangrove_giant",
@@ -812,8 +839,8 @@
           "every": 120
         },
         {
-          "feature": "overgrown_abyss:disc/froglight_bulbs",
-          "every": 200
+          "feature": "overgrown_abyss:disc/froglight_in_leaves",
+          "every": 40
         },
         {
           "feature": "overgrown_abyss:disc/lily_pads",
@@ -836,6 +863,15 @@
         {
           "feature": "overgrown_abyss:disc/glow_berries_hanging",
           "every": 16,
+          "on": "underside",
+          "patches": {
+            "size": 10,
+            "cover": 0.5
+          }
+        },
+        {
+          "feature": "overgrown_abyss:disc/glow_berries_over_drop",
+          "every": 24,
           "on": "underside",
           "patches": {
             "size": 10,

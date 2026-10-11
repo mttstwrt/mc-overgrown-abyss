@@ -159,7 +159,9 @@ in its middle. Its numbers:
 The mod's own themes:
 
 - `disc_lush` inherits from `minecraft:lush_caves` and adds nothing to its ground: a plain stone platform, which lush caves
-  moss over itself. Azalea bushes and vines hang over its rim, and a few glowing bulbs stand on it.
+  moss over itself. Azalea bushes and vines hang over its rim, and a few glowing bulbs stand on it. Its mossy ceiling and
+  the vines in it are the mod's (`moss_ceiling`, over the disc and under it): two of the parent's features are left out
+  (`without_features`), since their vines bear berries on one block in five and lit the whole disc.
 - `disc_jungle` inherits from `minecraft:jungle` (three times as likely in the middle of the cone as at its edge). Its top is
   a patchwork, in patches 10 to 30 blocks across: about half of it grass, with podzol, moss, coarse dirt and mud, and here
   and there a floor of mossy stone bricks edged with mossy cobblestone. Under it are three layers, which show at the rim as
@@ -197,19 +199,28 @@ The mod's own themes:
   dripleaf and blue orchids; on the water lily pads. Under the disc, patches of hanging mangrove roots draped with vines, and
   glow berries in patches of their own; its stem is clad in roots.
 
-Light on top of these two, which have none of the sky's under their domes:
+Light on top of these two, which have none of the sky's under their domes. Since 2026-10-11 it is held down on purpose,
+and what there is sits high and inside leaves, so that about two thirds of a jungle disc's ground and over half of a
+mangrove's has no block light and monsters can spawn on it (`docs/TUNING.md`, "Light", has what was measured):
 
-- `glow_berries_canopy` (both): glow berries hanging under leaves and branches, from 2 to 28 blocks over the ground. A cave
+- `glow_berries_canopy` (both): cave vines hanging under leaves and branches, from 2 to 28 blocks over the ground. A cave
   vine does not hold to a leaf by the game's own rules, so one of these stays until the leaf over it changes (the tree is cut,
   the leaf decays) and then drops as a vine does when its ceiling is broken.
-- Shroomlights hang under the crowns of the jungle's trees, and froglights of all three colours under the mangroves', as a
-  mangrove hangs its propagules: the `attached_to_leaves` decorator at the end of each tree's file, where `probability` is the
-  chance for each leaf with air under it and the two `exclusion_radius` numbers keep two lights apart.
-- `froglight_bulbs` (mangrove): froglights set into the mud in twos and threes, level with it, so they light the ground
-  without standing in the way.
-- `sea_pickles` (mangrove): on the beds of the ponds and streams, one to four to a block; four are as bright as a froglight.
+- `glow_berries_hanging` is the vine itself, there and under the discs and in the lush disc's moss: one vine in fourteen
+  has a berry, as a block more at its top, and no other block of a vine bears one. The two `weight`s of its first layer's
+  `height` are how many vines get none and how many get one.
+- `glow_berries_over_drop` (jungle, mangrove and lush, under the disc): a second vine, hung only where the 15 blocks under
+  it are open air, with berries in its top block or two on five vines in eight. That far up a berry lights no ground, so
+  the underside of a disc glows where it stands high over the next and stays dim where it is the next one's roof.
+- `shroomlight_in_leaves` (jungle) and `froglight_in_leaves` (mangrove, all three colours): a light in place of a leaf deep
+  in a crown, one with a leaf or a log on all six sides, at least 10 blocks over the ground. Most places tried have no crown
+  thick enough over them, which is why the jungle's `every` is 2. The trees hang no lights of their own any more, and no
+  froglights lie in the mud.
+- `sea_pickles` (mangrove): on the beds of the ponds and streams, one to three to a block and most often one, which is
+  light 6, 9 and 12.
 
-The numbers to change are each growth's `every` (larger is fewer), and the decorators' `probability`.
+The numbers to change are each growth's `every` (larger is fewer), and in the two `*_in_leaves` files the `y_spread`, which
+is the least a light is over the ground.
 
 Both are thinned so that a player can walk through. The numbers to change are the `every` of the bushes, bamboo and trees in
 each theme's `growth` (larger is thinner) and, for the mangrove's groves, their `cover` (smaller leaves more clearing); ferns,
@@ -282,14 +293,17 @@ it fills, and a tree started under one grows as tall as there is room):
 - `giant_pad` (jungle and mangrove): a flat round leaf of moss nine blocks across on a stalk of bamboo block, 4 to 6 blocks
   up and now and then twice that. It is the brown mushroom's own feature with other blocks. Its `rim_fade` has `to` 4, so
   it grows four times as often by the rim, where its leaf hangs out over the edge.
-- `glow_bulb` (jungle and lush) and `glow_bulb_swamp` (mangrove): a stalk of bamboo block 5 to 9 tall with a ball of leaves
-  on it, about a quarter of the ball lights: azalea leaves and shroomlights, or mangrove leaves and froglights of all
-  three colours. A tree feature, so it stands on any ground and puts a block of moss under itself.
+- `glow_bulb` (jungle and lush) and `glow_bulb_swamp` (mangrove): a stalk of bamboo block 10 to 14 tall with a bud on it,
+  a cross of five lights with a leaf on every side of each: shroomlights in azalea leaves, or froglights of all three
+  colours in mangrove leaves. A tree feature, so it stands on any ground and puts a block of moss under itself. To the
+  feature the lights are its foliage, and the leaves are six `attached_to_leaves` decorators, one for each direction; it
+  needs 9 blocks of clear air, so none grows under a low dome.
 
 For the mushrooms and the pad, `every` is places tried, and most tries come to nothing: the game grows one only on soil (grass,
 dirt, podzol, moss, mud; not the jungle's brick floors, not stone, not in water) and only where every block its cap will take
 is air or leaves, so not under a low part of a dome and not where a tree of the chunk next door already stands in the
-way. A bulb needs far less room and about two in five grow.
+way. A bulb stands on any ground but wants 9 blocks of clear air over it, and about one in six grows, one in five on a lush
+disc.
 
 A theme's `ground` is how its ground lies over the platform. The platform itself, and so the dome, the stem and the rim,
 stay as they are; the ground is more blocks on top, written into open air. Both parts are optional:
@@ -516,6 +530,15 @@ and say how many of its pieces' lowest layers lie in the ground.
 
 - `no-giants`: the mod's file without the giant mushrooms, pads and glowing bulbs.
 - `many-giants`: the mod's file with four times as many of each (every `every` a quarter). For finding them and judging them.
+
+- `no-lights`: the mod's file without glowing bulbs, lights in the leaves and sea pickles, and with a copy of
+  `glow_berries_hanging.json` in which no vine has a berry, and none of the second vine under discs. A disc at its darkest:
+  what light is left is the game's own glow berries in the hole's lush caves, lava, and a ruin's lamps. Measured: 93% of a
+  jungle disc's standing ground has no block light, 89% of a mangrove's and 94% of a lush disc's, where the mod's own file
+  gives 67%, 58% and 64%.
+- `many-lights`: the mod's file with twice the lights in the leaves on the jungle and three times on the mangrove (`every` 1
+  and 13), twice the bulbs, the sea pickles and the lit vines under discs, and a berry on one vine in five. For judging how
+  much light is too much again: 51%, 40% and 44% dark. These two packs each carry one feature file beside `carve.json`.
 
 - `huge-roots`: the mod's file with roots half as thick again: great roots of radius 7 down to 5.5 (14 blocks across to 11),
   crossing roots 5.5, links 3, nothing under 2.
