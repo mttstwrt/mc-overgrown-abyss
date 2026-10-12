@@ -11,7 +11,7 @@ import java.util.Optional;
  *
  * <p>The ground lies on the rock wherever something needs it level: near the rim, whose side shows the platform's own layers;
  * at the disc's water and beside it, which the rock holds in; and round each of its {@code flats}, the places where
- * something was stood on the platform itself or let into it: a ruin, or the water of a fall. Away from each of those it may rise by a block for each block
+ * something was stood on the platform itself or let into it: a ruin, a trove, or the water of a fall. Away from each of those it may rise by a block for each block
  * further, so a mound that one of them cuts into ends in a slope and not a wall.
  *
  * @param index the disc's place in its hole's layout, which its patches are drawn by
@@ -27,17 +27,14 @@ record DiscGround(Disc disc, long hash, int index, DiscRelief relief, Optional<D
         flats = List.copyOf(flats);
     }
 
-    /** The round of ground each ruin stands on with the margin a ruin keeps, for each disc in the themes' order. */
-    static List<List<Flat>> roundsOf(List<Optional<DiscTheme>> themes, List<DiscRuinSites.Placed> ruins, RuinPieces pieces) {
-        var rounds = new ArrayList<List<Flat>>(themes.size());
-        for (int i = 0; i < themes.size(); i++) {
+    /** The round of ground each ruin and trove stands on with the margin it keeps, for each of a layout's {@code discs} in their order. */
+    static List<List<Flat>> roundsOf(int discs, List<DiscRuinSites.Placed> stood) {
+        var rounds = new ArrayList<List<Flat>>(discs);
+        for (int i = 0; i < discs; i++) {
             int index = i;
-            Optional<DiscRuins> of = themes.get(i).flatMap(DiscTheme::ruins);
-            rounds.add(ruins.stream()
+            rounds.add(stood.stream()
                     .filter(placed -> placed.disc() == index)
-                    .map(placed -> new Flat(
-                            placed.site().x() + 0.5, placed.site().z() + 0.5,
-                            of.map(kinds -> pieces.radiusOf(kinds, placed.site())).orElse(0.0) + DiscRuinSites.MARGIN))
+                    .map(placed -> new Flat(placed.site().x() + 0.5, placed.site().z() + 0.5, placed.radius() + DiscRuinSites.MARGIN))
                     .toList());
         }
         return List.copyOf(rounds);

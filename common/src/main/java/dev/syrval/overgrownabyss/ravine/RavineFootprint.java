@@ -55,7 +55,7 @@ public interface RavineFootprint {
         public void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink) {}
 
         @Override
-        public List<RuinSite> ruinsIn(int minX, int minZ) {
+        public List<RuinSite> sitesIn(DiscSites which, int minX, int minZ) {
             return List.of();
         }
     };
@@ -114,8 +114,8 @@ public interface RavineFootprint {
      */
     void forEachInheritingDisc(int minX, int minZ, DiscPlotSink sink);
 
-    /** The ruins that stand on discs with their middle in the chunk whose lowest corner is {@code (minX, minZ)}. */
-    List<RuinSite> ruinsIn(int minX, int minZ);
+    /** The ruins or the troves that stand on discs with their middle in the chunk whose lowest corner is {@code (minX, minZ)}. */
+    List<RuinSite> sitesIn(DiscSites which, int minX, int minZ);
 
     /** One bound carve, the biome (if any) resolved for its cavern, and the biomes of its disc themes that exist in the level. */
     record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome, Map<ResourceKey<Biome>, Holder<Biome>> discBiomes) {
@@ -230,10 +230,10 @@ public interface RavineFootprint {
             }
 
             @Override
-            public List<RuinSite> ruinsIn(int minX, int minZ) {
+            public List<RuinSite> sitesIn(DiscSites which, int minX, int minZ) {
                 var found = new ArrayList<RuinSite>();
                 for (Region region : copy) {
-                    found.addAll(region.carve().ruinsIn(minX, minZ));
+                    found.addAll(region.carve().sitesIn(which, minX, minZ));
                 }
                 return found;
             }

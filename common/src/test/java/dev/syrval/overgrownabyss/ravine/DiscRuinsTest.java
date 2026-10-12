@@ -9,6 +9,7 @@ import com.mojang.serialization.JsonOps;
 import dev.syrval.overgrownabyss.compat.JarRuinPieces;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,7 +26,10 @@ import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import org.junit.jupiter.api.Test;
 
-/** The ruins on discs: how they are written, which discs have them, and that each stands where it has the room. */
+/**
+ * The ruins on discs: how they are written, which discs have them, and that each stands where it has the room. And the troves,
+ * which are a second list of the same kind on a theme.
+ */
 class DiscRuinsTest {
     static {
         MinecraftBootstrap.init();
@@ -67,9 +71,13 @@ class DiscRuinsTest {
     }
 
     private static DiscTheme ruined(Optional<DiscWater> water, DiscRuins ruins) {
+        return ruined(water, ruins, Optional.empty());
+    }
+
+    private static DiscTheme ruined(Optional<DiscWater> water, DiscRuins ruins, Optional<DiscRuins> troves) {
         return new DiscTheme(
                 Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE,
-                DiscPalette.UNPAINTED, water, List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.of(ruins), Optional.empty());
+                DiscPalette.UNPAINTED, water, List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.of(ruins), troves, Optional.empty());
     }
 
     /** The mod's own hole with other themes. */
@@ -84,7 +92,7 @@ class DiscRuinsTest {
         return CellDiscs.of(settings, LEVEL, RavineCells.at(SEED, settings, 0, cz).orElseThrow(), SurfaceProbe.SOLID, pieces);
     }
 
-    /** One ruin as the tests look at it: its site, the piece it is, and the disc it was found a place on. */
+    /** One ruin or trove as the tests look at it: its site, the piece it is, and the disc it was found a place on. */
     private record Standing(RuinSite site, RuinPieces.Piece piece, int index, Disc disc, DiscTraits traits) {
         double fromAxis() {
             return Math.hypot(site.x() + 0.5 - disc.x(), site.z() + 0.5 - disc.z());
@@ -97,19 +105,26 @@ class DiscRuinsTest {
 
     /** Every ruin of a cell with the disc it stands on and the piece it is. */
     private static List<Standing> standing(RavineSettings settings, int cz, CellDiscs cellDiscs, RuinPieces pieces) {
+        return standing(DiscSites.RUINS, settings, cz, cellDiscs, pieces);
+    }
+
+    /** The same of either of a cell's two lists. */
+    private static List<Standing> standing(DiscSites which, RavineSettings settings, int cz, CellDiscs cellDiscs, RuinPieces pieces) {
         RavineCell cell = RavineCells.at(SEED, settings, 0, cz).orElseThrow();
         List<Disc> discs = cellDiscs.layout().discs();
         List<DiscTraits> traits = DiscTraits.of(settings, cell, discs);
-        List<DiscRuinSites.Placed> placed = DiscRuinSites.onDiscs(settings, LEVEL, cell, cellDiscs.layout(), cellDiscs.themes(), traits, pieces);
-        assertEquals(cellDiscs.ruins(), placed.stream().map(DiscRuinSites.Placed::site).toList(), "the cell's ruins are these");
+        DiscRuinSites.Stood stood = DiscRuinSites.onDiscs(settings, LEVEL, cell, cellDiscs.layout(), cellDiscs.themes(), traits, pieces, cellDiscs.roots());
+        List<DiscRuinSites.Placed> placed = which == DiscSites.RUINS ? stood.ruins() : stood.troves();
+        assertEquals(cellDiscs.sites(which), placed.stream().map(DiscRuinSites.Placed::site).toList(), "the cell's " + which.getSerializedName() + " are these");
         var found = new ArrayList<Standing>();
         for (DiscRuinSites.Placed each : placed) {
             RuinSite site = each.site();
-            RuinPieces.Piece piece = cellDiscs.themes().get(each.disc()).flatMap(DiscTheme::ruins).stream()
+            RuinPieces.Piece piece = cellDiscs.themes().get(each.disc()).flatMap(which::of).stream()
                     .flatMap(ruins -> pieces.byRuins().getOrDefault(ruins, List.of()).stream())
                     .flatMap(kind -> kind.pieces().stream())
                     .filter(one -> one.pool().equals(site.pool()) && one.element() == site.element()).findFirst()
                     .orElseThrow(() -> new AssertionError(site + " is no piece of its disc's theme"));
+            assertEquals(piece.radius(), each.radius(), site + " is given the round of ground its piece asks for");
             var here = new Standing(site, piece, each.disc(), discs.get(each.disc()), traits.get(each.disc()));
             assertEquals(here.ground(), discs.get(each.disc()).topBlockAt(Math.max(0, here.fromAxis() - piece.radius())),
                     site + " stands on the lowest ground of its round");
@@ -298,12 +313,21 @@ class DiscRuinsTest {
 
     /** Every ruin of the first holes, each seen to have the room its piece needs. */
     private static List<Standing> assertRoomForEveryRuin(RavineSettings settings, RuinPieces pieces) {
+        return assertRoomForEverything(settings, pieces).get(DiscSites.RUINS);
+    }
+
+    /** Every ruin and every trove of the first holes, each seen to have the room its piece needs and to keep clear of all the others. */
+    private static Map<DiscSites, List<Standing>> assertRoomForEverything(RavineSettings settings, RuinPieces pieces) {
         DiscShape shape = settings.discs();
         var ruins = new ArrayList<Standing>();
+        var troves = new ArrayList<Standing>();
         for (int cz = 0; cz < CELLS; cz++) {
             RavineCell cell = RavineCells.at(SEED, settings, 0, cz).orElseThrow();
             CellDiscs cellDiscs = discs(settings, cz, pieces);
-            List<Standing> all = standing(settings, cz, cellDiscs, pieces);
+            List<Standing> ofRuins = standing(DiscSites.RUINS, settings, cz, cellDiscs, pieces);
+            List<Standing> ofTroves = standing(DiscSites.TROVES, settings, cz, cellDiscs, pieces);
+            var all = new ArrayList<>(ofRuins);
+            all.addAll(ofTroves);
             for (Standing ruin : all) {
                 Disc disc = ruin.disc();
                 double radius = ruin.piece().radius();
@@ -344,9 +368,10 @@ class DiscRuinsTest {
                     }
                 }
             }
-            ruins.addAll(all);
+            ruins.addAll(ofRuins);
+            troves.addAll(ofTroves);
         }
-        return ruins;
+        return Map.of(DiscSites.RUINS, ruins, DiscSites.TROVES, troves);
     }
 
     @Test
@@ -528,28 +553,242 @@ class DiscRuinsTest {
         RavineCell cell = RavineCells.at(SEED, settings, 0, 0).orElseThrow();
         int chunkX = Math.floorDiv((int) cell.centreX(), 16) * 16;
         int chunkZ = Math.floorDiv((int) cell.centreZ(), 16) * 16;
-        assertEquals(List.of(), carve.ruinsIn(chunkX, chunkZ), "nothing before the carve is bound to a level");
+        assertEquals(List.of(), carve.sitesIn(DiscSites.RUINS, chunkX, chunkZ), "nothing before the carve is bound to a level");
         RavineCarve bound = carve.bind(SEED, LEVEL);
         int chunks = (int) Math.ceil(settings.maxReach() / 16) + 2;
-        assertEquals(List.of(), ruinsRound(bound, chunkX, chunkZ, chunks), "nor before the level's pieces are known");
+        assertEquals(List.of(), sitesRound(DiscSites.RUINS, bound, chunkX, chunkZ, chunks), "nor before the level's pieces are known");
         bound.furnishRuins(pieces);
-        List<RuinSite> handed = ruinsRound(bound, chunkX, chunkZ, chunks);
+        List<RuinSite> handed = sitesRound(DiscSites.RUINS, bound, chunkX, chunkZ, chunks);
         List<RuinSite> all = discs(settings, 0, pieces).ruins();
         assertEquals(new HashSet<>(all), new HashSet<>(handed), "every ruin of the hole");
         assertEquals(all.size(), handed.size(), "each of them once");
         assertTrue(all.size() > 10, all.size() + " ruins in the hole");
         int farX = Math.floorDiv((int) (cell.centreX() + settings.maxReach() + 64), 16) * 16;
-        assertEquals(List.of(), bound.ruinsIn(farX, chunkZ), "none in a chunk the hole does not reach");
+        assertEquals(List.of(), bound.sitesIn(DiscSites.RUINS, farX, chunkZ), "none in a chunk the hole does not reach");
+
+        List<RuinSite> troves = discs(settings, 0, pieces).troves();
+        List<RuinSite> handedAsTroves = sitesRound(DiscSites.TROVES, bound, chunkX, chunkZ, chunks);
+        assertEquals(new HashSet<>(troves), new HashSet<>(handedAsTroves), "every trove of the hole, to the structure that builds troves");
+        assertEquals(troves.size(), handedAsTroves.size(), "each of them once");
+        assertTrue(troves.size() > 10, troves.size() + " troves in the hole");
+        assertTrue(Collections.disjoint(handed, handedAsTroves), "and none of them to the one that builds ruins");
     }
 
-    // What the chunks round one hand out, each ruin seen to be in the chunk that handed it out.
-    private static List<RuinSite> ruinsRound(RavineCarve carve, int chunkX, int chunkZ, int chunks) {
+    // A piece the size of a trove, which finds room nearly anywhere.
+    private static List<RuinPieces.Piece> tiny(String pool) {
+        return List.of(piece(pool, 0, 1, 1.5, 3, 0));
+    }
+
+    // A theme with troves and no ruins.
+    private static DiscTheme troved(DiscRuins troves) {
+        return new DiscTheme(
+                Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE,
+                DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.of(troves), Optional.empty());
+    }
+
+    private static RuinPieces piecesOf(DiscRuins ruins, List<RuinPieces.Piece> ofRuins, DiscRuins troves, List<RuinPieces.Piece> ofTroves) {
+        var both = new HashMap<>(pieces(ruins, ofRuins).byRuins());
+        both.putAll(pieces(troves, ofTroves).byRuins());
+        return new RuinPieces(both);
+    }
+
+    @Test
+    void aThemesTrovesAreWrittenLikeItsRuins() {
+        var json = JsonParser.parseString("""
+                {"weight": 1,
+                 "ruins": {"chance": 0.5, "kinds": [{"pool": "overgrown_abyss:disc_ruins/camp", "weight": 2}]},
+                 "troves": {"chance": 0.75, "every": 5000, "kinds": [{"pool": "overgrown_abyss:disc_troves/cairn", "weight": 1}]}}""");
+        DiscTheme theme = DiscTheme.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+        assertEquals(Optional.of(ruins(0.75F, 5000, EVEN, kind("disc_troves/cairn", 1, EVEN))), theme.troves());
+        assertEquals(theme.troves(), DiscSites.TROVES.of(theme));
+        assertEquals(theme.ruins(), DiscSites.RUINS.of(theme));
+        assertEquals(0.5F, theme.ruins().orElseThrow().chance(), "its ruins are a list of their own");
+        assertEquals(theme, DiscTheme.CODEC.parse(JsonOps.INSTANCE, DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, theme).getOrThrow()).getOrThrow(),
+                "written and read again");
+
+        DiscTheme plain = DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1}")).getOrThrow();
+        assertEquals(Optional.empty(), plain.troves(), "a theme has no troves unless it says so");
+        assertFalse(DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, plain).getOrThrow().getAsJsonObject().has("troves"), "and nothing is written for them");
+        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1, \"troves\": {\"chance\": 0.5, \"kinds\": []}}")).isError(),
+                "troves are checked as ruins are");
+    }
+
+    @Test
+    void aThemeGivenTrovesKeepsEveryRuinWhereItWasAndItsTrovesStandClearOfThem() throws Exception {
+        DiscRuins ruins = ruins(1, 1500, EVEN, kind("small", 1, EVEN));
+        DiscRuins troves = ruins(1, 800, EVEN, kind("tiny", 1, EVEN));
+        RuinPieces pieces = piecesOf(ruins, small("small"), troves, tiny("tiny"));
+        RavineSettings alone = with(ruined(Optional.empty(), ruins));
+        RavineSettings both = with(ruined(Optional.empty(), ruins, Optional.of(troves)));
+        int found = 0;
+        int kept = 0;
+        for (int cz = 0; cz < CELLS; cz++) {
+            CellDiscs withTroves = discs(both, cz, pieces);
+            CellDiscs without = discs(alone, cz, pieces);
+            assertEquals(without.ruins(), withTroves.ruins(), "the same ruins with troves as without");
+            assertEquals(List.of(), without.troves(), "a theme that names none has none");
+            assertTrue(Collections.disjoint(withTroves.ruins(), withTroves.troves()), "a trove is not among the ruins");
+            found += withTroves.troves().size();
+            kept += withTroves.ruins().size();
+        }
+        assertTrue(found > 300 && kept > 150, found + " troves beside " + kept + " ruins");
+        // That each keeps the margin from every ruin and every other trove, with the room its piece needs.
+        Map<DiscSites, List<Standing>> stood = assertRoomForEverything(both, pieces);
+        assertEquals(found, stood.get(DiscSites.TROVES).size());
+        // Drawn apart from the ruins: the very same list stood as a theme's troves comes to other places than it does as its ruins.
+        RavineSettings asTroves = with(troved(ruins));
+        RuinPieces same = pieces(ruins, small("small"));
+        var places = new HashSet<List<Integer>>();
+        int asTroveSites = 0;
+        int shared = 0;
+        for (int cz = 0; cz < CELLS; cz++) {
+            for (RuinSite site : discs(alone, cz, same).ruins()) {
+                places.add(List.of(cz, site.x(), site.z()));
+            }
+            assertEquals(List.of(), discs(asTroves, cz, same).ruins());
+            for (RuinSite site : discs(asTroves, cz, same).troves()) {
+                asTroveSites++;
+                shared += places.contains(List.of(cz, site.x(), site.z())) ? 1 : 0;
+            }
+        }
+        assertTrue(asTroveSites > 150, asTroveSites + " stood as troves");
+        assertTrue(shared < 0.05 * asTroveSites, shared + " of " + asTroveSites + " stand as troves where they stand as ruins");
+    }
+
+    @Test
+    void aTroveHoldsTheTableThatItsOwnTiersGiveItsDisc() throws Exception {
+        DiscRuins.Loot ofRuins = loot(2, 1, 0.5F, 0.8F);
+        var behind = new DiscRuins.Loot(
+                List.of(new DiscRuins.Loot.Tier(table("stash"), 0), new DiscRuins.Loot.Tier(table("poor"), 0.5F), new DiscRuins.Loot.Tier(table("fair"), 0.8F)), 2, 1);
+        DiscRuins ruins = new DiscRuins(1, 1500, EVEN, ofRuins, List.of(kind("small", 1, EVEN)), List.of());
+        DiscRuins troves = new DiscRuins(1, 800, EVEN, behind, List.of(kind("tiny", 1, EVEN)), List.of());
+        RuinPieces pieces = piecesOf(ruins, small("small"), troves, tiny("tiny"));
+        RavineSettings settings = with(ruined(Optional.empty(), ruins, Optional.of(troves)));
+        var held = new HashMap<ResourceKey<LootTable>, Integer>();
+        for (int cz = 0; cz < CELLS; cz++) {
+            CellDiscs cellDiscs = discs(settings, cz, pieces);
+            for (Standing ruin : standing(DiscSites.RUINS, settings, cz, cellDiscs, pieces)) {
+                assertEquals(ofRuins.tableFor(ruin.traits()), ruin.site().loot(), "a ruin still holds its own list's table");
+            }
+            for (Standing trove : standing(DiscSites.TROVES, settings, cz, cellDiscs, pieces)) {
+                assertEquals(behind.tableFor(trove.traits()), trove.site().loot(), "the table of the disc that the trove " + trove.site() + " stands on");
+                held.merge(trove.site().loot().orElseThrow(), 1, Integer::sum);
+            }
+        }
+        assertEquals(Set.of(table("stash"), table("poor"), table("fair")), held.keySet(), "every table of the troves is some trove's, and the ruins' richest is none's");
+        assertTrue(held.values().stream().allMatch(count -> count > 10), "each has its share: " + held);
+    }
+
+    // Whether a root comes within a margin of the round of ground a piece stands on, at the heights the piece is kept room for.
+    private static boolean meets(RootLayout roots, Standing piece, double margin) {
+        for (Root root : roots.roots()) {
+            for (Root.Knot knot : root.knots()) {
+                boolean level = knot.y() + knot.radius() >= piece.site().y() && knot.y() - knot.radius() <= piece.ground() + Math.max(piece.piece().height(), 3);
+                double apart = Math.hypot(knot.x() - piece.site().x() - 0.5, knot.z() - piece.site().z() - 0.5);
+                if (level && apart < piece.piece().radius() + knot.radius() + margin) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Test
+    void noTroveStandsWhereARootOfTheHolePassesThoughARuinMay() throws Exception {
+        RavineSettings settings = DiscThemeTest.shipped();
+        RuinPieces pieces = JarRuinPieces.of(settings);
+        int knots = 0;
+        int troves = 0;
+        int ruins = 0;
+        int ruinsMet = 0;
+        for (int cz = 0; cz < CELLS; cz++) {
+            CellDiscs cellDiscs = discs(settings, cz, pieces);
+            RootLayout roots = cellDiscs.roots();
+            knots += roots.roots().stream().mapToInt(root -> root.knots().size()).sum();
+            for (Standing trove : standing(DiscSites.TROVES, settings, cz, cellDiscs, pieces)) {
+                // No piece replaces a root's wood, and a trove is four or five blocks: a root through it would leave nothing.
+                assertFalse(meets(roots, trove, DiscRuinSites.MARGIN), "the trove " + trove.site() + " is within the margin of a root");
+                troves++;
+            }
+            for (Standing ruin : standing(DiscSites.RUINS, settings, cz, cellDiscs, pieces)) {
+                ruins++;
+                ruinsMet += meets(roots, ruin, 0) ? 1 : 0;
+            }
+        }
+        assertTrue(knots > 1000 && troves > 100, knots + " knots of root and " + troves + " troves in " + CELLS + " holes");
+        assertTrue(ruinsMet > 0, "roots do come through where pieces stand: of " + ruins + " ruins, which are built round them, " + ruinsMet + " are met by one");
+    }
+
+    // A trove stands on the platform, as a ruin does, so a mound it was put in is cut back from it and does not bury it.
+    private static void assertTheGroundLiesLevelRound(RavineSettings settings, RuinPieces pieces) {
+        int looked = 0;
+        int inAMound = 0;
+        for (int cz = 0; cz < CELLS; cz++) {
+            CellDiscs cellDiscs = discs(settings, cz, pieces);
+            for (Standing trove : standing(DiscSites.TROVES, settings, cz, cellDiscs, pieces)) {
+                DiscGround ground = cellDiscs.grounds().get(trove.index());
+                double kept = trove.piece().radius() + DiscRuinSites.MARGIN;
+                for (int dx = -4; dx <= 4; dx++) {
+                    for (int dz = -4; dz <= 4; dz++) {
+                        if (Math.hypot(dx - 0.5, dz - 0.5) < kept + 1) {
+                            assertEquals(0, ground.riseAt(trove.site().x() + dx, trove.site().z() + dz), "ground over the platform beside the trove " + trove.site());
+                        }
+                    }
+                }
+                var left = new DiscGround(ground.disc(), ground.hash(), ground.index(), ground.relief(), ground.water(), List.of());
+                looked++;
+                inAMound += left.riseAt(trove.site().x(), trove.site().z()) > 0 ? 1 : 0;
+            }
+        }
+        assertTrue(inAMound > 10, "of " + looked + " troves, those where a mound or an outcrop would have stood: " + inAMound);
+    }
+
+    @Test
+    void theModsTrovesAreAboutOneADiscAndEveryPieceOfThemFindsRoom() throws Exception {
+        RavineSettings settings = DiscThemeTest.shipped();
+        RuinPieces pieces = JarRuinPieces.of(settings);
+        List<Standing> troves = assertRoomForEverything(settings, pieces).get(DiscSites.TROVES);
+        int discs = 0;
+        int withATrove = 0;
+        int bare = 0;
+        for (int cz = 0; cz < CELLS; cz++) {
+            int cell = cz;
+            CellDiscs cellDiscs = discs(settings, cz, pieces);
+            List<RuinSite> here = cellDiscs.troves();
+            assertTrue(here.stream().allMatch(site -> troves.stream().anyMatch(trove -> trove.site().equals(site))), "the troves of hole " + cell + " were all looked at");
+            for (int i = 0; i < cellDiscs.themes().size(); i++) {
+                int index = i;
+                boolean themed = cellDiscs.themes().get(i).flatMap(DiscTheme::troves).isPresent();
+                long on = standing(DiscSites.TROVES, settings, cz, cellDiscs, pieces).stream().filter(trove -> trove.index() == index).count();
+                discs += themed ? 1 : 0;
+                withATrove += themed && on > 0 ? 1 : 0;
+                bare += themed ? 0 : 1;
+                assertTrue(themed || on == 0, "a disc of a theme without troves has none");
+                assertTrue(on <= 3, on + " troves on one disc");
+            }
+        }
+        assertTheGroundLiesLevelRound(settings, pieces);
+        double aDisc = troves.size() / (double) discs;
+        String counts = troves.size() + " troves on " + discs + " discs of the themes that have them, " + withATrove + " of which have any; " + bare + " discs of the others";
+        assertTrue(aDisc > 0.8 && aDisc < 1.25, "about one a disc: " + counts);
+        assertTrue(withATrove > 0.5 * discs && withATrove < 0.95 * discs, "most discs have one and some have none: " + counts);
+        assertTrue(bare > 5, counts);
+        Set<String> used = troves.stream().map(trove -> trove.site().pool().location().getPath() + " " + trove.site().element()).collect(Collectors.toSet());
+        assertEquals(6, used.size(), "each of the three cairns and three marker stones stands somewhere: " + used);
+        Set<String> tables = troves.stream().map(trove -> trove.site().loot().orElseThrow().location().getPath()).collect(Collectors.toSet());
+        assertTrue(tables.containsAll(Set.of("chests/disc/jungle_stash", "chests/disc/lush_stash", "chests/disc/mangrove_stash", "chests/disc/jungle_1", "chests/disc/jungle_2")),
+                "tables held: " + tables);
+        assertTrue(tables.stream().noneMatch(table -> table.endsWith("_3")), "no trove holds a theme's richest table: " + tables);
+    }
+
+    // What the chunks round one hand out of one of the two lists, each site seen to be in the chunk that handed it out.
+    private static List<RuinSite> sitesRound(DiscSites which, RavineCarve carve, int chunkX, int chunkZ, int chunks) {
         var handed = new ArrayList<RuinSite>();
         for (int dx = -chunks; dx <= chunks; dx++) {
             for (int dz = -chunks; dz <= chunks; dz++) {
                 int minX = chunkX + dx * 16;
                 int minZ = chunkZ + dz * 16;
-                for (RuinSite site : carve.ruinsIn(minX, minZ)) {
+                for (RuinSite site : carve.sitesIn(which, minX, minZ)) {
                     assertTrue(site.x() >= minX && site.x() < minX + 16 && site.z() >= minZ && site.z() < minZ + 16, site + " handed to the chunk at " + minX + " " + minZ);
                     handed.add(site);
                 }

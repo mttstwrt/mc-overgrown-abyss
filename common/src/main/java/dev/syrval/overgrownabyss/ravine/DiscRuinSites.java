@@ -26,6 +26,11 @@ import net.minecraft.world.level.storage.loot.LootTable;
  *
  * <p>Ruins are more or less frequent with a disc's height in its hole, and so is each kind: see {@link DiscRuins#byHeight}.
  * A ruin of one of the theme's own kinds is also given the loot table of its disc: see {@link DiscRuins.Loot}.
+ *
+ * <p>A theme's troves are stood the same way and by the same rules, from a list and draws of their own (see
+ * {@link DiscSites}), once every ruin of the cell stands: so a theme given troves keeps each of its ruins where it was, and a
+ * trove keeps clear of them. A trove also keeps clear of the hole's roots, which a ruin does not: no piece replaces a root's
+ * wood, so a ruin is built round one that passes through it, and of a trove's few blocks nothing would be left.
  */
 final class DiscRuinSites {
     static final int MAX_PER_DISC = 6;
@@ -35,9 +40,8 @@ final class DiscRuinSites {
     static final int MAX_STEP = 1;
     // The most of a ruin's round that may be water.
     static final double MAX_WET = 0.2;
-    private static final int HASH_BASE = 800_000;
-    // Hash indices kept apart for each disc: one for whether it has ruins, then one for each of its ruins, which all of that
-    // ruin's own draws are made from.
+    // Hash indices kept apart for each disc, from the first of its list's (see DiscSites): one for whether it has ruins, then
+    // one for each of its ruins, which all of that ruin's own draws are made from.
     private static final int PER_DISC = 256;
     private static final int TRIES = 8;
     // A ruin's own draws: two for each place tried, one for the seed, then one for each kind's place in the order. The draws
@@ -53,35 +57,36 @@ final class DiscRuinSites {
 
     private DiscRuinSites() {}
 
-    /** A ruin and which disc of the layout it stands on. */
-    record Placed(int disc, RuinSite site) {}
+    /** A ruin or a trove, which disc of the layout it stands on, and the radius of the round of ground kept for it. */
+    record Placed(int disc, RuinSite site, double radius) {}
 
-    /** Every ruin in a cell with the disc it stands on, in the order of those discs. */
-    static List<Placed> onDiscs(
-            RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, List<Optional<DiscTheme>> themes,
-            List<DiscTraits> traits, RuinPieces pieces) {
-        var hole = new Hole(settings, bounds, cell, layout);
-        var sites = new ArrayList<Placed>();
-        // Discs of one layer run into one another, so a ruin keeps clear of those on every disc and not only of its own.
-        var standing = new ArrayList<Standing>();
-        for (int i = 0; i < layout.discs().size(); i++) {
-            Optional<DiscTheme> theme = themes.get(i);
-            Optional<DiscRuins> ruins = theme.flatMap(DiscTheme::ruins);
-            if (ruins.isEmpty()) {
-                continue;
-            }
-            double height = traits.get(i).height();
-            List<RuinPieces.Kind> kinds = pieces.of(ruins.get());
-            if (!kinds.isEmpty() && RavineCells.unit(cell.hash(), base(i)) < ruins.get().chance() * ruins.get().byHeight().at(height)) {
-                var host = new Host(i, layout.discs().get(i), theme.get(), ruins.get().loot().tableFor(traits.get(i)));
-                hole.ruinsOn(host, ruins.get(), kinds, height, standing, sites);
-            }
+    /** What stands in a cell: its ruins and its troves, each with the disc it stands on, in the order of those discs. */
+    record Stood(List<Placed> ruins, List<Placed> troves) {
+        Stood {
+            ruins = List.copyOf(ruins);
+            troves = List.copyOf(troves);
         }
-        return List.copyOf(sites);
+
+        List<Placed> all() {
+            var all = new ArrayList<>(ruins);
+            all.addAll(troves);
+            return all;
+        }
     }
 
-    private static int base(int disc) {
-        return HASH_BASE + disc * PER_DISC;
+    /** Every ruin and every trove in a cell whose hole has these {@code roots}. */
+    static Stood onDiscs(
+            RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, List<Optional<DiscTheme>> themes,
+            List<DiscTraits> traits, RuinPieces pieces, RootLayout roots) {
+        var hole = new Hole(settings, bounds, cell, layout, roots);
+        // Discs of one layer run into one another, so a ruin keeps clear of those on every disc and not only of its own.
+        var standing = new ArrayList<Standing>();
+        List<Placed> ruins = hole.stand(DiscSites.RUINS, themes, traits, pieces, standing);
+        return new Stood(ruins, hole.stand(DiscSites.TROVES, themes, traits, pieces, standing));
+    }
+
+    private static int base(DiscSites which, int disc) {
+        return which.hashBase() + disc * PER_DISC;
     }
 
     /**
@@ -99,8 +104,11 @@ final class DiscRuinSites {
         return drawn.stream().map(Drawn::thing).toList();
     }
 
-    /** A disc that holds ruins: its place in the layout, its theme, and the loot table of the theme's own ruins on it, if it names any. */
-    private record Host(int index, Disc disc, DiscTheme theme, Optional<ResourceKey<LootTable>> loot) {}
+    /**
+     * A disc that holds ruins: which of its theme's two lists they are of, its place in the layout, its theme, and the loot
+     * table of the theme's own ruins on it, if that list names any.
+     */
+    private record Host(DiscSites which, int index, Disc disc, DiscTheme theme, Optional<ResourceKey<LootTable>> loot) {}
 
     /**
      * A kind as one disc has it: its place among the level's kinds, its weight at the disc's height, its pieces the disc is wide
@@ -146,9 +154,28 @@ final class DiscRuinSites {
         }
     }
 
-    private record Hole(RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout) {
+    private record Hole(RavineSettings settings, RavineBounds bounds, RavineCell cell, DiscLayout layout, RootLayout roots) {
 
-        void ruinsOn(Host host, DiscRuins ruins, List<RuinPieces.Kind> kinds, double height, List<Standing> standing, List<Placed> sites) {
+        /** One of the two lists on every disc whose theme has it, in the order of the discs; each piece stood is added to {@code standing}. */
+        List<Placed> stand(DiscSites which, List<Optional<DiscTheme>> themes, List<DiscTraits> traits, RuinPieces pieces, List<Standing> standing) {
+            var sites = new ArrayList<Placed>();
+            for (int i = 0; i < layout.discs().size(); i++) {
+                Optional<DiscTheme> theme = themes.get(i);
+                Optional<DiscRuins> ruins = theme.flatMap(which::of);
+                if (ruins.isEmpty()) {
+                    continue;
+                }
+                double height = traits.get(i).height();
+                List<RuinPieces.Kind> kinds = pieces.of(ruins.get());
+                if (!kinds.isEmpty() && RavineCells.unit(cell.hash(), base(which, i)) < ruins.get().chance() * ruins.get().byHeight().at(height)) {
+                    var host = new Host(which, i, layout.discs().get(i), theme.get(), ruins.get().loot().tableFor(traits.get(i)));
+                    ruinsOn(host, ruins.get(), kinds, height, standing, sites);
+                }
+            }
+            return sites;
+        }
+
+        private void ruinsOn(Host host, DiscRuins ruins, List<RuinPieces.Kind> kinds, double height, List<Standing> standing, List<Placed> sites) {
             Disc disc = host.disc();
             var offered = new ArrayList<Offered>(kinds.size());
             for (int i = 0; i < kinds.size(); i++) {
@@ -165,15 +192,15 @@ final class DiscRuinSites {
             double area = Math.PI * disc.radius() * disc.radius();
             int wanted = Math.clamp(Math.round(area / ruins.every() * ruins.byHeight().at(height)), 1, MAX_PER_DISC);
             for (int ruin = 0; ruin < wanted; ruin++) {
-                long draws = RavineCells.bits(cell.hash(), base(host.index()) + 1 + ruin);
+                long draws = RavineCells.bits(cell.hash(), base(host.which(), host.index()) + 1 + ruin);
                 List<Offered> order = inOrder(offered, Offered::weight, kind -> RavineCells.unit(draws, FIRST_KIND_DRAW + kind.index()));
-                stand(host, order, draws, standing).ifPresent(site -> sites.add(new Placed(host.index(), site)));
+                standOne(host, order, draws, standing).ifPresent(sites::add);
             }
         }
 
         // One ruin: the first piece with room, of the kinds in the order given and of each kind's pieces in an order drawn by
         // their weights in its pool.
-        private Optional<RuinSite> stand(Host host, List<Offered> kinds, long draws, List<Standing> standing) {
+        private Optional<Placed> standOne(Host host, List<Offered> kinds, long draws, List<Standing> standing) {
             var full = new HashSet<Size>();
             for (Offered kind : kinds) {
                 long order = RavineCells.bits(draws, -1 - kind.index());
@@ -181,7 +208,7 @@ final class DiscRuinSites {
                     if (full.contains(Size.of(piece))) {
                         continue;
                     }
-                    Optional<RuinSite> site = place(host, piece, kind.loot(), draws, standing);
+                    Optional<Placed> site = place(host, piece, kind.loot(), draws, standing);
                     if (site.isPresent()) {
                         return site;
                     }
@@ -192,7 +219,7 @@ final class DiscRuinSites {
         }
 
         // A piece at the first of the places drawn for its ruin where it has room.
-        private Optional<RuinSite> place(
+        private Optional<Placed> place(
                 Host host, RuinPieces.Piece piece, Optional<ResourceKey<LootTable>> loot, long draws, List<Standing> standing) {
             for (int attempt = 0; attempt < TRIES; attempt++) {
                 Round round = roundAt(host.disc(), piece, draws, attempt);
@@ -200,8 +227,8 @@ final class DiscRuinSites {
                 if (ground.isPresent()) {
                     standing.add(new Standing(host.index(), round, ground.getAsInt() - piece.sink(), topOver(ground.getAsInt(), piece)));
                     long seed = RavineCells.bits(draws, SEED_DRAW);
-                    return Optional.of(new RuinSite(
-                            round.x(), ground.getAsInt() + 1 - piece.sink(), round.z(), piece.pool(), piece.element(), seed, loot));
+                    var site = new RuinSite(round.x(), ground.getAsInt() + 1 - piece.sink(), round.z(), piece.pool(), piece.element(), seed, loot);
+                    return Optional.of(new Placed(host.index(), site, round.radius()));
                 }
             }
             return Optional.empty();
@@ -239,7 +266,24 @@ final class DiscRuinSites {
                     || !isRockUnder(round, lowest, piece.sink()) || !isOpenOver(round, lowest, top)) {
                 return OptionalInt.empty();
             }
+            if (host.which() == DiscSites.TROVES && isRooted(round, lowest + 1 - piece.sink(), top)) {
+                return OptionalInt.empty();
+            }
             return OptionalInt.of(lowest);
+        }
+
+        // Whether a root of the hole's comes within the margin of a round between two heights. A root's knots are about a
+        // block apart along it, so each is asked.
+        private boolean isRooted(Round round, int bottom, int top) {
+            for (Root root : roots.roots()) {
+                for (Root.Knot knot : root.knots()) {
+                    if (knot.y() + knot.radius() >= bottom && knot.y() - knot.radius() <= top
+                            && round.distanceTo(knot.x(), knot.z()) < round.radius() + knot.radius() + MARGIN) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         // The highest block kept clear for a piece that stands on ground at this height.

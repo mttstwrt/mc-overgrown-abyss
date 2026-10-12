@@ -6,10 +6,10 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 
 /**
- * What the ruins of a level's disc themes are made of: for each theme's {@link DiscRuins}, the kinds a ruin can be there, each
- * with the pieces of its pool and the room every piece needs. The room is measured from the templates the level really has
- * when it loads, which a pack may have replaced and another mod may have added, so none of it is written in a theme. Plain
- * data, built once for a level and then only read.
+ * What the ruins and troves of a level's disc themes are made of: for each theme's {@link DiscRuins}, the kinds a ruin can be
+ * there, each with the pieces of its pool and the room every piece needs. The room is measured from the templates the level
+ * really has when it loads, which a pack may have replaced and another mod may have added, so none of it is written in a
+ * theme. Plain data, built once for a level and then only read.
  */
 public record RuinPieces(Map<DiscRuins, List<Kind>> byRuins) {
     public static final RuinPieces NONE = new RuinPieces(Map.of());
@@ -45,13 +45,6 @@ public record RuinPieces(Map<DiscRuins, List<Kind>> byRuins) {
     }
 
     /** The kinds a theme's ruins can be in this level; none if nothing of them could be measured. */
-    /** The radius of the round of ground a site's piece was given; 0 for a site that none of these ruins' pieces made. */
-    double radiusOf(DiscRuins ruins, RuinSite site) {
-        return of(ruins).stream().flatMap(kind -> kind.pieces().stream())
-                .filter(piece -> piece.pool().equals(site.pool()) && piece.element() == site.element())
-                .mapToDouble(Piece::radius).findFirst().orElse(0);
-    }
-
     List<Kind> of(DiscRuins ruins) {
         return byRuins.getOrDefault(ruins, List.of());
     }

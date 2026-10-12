@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.syrval.overgrownabyss.ravine.DiscRuins;
+import dev.syrval.overgrownabyss.ravine.DiscSites;
 import dev.syrval.overgrownabyss.ravine.DiscTheme;
 import dev.syrval.overgrownabyss.ravine.RavineSettings;
 import dev.syrval.overgrownabyss.ravine.RuinPieces;
@@ -22,8 +23,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 
 /**
- * The pieces a level has for the ruins of some settings when its templates are vanilla's and no other mod lends any: each
- * kind's pool read from its file and each template from the game's jar, measured by the mod's own rule. For tests that need
+ * The pieces a level has for the ruins and troves of some settings when its templates are vanilla's and the mod's and no
+ * other mod lends any: each kind's pool read from its file and each template from the game's jar or the mod's files, measured
+ * by the mod's own rule. For tests that need
  * the mod's real pieces without a level to load them in; the pools are read as files because the mod's own name processors
  * that only the running mod registers.
  */
@@ -86,7 +88,9 @@ public final class JarRuinPieces {
     public static RuinPieces of(RavineSettings settings) {
         var byRuins = new HashMap<DiscRuins, List<RuinPieces.Kind>>();
         for (DiscTheme theme : settings.discThemes()) {
-            theme.ruins().ifPresent(ruins -> byRuins.put(ruins, ruins.kinds().stream().map(JarRuinPieces::kind).toList()));
+            for (DiscSites which : DiscSites.values()) {
+                which.of(theme).ifPresent(ruins -> byRuins.put(ruins, ruins.kinds().stream().map(JarRuinPieces::kind).toList()));
+            }
         }
         return new RuinPieces(byRuins);
     }

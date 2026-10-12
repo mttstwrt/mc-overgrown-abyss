@@ -6,6 +6,7 @@ import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import dev.syrval.overgrownabyss.OvergrownAbyss;
 import dev.syrval.overgrownabyss.ravine.DiscRuins;
+import dev.syrval.overgrownabyss.ravine.DiscSites;
 import dev.syrval.overgrownabyss.ravine.DiscTheme;
 import dev.syrval.overgrownabyss.ravine.RuinPieces;
 import java.util.ArrayList;
@@ -38,9 +39,9 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProc
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
 
 /**
- * What a level's ruins are made of (see {@link RuinPieces}), found once when the level loads: the pieces of each kind's
- * template pool, each measured from its own template, and for the structures a theme borrows by tag the pool and the depth
- * their own files start them with.
+ * What a level's ruins and troves are made of (see {@link RuinPieces}), found once when the level loads: the pieces of each
+ * kind's template pool, each measured from its own template, and for the structures a theme borrows by tag the pool and the
+ * depth their own files start them with.
  *
  * <p>Nothing here is typed into a theme, because the templates are not ours: a pack may replace vanilla's, and the structures
  * of a tag are other mods'. What the game has no accessor for is read through its own codecs, as the files would say it, and
@@ -147,31 +148,34 @@ final class DiscRuinPieces {
         this.templates = templates;
     }
 
-    /** The pieces the ruins of {@code themes} are made of in a level with these registries and templates. */
+    /** The pieces the ruins and the troves of {@code themes} are made of in a level with these registries and templates. */
     static RuinPieces of(RegistryAccess registries, Templates templates, List<DiscTheme> themes) {
         var level = new DiscRuinPieces(registries, templates);
         var byRuins = new HashMap<DiscRuins, List<RuinPieces.Kind>>();
         for (DiscTheme theme : themes) {
-            if (theme.ruins().isPresent() && !byRuins.containsKey(theme.ruins().get())) {
-                List<RuinPieces.Kind> kinds = level.kindsOf(theme.ruins().get());
-                byRuins.put(theme.ruins().get(), kinds);
-                logKinds(theme, kinds);
+            for (DiscSites which : DiscSites.values()) {
+                Optional<DiscRuins> ruins = which.of(theme);
+                if (ruins.isPresent() && !byRuins.containsKey(ruins.get())) {
+                    List<RuinPieces.Kind> kinds = level.kindsOf(ruins.get());
+                    byRuins.put(ruins.get(), kinds);
+                    logKinds(which, theme, kinds);
+                }
             }
         }
         return new RuinPieces(byRuins);
     }
 
     // Shows in a pack's log what its templates came to, which is what decides where its ruins find room.
-    private static void logKinds(DiscTheme theme, List<RuinPieces.Kind> kinds) {
+    private static void logKinds(DiscSites which, DiscTheme theme, List<RuinPieces.Kind> kinds) {
         List<RuinPieces.Piece> pieces = kinds.stream().flatMap(kind -> kind.pieces().stream()).toList();
-        String name = theme.biome().map(biome -> biome.location().toString()).orElse("a theme with no biome");
+        String name = which.getSerializedName() + " of " + theme.biome().map(biome -> biome.location().toString()).orElse("a theme with no biome");
         // Not a warning: a theme may have nothing but the structures of a mod that is not installed. A pool of its own that is
         // missing was warned of by name.
         if (pieces.isEmpty()) {
-            OvergrownAbyss.LOGGER.info("Disc ruins of {}: no piece to make them of in this level, so its discs have none", name);
+            OvergrownAbyss.LOGGER.info("Disc {}: no piece to make them of in this level, so its discs have none", name);
             return;
         }
-        OvergrownAbyss.LOGGER.info("Disc ruins of {}: {} kinds with {} pieces, needing rounds {} to {} blocks across and {} to {} blocks of air",
+        OvergrownAbyss.LOGGER.info("Disc {}: {} kinds with {} pieces, needing rounds {} to {} blocks across and {} to {} blocks of air",
                 name, kinds.size(), pieces.size(),
                 Math.round(2 * pieces.stream().mapToDouble(RuinPieces.Piece::radius).min().orElse(0)),
                 Math.round(2 * pieces.stream().mapToDouble(RuinPieces.Piece::radius).max().orElse(0)),

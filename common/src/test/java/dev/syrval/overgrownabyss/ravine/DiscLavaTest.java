@@ -23,7 +23,7 @@ class DiscLavaTest {
         DiscTheme lava = themes.get(4);
         var tree = new DiscTheme.Growth(DiscThemeTest.feature("overgrown_abyss:disc/obsidian_tree"), 30, DiscTheme.Surface.LAVA, Optional.empty(), Optional.empty());
         themes.set(4, new DiscTheme(lava.biome(), lava.inherits(), lava.weight(), lava.byHeight(), lava.byDistance(), lava.bySize(), lava.only(), lava.palette(),
-                lava.water(), List.of(tree), lava.wildness(), lava.ground(), lava.ruins(), lava.rootWood()));
+                lava.water(), List.of(tree), lava.wildness(), lava.ground(), lava.ruins(), lava.troves(), lava.rootWood()));
         return new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), base.floor(), base.top(), base.cavernRadius(), base.cavernHeight(),
                 base.edgeFalloff(), base.discs(), themes, base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
     }

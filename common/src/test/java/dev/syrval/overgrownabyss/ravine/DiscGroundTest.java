@@ -30,7 +30,7 @@ class DiscGroundTest {
     static DiscTheme theme(DiscRelief relief, Optional<DiscWater> water, DiscTheme.Growth... growth) {
         return new DiscTheme(
                 Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
-                PALETTE, water, List.of(growth), DiscTheme.Wildness.EVEN, relief, Optional.empty(), Optional.empty());
+                PALETTE, water, List.of(growth), DiscTheme.Wildness.EVEN, relief, Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     /** The mod's own hole with one theme on every disc. */

@@ -1,0 +1,155 @@
+{
+  "processors": [
+    {
+      "processor_type": "overgrown_abyss:swap_blocks",
+      "swaps": [
+        {
+          "from": "minecraft:cobblestone",
+          "to": [
+            {
+              "block": "minecraft:cobblestone",
+              "weight": 1
+            },
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 2
+            }
+          ]
+        },
+        {
+          "from": "minecraft:mossy_cobblestone",
+          "to": [
+            {
+              "block": "minecraft:mossy_cobblestone",
+              "weight": 3
+            },
+            {
+              "block": "minecraft:cobblestone",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cobblestone_wall",
+          "to": [
+            {
+              "block": "minecraft:cobblestone_wall",
+              "weight": 1
+            },
+            {
+              "block": "minecraft:mossy_cobblestone_wall",
+              "weight": 2
+            }
+          ]
+        },
+        {
+          "from": "minecraft:mossy_cobblestone_wall",
+          "to": [
+            {
+              "block": "minecraft:mossy_cobblestone_wall",
+              "weight": 3
+            },
+            {
+              "block": "minecraft:cobblestone_wall",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:stone_bricks",
+          "to": [
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:mossy_stone_bricks",
+          "to": [
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 3
+            },
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 1
+            },
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:cracked_stone_bricks",
+          "to": [
+            {
+              "block": "minecraft:cracked_stone_bricks",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:mossy_stone_bricks",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:stone_bricks",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:stone_brick_wall",
+          "to": [
+            {
+              "block": "minecraft:stone_brick_wall",
+              "weight": 1
+            },
+            {
+              "block": "minecraft:mossy_stone_brick_wall",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:mossy_stone_brick_wall",
+          "to": [
+            {
+              "block": "minecraft:mossy_stone_brick_wall",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:stone_brick_wall",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "from": "minecraft:mossy_stone_brick_stairs",
+          "to": [
+            {
+              "block": "minecraft:mossy_stone_brick_stairs",
+              "weight": 2
+            },
+            {
+              "block": "minecraft:stone_brick_stairs",
+              "weight": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "processor_type": "minecraft:protected_blocks",
+      "value": "#overgrown_abyss:ruins_cannot_replace"
+    }
+  ]
+}

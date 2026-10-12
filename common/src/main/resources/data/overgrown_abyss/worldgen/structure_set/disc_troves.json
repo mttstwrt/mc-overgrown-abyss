@@ -1,0 +1,13 @@
+{
+  "placement": {
+    "type": "overgrown_abyss:disc_ruins",
+    "sites": "troves",
+    "salt": 1094861642
+  },
+  "structures": [
+    {
+      "structure": "overgrown_abyss:disc_troves",
+      "weight": 1
+    }
+  ]
+}

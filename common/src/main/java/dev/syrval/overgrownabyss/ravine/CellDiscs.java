@@ -5,11 +5,13 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * The discs of one cell, the theme of each, the ruins that stand on them, and the roots that wind among them. All depend only on the settings, the heights the
- * cell's hole lies between, the cell, the ground over it and the pieces the level has for ruins, so they are built once for a cell and then only read, which makes
- * them safe to share between worker threads.
+ * The discs of one cell, the theme of each, the ruins and the troves that stand on them, and the roots that wind among them. All depend only on the settings, the
+ * heights the cell's hole lies between, the cell, the ground over it and the pieces the level has for ruins, so they are built once for a cell and then only read,
+ * which makes them safe to share between worker threads.
  */
-record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes, List<RuinSite> ruins, List<DiscGround> grounds, RootLayout roots, DiscFalls falls) {
+record CellDiscs(
+        DiscLayout layout, List<Optional<DiscTheme>> themes, List<RuinSite> ruins, List<RuinSite> troves, List<DiscGround> grounds, RootLayout roots,
+        DiscFalls falls) {
 
     /** The discs of a hole whose ground is nowhere lower than its top, in a level that has no pieces for ruins. */
     static CellDiscs of(RavineSettings settings, RavineBounds bounds, RavineCell cell) {
@@ -20,14 +22,22 @@ record CellDiscs(DiscLayout layout, List<Optional<DiscTheme>> themes, List<RuinS
         DiscLayout layout = DiscLayouts.of(settings, bounds, cell, ground);
         List<DiscTraits> traits = DiscTraits.of(settings, cell, layout.discs());
         List<Optional<DiscTheme>> themes = DiscThemes.assign(settings, cell, traits);
-        List<DiscRuinSites.Placed> ruins = DiscRuinSites.onDiscs(settings, bounds, cell, layout, themes, traits, pieces);
-        List<List<DiscGround.Flat>> rounds = DiscGround.roundsOf(themes, ruins, pieces);
         RootLayout roots = RootLayout.of(settings, bounds, cell, layout, ground);
-        // Falls keep clear of ruins and roots, and the ground lies level round all three.
+        DiscRuinSites.Stood stood = DiscRuinSites.onDiscs(settings, bounds, cell, layout, themes, traits, pieces, roots);
+        List<List<DiscGround.Flat>> rounds = DiscGround.roundsOf(layout.discs().size(), stood.all());
+        // Falls keep clear of ruins, troves and roots, and the ground lies level round all of them.
         DiscFalls falls = DiscFalls.of(settings, bounds, cell, layout, themes, traits, rounds, roots);
         return new CellDiscs(
-                layout, themes, ruins.stream().map(DiscRuinSites.Placed::site).toList(),
-                DiscGround.of(cell, layout.discs(), themes, rounds, falls), roots, falls);
+                layout, themes, sitesOf(stood.ruins()), sitesOf(stood.troves()), DiscGround.of(cell, layout.discs(), themes, rounds, falls), roots, falls);
+    }
+
+    private static List<RuinSite> sitesOf(List<DiscRuinSites.Placed> stood) {
+        return stood.stream().map(DiscRuinSites.Placed::site).toList();
+    }
+
+    /** One of the two lists of pieces that stand on the cell's discs. */
+    List<RuinSite> sites(DiscSites which) {
+        return which == DiscSites.RUINS ? ruins : troves;
     }
 
     /**

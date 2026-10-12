@@ -1,6 +1,8 @@
 package dev.syrval.overgrownabyss.compat;
 
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.syrval.overgrownabyss.ravine.DiscSites;
 import dev.syrval.overgrownabyss.ravine.RavineFootprint;
 import dev.syrval.overgrownabyss.ravine.RuinSite;
 import java.util.List;
@@ -36,7 +38,8 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import net.minecraft.world.level.storage.loot.LootTable;
 
 /**
- * The ruins on a level's discs. A chunk's start holds one piece for every ruin whose middle is in that chunk. Which ruins
+ * The ruins on a level's discs, or their troves where {@code sites} says so: the two are structures of this one type, so that
+ * either can be found by itself. A chunk's start holds one piece for every ruin whose middle is in that chunk. Which ruins
  * those are, where they stand and which element of which pool each is, is decided with the discs themselves (see
  * {@code DiscRuinSites}); this only turns each site into that piece, turned any of four ways, with the middle of its lowest
  * layer on the site. Nothing is joined on to a piece, so a jigsaw block in it is left as its final state.
@@ -53,30 +56,36 @@ public final class DiscRuinsStructure extends Structure {
     // What vanilla's templates call the place of a chest that the game puts in by code.
     private static final String CHEST_MARKER = "chest";
 
-    public static final MapCodec<DiscRuinsStructure> CODEC = simpleCodec(DiscRuinsStructure::new);
+    public static final MapCodec<DiscRuinsStructure> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            settingsCodec(i),
+            DiscSites.CODEC.optionalFieldOf("sites", DiscSites.RUINS).forGetter(structure -> structure.sites)
+    ).apply(i, DiscRuinsStructure::new));
     public static final StructureType<DiscRuinsStructure> TYPE = () -> CODEC;
 
-    private DiscRuinsStructure(StructureSettings settings) {
+    private final DiscSites sites;
+
+    private DiscRuinsStructure(StructureSettings settings, DiscSites sites) {
         super(settings);
+        this.sites = sites;
     }
 
     @Override
     public Optional<GenerationStub> findGenerationPoint(GenerationContext context) {
         var footprint = ((RavineFootprintHolder) (Object) context.randomState()).overgrownAbyss$footprint();
         ChunkPos chunk = context.chunkPos();
-        List<RuinSite> sites = footprint.ruinsIn(chunk.getMinBlockX(), chunk.getMinBlockZ());
-        if (sites.isEmpty()) {
+        List<RuinSite> found = footprint.sitesIn(sites, chunk.getMinBlockX(), chunk.getMinBlockZ());
+        if (found.isEmpty()) {
             return Optional.empty();
         }
         Registry<StructureTemplatePool> pools = context.registryAccess().registryOrThrow(Registries.TEMPLATE_POOL);
-        List<StructurePiece> pieces = sites.stream()
+        List<StructurePiece> pieces = found.stream()
                 .flatMap(site -> pieceAt(site, pools, context.structureTemplateManager()).stream())
                 .toList();
         if (pieces.isEmpty()) {
             return Optional.empty();
         }
         // The start's own position only decides which biome the structure's biome list is asked about.
-        RuinSite first = sites.getFirst();
+        RuinSite first = found.getFirst();
         return Optional.of(new GenerationStub(new BlockPos(first.x(), first.y(), first.z()), builder -> pieces.forEach(builder::addPiece)));
     }
 
@@ -114,12 +123,12 @@ public final class DiscRuinsStructure extends Structure {
 
     // A piece saved with its chunk comes back as vanilla's own, so its site is found again by where pieceAt put it: the
     // middle of its box on the site, and its lowest layer at the site's height.
-    private static Optional<RuinSite> siteOf(PoolElementStructurePiece ruin, RavineFootprint footprint) {
+    private Optional<RuinSite> siteOf(PoolElementStructurePiece ruin, RavineFootprint footprint) {
         BoundingBox bounds = ruin.getBoundingBox();
         BlockPos middle = bounds.getCenter();
         int minX = SectionPos.sectionToBlockCoord(SectionPos.blockToSectionCoord(middle.getX()));
         int minZ = SectionPos.sectionToBlockCoord(SectionPos.blockToSectionCoord(middle.getZ()));
-        return footprint.ruinsIn(minX, minZ).stream()
+        return footprint.sitesIn(sites, minX, minZ).stream()
                 .filter(site -> site.x() == middle.getX() && site.z() == middle.getZ() && site.y() == bounds.minY())
                 .findFirst();
     }

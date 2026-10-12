@@ -298,7 +298,7 @@ class DiscFallsTest {
         for (DiscWater.Fluid fluid : DiscWater.Fluid.values()) {
             var held = new DiscWater(water.ponds(), water.pondSize(), water.streamWidth(), water.streamSpacing(), water.depth(), water.bank(), fluid, 0);
             var theme = new DiscTheme(swamp.biome(), swamp.inherits(), swamp.weight(), swamp.byHeight(), swamp.byDistance(), swamp.bySize(), swamp.only(), swamp.palette(),
-                    Optional.of(held), swamp.growth(), swamp.wildness(), swamp.ground(), swamp.ruins(), swamp.rootWood());
+                    Optional.of(held), swamp.growth(), swamp.wildness(), swamp.ground(), swamp.ruins(), swamp.troves(), swamp.rootWood());
             var settings = new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), base.floor(), base.top(), base.cavernRadius(), base.cavernHeight(),
                     base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
             for (Hole hole : holes(settings)) {

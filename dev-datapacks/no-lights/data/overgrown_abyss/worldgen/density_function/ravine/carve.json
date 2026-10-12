@@ -175,6 +175,41 @@
             "weight": 5
           }
         ]
+      },
+      "troves": {
+        "chance": 0.75,
+        "every": 5000,
+        "by_height": {
+          "bottom": 1.3,
+          "top": 0.8
+        },
+        "loot": {
+          "depth": 2,
+          "distance": 1,
+          "tables": [
+            {
+              "table": "overgrown_abyss:chests/disc/lush_stash"
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/lush_1",
+              "from": 0.6
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/lush_2",
+              "from": 0.85
+            }
+          ]
+        },
+        "kinds": [
+          {
+            "pool": "overgrown_abyss:disc_troves/cairn",
+            "weight": 1
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/marker",
+            "weight": 1
+          }
+        ]
       }
     },
     {
@@ -705,6 +740,41 @@
           }
         ]
       },
+      "troves": {
+        "chance": 0.75,
+        "every": 5000,
+        "by_height": {
+          "bottom": 1.3,
+          "top": 0.8
+        },
+        "loot": {
+          "depth": 2,
+          "distance": 1,
+          "tables": [
+            {
+              "table": "overgrown_abyss:chests/disc/jungle_stash"
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/jungle_1",
+              "from": 0.6
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/jungle_2",
+              "from": 0.85
+            }
+          ]
+        },
+        "kinds": [
+          {
+            "pool": "overgrown_abyss:disc_troves/cairn",
+            "weight": 1
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/marker",
+            "weight": 1
+          }
+        ]
+      },
       "root_wood": {
         "bark": {
           "type": "minecraft:simple_state_provider",
@@ -1011,6 +1081,41 @@
               "bottom": 0.5,
               "top": 2
             }
+          }
+        ]
+      },
+      "troves": {
+        "chance": 0.75,
+        "every": 5000,
+        "by_height": {
+          "bottom": 1.3,
+          "top": 0.8
+        },
+        "loot": {
+          "depth": 2,
+          "distance": 1,
+          "tables": [
+            {
+              "table": "overgrown_abyss:chests/disc/mangrove_stash"
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/mangrove_1",
+              "from": 0.6
+            },
+            {
+              "table": "overgrown_abyss:chests/disc/mangrove_2",
+              "from": 0.85
+            }
+          ]
+        },
+        "kinds": [
+          {
+            "pool": "overgrown_abyss:disc_troves/cairn",
+            "weight": 1
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/marker",
+            "weight": 1
           }
         ]
       },

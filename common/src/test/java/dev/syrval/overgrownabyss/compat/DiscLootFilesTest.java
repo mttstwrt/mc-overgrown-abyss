@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.compat;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,9 +37,9 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import org.junit.jupiter.api.Test;
 
 /**
- * The loot tables the mod's disc themes name for their ruins: each is a file of the mod's and reads as the game reads it. A
- * table that names an item or a function the pinned version does not have would only be found out in a game, as a chest that
- * comes up empty.
+ * The loot tables the mod's disc themes name for their ruins and their troves: each is a file of the mod's and reads as the
+ * game reads it. A table that names an item or a function the pinned version does not have would only be found out in a
+ * game, as a chest that comes up empty.
  */
 class DiscLootFilesTest {
     static {
@@ -55,14 +56,17 @@ class DiscLootFilesTest {
         }
     }
 
-    /** The tables of each theme that has any, by the theme's biome, as the mod's own settings file lists them. */
-    private static Map<String, List<ResourceLocation>> tablesByTheme() throws IOException {
+    /**
+     * The tables of each theme that has any for its {@code ruins} or its {@code troves}, by the theme's biome, as the mod's own
+     * settings file lists them.
+     */
+    private static Map<String, List<ResourceLocation>> tablesByTheme(String which) throws IOException {
         var found = new LinkedHashMap<String, List<ResourceLocation>>();
         for (JsonElement each : file(CARVE).getAsJsonObject().getAsJsonArray("disc_themes")) {
             JsonObject theme = each.getAsJsonObject();
-            if (theme.has("ruins") && theme.getAsJsonObject("ruins").has("loot")) {
+            if (theme.has(which) && theme.getAsJsonObject(which).has("loot")) {
                 var tables = new ArrayList<ResourceLocation>();
-                theme.getAsJsonObject("ruins").getAsJsonObject("loot").getAsJsonArray("tables")
+                theme.getAsJsonObject(which).getAsJsonObject("loot").getAsJsonArray("tables")
                         .forEach(table -> tables.add(ResourceLocation.parse(table.getAsJsonObject().get("table").getAsString())));
                 found.put(theme.get("biome").getAsString(), tables);
             }
@@ -88,7 +92,7 @@ class DiscLootFilesTest {
 
     @Test
     void everyThemeWithRuinsOfItsOwnNamesTablesOfItsOwn() throws IOException {
-        Map<String, List<ResourceLocation>> tables = tablesByTheme();
+        Map<String, List<ResourceLocation>> tables = tablesByTheme("ruins");
         assertEquals(List.of("overgrown_abyss:disc_lush", "overgrown_abyss:disc_jungle", "overgrown_abyss:disc_mangrove"), List.copyOf(tables.keySet()));
         var all = new HashSet<ResourceLocation>();
         for (var theme : tables.entrySet()) {
@@ -101,9 +105,29 @@ class DiscLootFilesTest {
     }
 
     @Test
+    void aThemesTrovesHoldAStashOfTheirOwnAndThenItsRuinsTablesOneBehind() throws IOException {
+        Map<String, List<ResourceLocation>> ruins = tablesByTheme("ruins");
+        Map<String, List<ResourceLocation>> troves = tablesByTheme("troves");
+        assertEquals(ruins.keySet(), troves.keySet(), "the themes with ruins of their own have troves");
+        var stashes = new HashSet<ResourceLocation>();
+        for (var theme : troves.entrySet()) {
+            List<ResourceLocation> ofRuins = ruins.get(theme.getKey());
+            assertEquals(3, theme.getValue().size(), theme.getKey() + " has three tables for its troves");
+            ResourceLocation stash = theme.getValue().getFirst();
+            assertEquals("overgrown_abyss", stash.getNamespace(), "a table of the mod's own, so that a pack can pick the troves out by it");
+            assertFalse(ofRuins.contains(stash), stash + " is the troves' own, poorer than any of the ruins'");
+            assertTrue(stashes.add(stash), stash + " is named once, by one theme");
+            assertEquals(ofRuins.subList(0, 2), theme.getValue().subList(1, 3),
+                    "where a ruin of " + theme.getKey() + " holds its second and third tables a trove holds its first and second");
+        }
+    }
+
+    @Test
     void everyTableReadsAsTheGameReadsIt() throws IOException {
         DynamicOps<JsonElement> ops = ops();
-        for (List<ResourceLocation> tables : tablesByTheme().values()) {
+        var named = new ArrayList<>(tablesByTheme("ruins").values());
+        named.addAll(tablesByTheme("troves").values());
+        for (List<ResourceLocation> tables : named) {
             for (ResourceLocation table : tables) {
                 JsonElement json = file("/data/" + table.getNamespace() + "/loot_table/" + table.getPath() + ".json");
                 var read = LootTable.DIRECT_CODEC.parse(ops, json);

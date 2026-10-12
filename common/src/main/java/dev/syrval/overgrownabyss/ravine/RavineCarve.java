@@ -230,17 +230,17 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     }
 
     /**
-     * The ruins whose middle is in the chunk whose lowest corner is {@code (minX, minZ)}. See {@link DiscRuinSites}. Structure
-     * starts are asked for in every chunk of a level, so a chunk out of the hole's reach is answered without building the
-     * hole's discs.
+     * The ruins or the troves whose middle is in the chunk whose lowest corner is {@code (minX, minZ)}. See
+     * {@link DiscRuinSites}. Structure starts are asked for in every chunk of a level, so a chunk out of the hole's reach is
+     * answered without building the hole's discs.
      */
-    public List<RuinSite> ruinsIn(int minX, int minZ) {
-        if (settings.discThemes().stream().allMatch(theme -> theme.ruins().isEmpty())) {
+    public List<RuinSite> sitesIn(DiscSites which, int minX, int minZ) {
+        if (settings.discThemes().stream().allMatch(theme -> which.of(theme).isEmpty())) {
             return List.of();
         }
         return holeAt(minX, minZ)
                 .filter(hole -> hole.cell().distanceToCentre(minX + CHUNK_SIZE / 2.0, minZ + CHUNK_SIZE / 2.0) <= settings.maxReach() + CHUNK_SIZE)
-                .map(hole -> discsOf(hole).ruins().stream()
+                .map(hole -> discsOf(hole).sites(which).stream()
                         .filter(site -> site.x() >= minX && site.x() < minX + CHUNK_SIZE && site.z() >= minZ && site.z() < minZ + CHUNK_SIZE)
                         .toList())
                 .orElse(List.of());

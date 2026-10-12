@@ -33,7 +33,7 @@ class DiscBlocksTest {
 
     /** A theme that is only a palette: no biome, nothing growing, the same weight everywhere. */
     static DiscTheme themed(DiscPalette palette) {
-        return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
+        return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE, palette, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     private record Block(int x, int y, int z) {}
@@ -184,7 +184,7 @@ class DiscBlocksTest {
     void aChunksWaterIsItsShareOfEachDiscsPondsAndStreams() {
         var water = new DiscWater(0.4F, 12, 2, 40, 2, 3, DiscWater.Fluid.WATER, 0);
         var wet = new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
-                PALETTE, Optional.of(water), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
+                PALETTE, Optional.of(water), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty(), Optional.empty());
         RavineSettings settings = painted(ConeShapeTest.LOW, List.of(wet), DiscTest.SLIM);
         RavineCell cell = cell(settings, 1);
         CellDiscs discs = CellDiscs.of(settings, BOUNDS, cell);
@@ -223,7 +223,7 @@ class DiscBlocksTest {
         assertTrue(none.isEmpty(), "a theme without water has none");
         // The same ponds and streams of lava lie in the same columns.
         var molten = new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
-                PALETTE, Optional.of(new DiscWater(0.4F, 12, 2, 40, 2, 3, DiscWater.Fluid.LAVA, 0)), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty());
+                PALETTE, Optional.of(new DiscWater(0.4F, 12, 2, 40, 2, 3, DiscWater.Fluid.LAVA, 0)), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty(), Optional.empty());
         RavineSettings hot = painted(ConeShapeTest.LOW, List.of(molten), DiscTest.SLIM);
         var lava = new ArrayList<Column>();
         for (int chunkX = Math.floorDiv((int) Math.floor(d.x() - d.radius()), 16); chunkX <= Math.floorDiv((int) Math.floor(d.x() + d.radius()), 16); chunkX++) {

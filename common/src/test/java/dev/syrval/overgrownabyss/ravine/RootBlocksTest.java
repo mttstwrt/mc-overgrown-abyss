@@ -164,12 +164,12 @@ class RootBlocksTest {
         DiscLayout layout = () -> discs;
         return new CellDiscs(
                 layout, List.of(Optional.of(theme(Optional.of(MANGROVE))), Optional.of(theme(Optional.of(JUNGLE))), Optional.of(theme(Optional.empty()))),
-                List.of(), List.of(), RootLayout.NONE, DiscFalls.NONE);
+                List.of(), List.of(), List.of(), RootLayout.NONE, DiscFalls.NONE);
     }
 
     private static DiscTheme theme(Optional<RootWood> wood) {
         return new DiscTheme(Optional.empty(), Optional.empty(), 1, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Ramp.EVEN, DiscTheme.Limits.NONE,
-                DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), wood);
+                DiscPalette.UNPAINTED, Optional.empty(), List.of(), DiscTheme.Wildness.EVEN, DiscRelief.FLAT, Optional.empty(), Optional.empty(), wood);
     }
 
     @Test
@@ -206,7 +206,7 @@ class RootBlocksTest {
         // Two discs of different woods as near as each other share the place evenly.
         List<Disc> close = List.of(new Disc(0, 0, 0, 30, 14), new Disc(80, 0, 0, 30, 14));
         DiscLayout layout = () -> close;
-        var both = new CellDiscs(layout, List.of(Optional.of(theme(Optional.of(MANGROVE))), Optional.of(theme(Optional.of(JUNGLE)))), List.of(), List.of(), RootLayout.NONE, DiscFalls.NONE);
+        var both = new CellDiscs(layout, List.of(Optional.of(theme(Optional.of(MANGROVE))), Optional.of(theme(Optional.of(JUNGLE)))), List.of(), List.of(), List.of(), RootLayout.NONE, DiscFalls.NONE);
         assertEquals(0.5, RootBlocks.mixAt(SETTINGS, both, 40, 0, 0).share(), 1e-9);
         RootBlocks.Mix nearer = RootBlocks.mixAt(SETTINGS, both, 36, 0, 0);
         assertSame(MANGROVE, nearer.first());

@@ -17,6 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
@@ -165,6 +166,20 @@ class DiscRuinPiecesTest {
             assertEquals(elements.get(piece.element()).weight(), piece.weight());
         }
         assertEquals(city.pieces().size(), city.pieces().stream().map(RuinPieces.Piece::element).distinct().count(), "each piece another element");
+    }
+
+    @Test
+    void aThemesTrovesAreMeasuredAsItsRuinsAre() {
+        DiscTheme theme = DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("""
+                {"weight": 1,
+                 "ruins": {"chance": 0.5, "kinds": [{"pool": "minecraft:ancient_city/structures", "weight": 3}]},
+                 "troves": {"chance": 0.5, "kinds": [{"pool": "minecraft:village/plains/town_centers", "weight": 1, "sink": 1}]}}""")).getOrThrow();
+        DiscRuins ruins = theme.ruins().orElseThrow();
+        DiscRuins troves = theme.troves().orElseThrow();
+        RuinPieces pieces = DiscRuinPieces.of(VANILLA, JarRuinPieces::template, List.of(theme));
+        assertEquals(Set.of(ruins, troves), pieces.byRuins().keySet(), "each of a theme's two lists has kinds of its own");
+        assertEquals(filed(CITY, 0), sorted(pieces.byRuins().get(ruins).getFirst().pieces()));
+        assertEquals(filed(CENTRES, 1), sorted(pieces.byRuins().get(troves).getFirst().pieces()), "a trove's pieces from its own pool, with its own layers in the ground");
     }
 
     private static List<RuinPieces.Kind> kindsOf(String ruins) {

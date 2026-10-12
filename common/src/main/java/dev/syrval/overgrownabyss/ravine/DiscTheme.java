@@ -35,13 +35,16 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * @param wildness   how much more or less of that growth one disc has than another of the same theme
  * @param ground     how the disc's ground lies over its platform: mounds and outcrops
  * @param ruins      the ruins that stand on some of the theme's discs
+ * @param troves     the small caches of treasure hidden on its discs: a marker of a few blocks with a chest or barrel at its
+ *                   foot. They are written and stood like ruins, and counted apart from them, so a disc may have either,
+ *                   both or neither
  * @param rootWood   what the hole's roots are made of where they pass near one of the theme's discs (see {@link RootSettings});
  *                   without one the theme has no say in it
  */
 public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
         Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Wildness wildness,
-        DiscRelief ground, Optional<DiscRuins> ruins, Optional<RootWood> rootWood) {
+        DiscRelief ground, Optional<DiscRuins> ruins, Optional<DiscRuins> troves, Optional<RootWood> rootWood) {
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -280,6 +283,7 @@ public record DiscTheme(
             Wildness.CODEC.optionalFieldOf("wildness", Wildness.EVEN).forGetter(DiscTheme::wildness),
             DiscRelief.CODEC.optionalFieldOf("ground", DiscRelief.FLAT).forGetter(DiscTheme::ground),
             DiscRuins.CODEC.optionalFieldOf("ruins").forGetter(DiscTheme::ruins),
+            DiscRuins.CODEC.optionalFieldOf("troves").forGetter(DiscTheme::troves),
             RootWood.CODEC.optionalFieldOf("root_wood").forGetter(DiscTheme::rootWood)
     ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);
 
