@@ -3014,6 +3014,19 @@ The unit tests of `common` have 22 more: each dial at none, at half, at twice an
 the codec and back unchanged, nothing the city's placement reads moved, every feature a tag names grown by the mod's own
 settings, and the file made, filled in, not written again, and left alone.
 
+**A fault the runs found: looking for the city where there is none.** With `holes` at 0, `/locate structure
+overgrown_abyss:city` held the server's thread for over a minute on both loaders, and the watchdog ended the server
+(`max-tick-time` 60000). None of that time was the mod's. `/locate` asks about one chunk of every cell out to a hundred
+cells from the player, 40,401 of them, and for each the game asks the chunk storage (`StructureCheck.tryLoadFromStorage`)
+before it asks the placement or the structure anything; the cells are 64 chunks apart, so each is a region file of its
+own. The dial only made this easy to reach: a level whose noise settings are not carved was the same before it.
+
+The level knows which cells hold a hole, so `StructureCheckMixin` wraps that one call: for the city, in a cell that holds no
+hole, the answer is "not here" and the storage is not asked. It is a seventh mixin. After it, on both loaders: with `holes`
+0 the command said `Could not find a structure of type "overgrown_abyss:city" nearby` within half a second, and as the mod
+ships it gave `The nearest overgrown_abyss:city is at [-1728, ~, 1712]`, the same on both. What it gives up: a city in a
+chunk that was made under other settings, in a cell where today's settings put no hole, is not found by the command.
+
 **Not verified.** Nothing was looked at in game. The owner's pack (Larion, C2ME) was not run. In a generated world only
 `roots`, `growth.lights` and `holes` were turned: the other dials are checked by the settings they give, in the unit tests,
 and not by what grows. A world explored under one set of dials and reopened under another was not looked at; new chunks
