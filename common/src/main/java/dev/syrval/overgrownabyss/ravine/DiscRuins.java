@@ -32,6 +32,8 @@ import net.minecraft.world.level.storage.loot.LootTable;
  */
 public record DiscRuins(float chance, int every, DiscTheme.Ramp byHeight, Loot loot, List<Kind> kinds, List<Borrowed> structures) {
     private static final int ONE_A_DISC = 1_000_000;
+    // Named because the owner's dials hold what they turn to the same limit (see Dials).
+    static final int LEAST_EVERY = 64;
 
     /**
      * The treasure of a theme's own ruins: loot tables from the poorest to the richest, each with the rank a disc must have
@@ -138,7 +140,7 @@ public record DiscRuins(float chance, int every, DiscTheme.Ramp byHeight, Loot l
 
     static final Codec<DiscRuins> CODEC = RecordCodecBuilder.<DiscRuins>create(i -> i.group(
             Codec.floatRange(0, 1).fieldOf("chance").forGetter(DiscRuins::chance),
-            Codec.intRange(64, ONE_A_DISC).optionalFieldOf("every", ONE_A_DISC).forGetter(DiscRuins::every),
+            Codec.intRange(LEAST_EVERY, ONE_A_DISC).optionalFieldOf("every", ONE_A_DISC).forGetter(DiscRuins::every),
             DiscTheme.Ramp.BY_HEIGHT.optionalFieldOf("by_height", DiscTheme.Ramp.EVEN).forGetter(DiscRuins::byHeight),
             Loot.CODEC.optionalFieldOf("loot", Loot.NONE).forGetter(DiscRuins::loot),
             Kind.CODEC.listOf().optionalFieldOf("kinds", List.of()).forGetter(DiscRuins::kinds),

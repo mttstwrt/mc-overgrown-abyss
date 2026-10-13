@@ -45,6 +45,7 @@ public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
         Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Wildness wildness,
         DiscRelief ground, Optional<DiscRuins> ruins, Optional<DiscRuins> troves, Optional<RootWood> rootWood) {
+    static final float MOST_WEIGHT = 1000;
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
     public record Ramp(float from, float to) {
@@ -162,9 +163,11 @@ public record DiscTheme(
      * {@code rimFade} as thickly at the rim as in the middle.
      */
     public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, Surface on, Optional<Patches> patches, Optional<RimFade> rimFade) {
+        // Named because the owner's dials hold what they turn to the same limit (see Dials); so with a theme's weight.
+        static final int MOST_EVERY = 100_000;
         static final Codec<Growth> CODEC = RecordCodecBuilder.<Growth>create(i -> i.group(
                 ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(Growth::feature),
-                Codec.intRange(1, 100_000).fieldOf("every").forGetter(Growth::every),
+                Codec.intRange(1, MOST_EVERY).fieldOf("every").forGetter(Growth::every),
                 Surface.CODEC.optionalFieldOf("on", Surface.TOP).forGetter(Growth::on),
                 Patches.CODEC.optionalFieldOf("patches").forGetter(Growth::patches),
                 RimFade.CODEC.optionalFieldOf("rim_fade").forGetter(Growth::rimFade)
@@ -272,7 +275,7 @@ public record DiscTheme(
     public static final Codec<DiscTheme> CODEC = RecordCodecBuilder.<DiscTheme>create(i -> i.group(
             ResourceKey.codec(Registries.BIOME).optionalFieldOf("biome").forGetter(DiscTheme::biome),
             Inherits.CODEC.optionalFieldOf("inherits").forGetter(DiscTheme::inherits),
-            Codec.floatRange(0, 1000).fieldOf("weight").forGetter(DiscTheme::weight),
+            Codec.floatRange(0, MOST_WEIGHT).fieldOf("weight").forGetter(DiscTheme::weight),
             Ramp.BY_HEIGHT.optionalFieldOf("by_height", Ramp.EVEN).forGetter(DiscTheme::byHeight),
             Ramp.codec("centre", "edge").optionalFieldOf("by_distance", Ramp.EVEN).forGetter(DiscTheme::byDistance),
             Ramp.codec("small", "large").optionalFieldOf("by_size", Ramp.EVEN).forGetter(DiscTheme::bySize),

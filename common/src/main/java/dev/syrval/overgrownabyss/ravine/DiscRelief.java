@@ -27,10 +27,12 @@ public record DiscRelief(Optional<Mounds> mounds, Optional<Outcrops> outcrops) {
         // A smooth value changes by at most 2.13 over one of its sizes; spreading a mound's rise over a little more than that
         // keeps it under a block for a block.
         private static final double GENTLE = 2.2;
+        // Named because the owner's dials hold what they turn to the same limit (see Dials); so with an outcrop's.
+        static final float LEAST_COVER = 0.05F;
         static final Codec<Mounds> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(1, 8).fieldOf("height").forGetter(Mounds::height),
                 Codec.floatRange(4, 128).fieldOf("size").forGetter(Mounds::size),
-                Codec.floatRange(0.05F, 1).fieldOf("cover").forGetter(Mounds::cover)
+                Codec.floatRange(LEAST_COVER, 1).fieldOf("cover").forGetter(Mounds::cover)
         ).apply(i, Mounds::new));
 
         /** How far a mound stands over a column of the {@code index}-th disc of a hole, in blocks and parts of one; 0 where there is none. */
@@ -48,10 +50,11 @@ public record DiscRelief(Optional<Mounds> mounds, Optional<Outcrops> outcrops) {
     public record Outcrops(int height, float size, float cover, BlockStateProvider block) {
         // The share of the way from an outcrop's edge to the highest a smooth value goes at which it reaches its full height.
         private static final double FULL = 0.35;
+        static final float LEAST_COVER = 0.01F;
         static final Codec<Outcrops> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(1, 12).fieldOf("height").forGetter(Outcrops::height),
                 Codec.floatRange(4, 128).fieldOf("size").forGetter(Outcrops::size),
-                Codec.floatRange(0.01F, 1).fieldOf("cover").forGetter(Outcrops::cover),
+                Codec.floatRange(LEAST_COVER, 1).fieldOf("cover").forGetter(Outcrops::cover),
                 BlockStateProvider.CODEC.fieldOf("block").forGetter(Outcrops::block)
         ).apply(i, Outcrops::new));
 

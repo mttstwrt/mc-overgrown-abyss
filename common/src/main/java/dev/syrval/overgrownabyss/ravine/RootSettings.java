@@ -47,8 +47,10 @@ public record RootSettings(
      * @param touchChance chance that it turns aside to touch a disc it passes, its top level with the disc's rim
      */
     public record Great(InclusiveRange<Integer> count, float radius, float endRadius, float fall, float touchChance) {
+        // The limits with a name here and below are the ones the owner's dials hold their results to (see Dials).
+        static final int MOST = 16;
         static final Codec<Great> CODEC = RecordCodecBuilder.create(i -> i.group(
-                InclusiveRange.codec(Codec.intRange(0, 16)).fieldOf("count").forGetter(Great::count),
+                InclusiveRange.codec(Codec.intRange(0, MOST)).fieldOf("count").forGetter(Great::count),
                 Codec.floatRange(THINNEST, 16).fieldOf("radius").forGetter(Great::radius),
                 Codec.floatRange(THINNEST, 16).fieldOf("end_radius").forGetter(Great::endRadius),
                 Codec.floatRange(0.1F, 2).fieldOf("fall").forGetter(Great::fall),
@@ -61,8 +63,9 @@ public record RootSettings(
      * @param radius a crossing root's radius
      */
     public record Crossing(InclusiveRange<Integer> count, float radius) {
+        static final int MOST = 8;
         static final Codec<Crossing> CODEC = RecordCodecBuilder.create(i -> i.group(
-                InclusiveRange.codec(Codec.intRange(0, 8)).fieldOf("count").forGetter(Crossing::count),
+                InclusiveRange.codec(Codec.intRange(0, MOST)).fieldOf("count").forGetter(Crossing::count),
                 Codec.floatRange(THINNEST, 16).fieldOf("radius").forGetter(Crossing::radius)
         ).apply(i, Crossing::new));
     }
@@ -75,8 +78,10 @@ public record RootSettings(
      * @param reach    blocks a branch may go to find another root, a disc, the floor or the wall to end in
      */
     public record Branches(float every, DiscTheme.Ramp byHeight, float shrink, int depth, float reach) {
+        static final float LEAST_EVERY = 8;
+        static final float MOST_EVERY = 4096;
         static final Codec<Branches> CODEC = RecordCodecBuilder.create(i -> i.group(
-                Codec.floatRange(8, 4096).fieldOf("every").forGetter(Branches::every),
+                Codec.floatRange(LEAST_EVERY, MOST_EVERY).fieldOf("every").forGetter(Branches::every),
                 DiscTheme.Ramp.BY_HEIGHT.optionalFieldOf("by_height", DiscTheme.Ramp.EVEN).forGetter(Branches::byHeight),
                 Codec.floatRange(0.3F, 0.95F).fieldOf("shrink").forGetter(Branches::shrink),
                 Codec.intRange(0, 3).fieldOf("depth").forGetter(Branches::depth),
@@ -109,7 +114,7 @@ public record RootSettings(
     public record Growth(ResourceKey<ConfiguredFeature<?, ?>> feature, int every, float minRadius) {
         static final Codec<Growth> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(Growth::feature),
-                Codec.intRange(1, 100_000).fieldOf("every").forGetter(Growth::every),
+                Codec.intRange(1, DiscTheme.Growth.MOST_EVERY).fieldOf("every").forGetter(Growth::every),
                 Codec.floatRange(0, 16).optionalFieldOf("min_radius", 0F).forGetter(Growth::minRadius)
         ).apply(i, Growth::new));
     }

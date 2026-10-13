@@ -27,6 +27,8 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 public record FallSettings(
         InclusiveRange<Integer> count, DiscTheme.Ramp byHeight, int width, int minDrop, int maxPerDisc, Pool pool, float chain, int maxSteps,
         Optional<Curtain> curtain, Optional<Springs> springs) {
+    // The most falls or springs a hole may have. Named because the owner's dials hold what they turn to it (see Dials).
+    static final int MOST = 16;
 
     /**
      * @param radius blocks from the middle of a pool to its edge; a wide fall's pool is wider
@@ -63,14 +65,14 @@ public record FallSettings(
      */
     public record Springs(InclusiveRange<Integer> count, InclusiveRange<Integer> height, ResourceKey<ConfiguredFeature<?, ?>> feature) {
         static final Codec<Springs> CODEC = RecordCodecBuilder.create(i -> i.group(
-                InclusiveRange.codec(Codec.intRange(0, 16)).fieldOf("count").forGetter(Springs::count),
+                InclusiveRange.codec(Codec.intRange(0, MOST)).fieldOf("count").forGetter(Springs::count),
                 InclusiveRange.codec(Codec.intRange(2, 16)).fieldOf("height").forGetter(Springs::height),
                 ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(Springs::feature)
         ).apply(i, Springs::new));
     }
 
     static final Codec<FallSettings> CODEC = RecordCodecBuilder.create(i -> i.group(
-            InclusiveRange.codec(Codec.intRange(0, 16)).fieldOf("count").forGetter(FallSettings::count),
+            InclusiveRange.codec(Codec.intRange(0, MOST)).fieldOf("count").forGetter(FallSettings::count),
             DiscTheme.Ramp.BY_HEIGHT.optionalFieldOf("by_height", DiscTheme.Ramp.EVEN).forGetter(FallSettings::byHeight),
             Codec.intRange(1, 2).optionalFieldOf("width", 1).forGetter(FallSettings::width),
             Codec.intRange(2, 256).optionalFieldOf("min_drop", 10).forGetter(FallSettings::minDrop),

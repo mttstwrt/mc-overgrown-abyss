@@ -27,8 +27,7 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  * ({@link #boundsOf}).
  */
 public final class RavineCarve implements DensityFunction.SimpleFunction {
-    public static final MapCodec<RavineCarve> MAP_CODEC =
-            RavineSettings.MAP_CODEC.xmap(settings -> new RavineCarve(settings, 0, null, new RavineSites(settings, null), Output.OPEN), RavineCarve::settings);
+    public static final MapCodec<RavineCarve> MAP_CODEC = RavineSettings.MAP_CODEC.xmap(RavineCarve::of, RavineCarve::settings);
     private static final KeyDispatchDataCodec<RavineCarve> CODEC = KeyDispatchDataCodec.of(MAP_CODEC);
 
     private static final double CAVERN_BIOME_MARGIN = 4;
@@ -55,6 +54,11 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         this.bounds = bounds;
         this.sites = sites;
         this.output = output;
+    }
+
+    /** The carve of these settings as the codec makes it: unseeded, and inert until it is bound. */
+    public static RavineCarve of(RavineSettings settings) {
+        return new RavineCarve(settings, 0, null, new RavineSites(settings, null), Output.OPEN);
     }
 
     /** The ravine settings behind a datapack reference; fails loudly if the reference is not a ravine carve. */

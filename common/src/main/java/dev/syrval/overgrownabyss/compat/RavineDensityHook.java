@@ -1,7 +1,10 @@
 package dev.syrval.overgrownabyss.compat;
 
+import com.mojang.serialization.DataResult;
+import dev.architectury.platform.Platform;
 import dev.syrval.overgrownabyss.OvergrownAbyss;
 import dev.syrval.overgrownabyss.ravine.ConeSettings;
+import dev.syrval.overgrownabyss.ravine.Dials;
 import dev.syrval.overgrownabyss.ravine.RavineBounds;
 import dev.syrval.overgrownabyss.ravine.RavineCarve;
 import dev.syrval.overgrownabyss.ravine.RavineCell;
@@ -25,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.Registry;
@@ -62,6 +66,8 @@ public final class RavineDensityHook {
     private static final ResourceKey<DensityFunction> CARVE = ResourceKey.create(Registries.DENSITY_FUNCTION, OvergrownAbyss.id("ravine/carve"));
     // The world-load log covers this many cells from the origin, each way.
     private static final int LOGGED_CELLS = 3;
+    // A tag of configured features under this folder of the mod's is a group of growth, with a dial of the rest of its name.
+    private static final String DIAL_TAGS = "dial/";
 
     private RavineDensityHook() {}
 
@@ -85,9 +91,10 @@ public final class RavineDensityHook {
         var context = new WorldGenerationContext(generator, level);
         boolean[] invalid = {false};
         DensityFunction seededCarve = carve.get().mapAll(function -> {
-            if (!(function instanceof RavineCarve ravine)) {
+            if (!(function instanceof RavineCarve loaded)) {
                 return function;
             }
+            RavineCarve ravine = turnedByDials(registries, loaded);
             Optional<RavineBounds> bounds = ravine.settings().resolveBounds(context);
             if (bounds.isEmpty()) {
                 invalid[0] = true;
@@ -112,6 +119,43 @@ public final class RavineDensityHook {
                 : SurfaceProbe.SOLID;
         installLevelBindings(registries, generator, templates, settings, state, ground, seeded);
         return state;
+    }
+
+    /**
+     * The carve with its settings as the owner's dials turn them (see {@link Dials}), before anything is made from them. The
+     * registry keeps the settings as they were loaded, which is all the city's placement reads of them. What the dials give
+     * that the settings' own rules refuse is not used at all, rather than in part.
+     */
+    private static RavineCarve turnedByDials(RegistryAccess registries, RavineCarve ravine) {
+        Map<String, Set<String>> groups = growthGroups(registries.registryOrThrow(Registries.CONFIGURED_FEATURE));
+        Dials dials = DialsFile.read(Platform.getConfigFolder(), groups.keySet(), Dials.themeNames(ravine.settings()));
+        if (dials.isNeutral()) {
+            OvergrownAbyss.LOGGER.info("Dials: all at 1");
+            return ravine;
+        }
+        DataResult<RavineSettings> turned = dials.applyTo(ravine.settings(), groups);
+        if (turned.isError()) {
+            OvergrownAbyss.LOGGER.error(
+                    "Dials {} give settings that do not hold ({}); the level loads with every dial at 1",
+                    dials.turned(), turned.error().map(DataResult.Error::message).orElse(""));
+            return ravine;
+        }
+        OvergrownAbyss.LOGGER.info("Dials: {}", dials.turned());
+        return RavineCarve.of(turned.getOrThrow());
+    }
+
+    private static Map<String, Set<String>> growthGroups(Registry<ConfiguredFeature<?, ?>> features) {
+        Map<String, Set<String>> groups = new HashMap<>();
+        features.getTags().forEach(tag -> {
+            ResourceLocation id = tag.getFirst().location();
+            if (id.getNamespace().equals(OvergrownAbyss.MOD_ID) && id.getPath().startsWith(DIAL_TAGS)) {
+                groups.put(id.getPath().substring(DIAL_TAGS.length()), tag.getSecond().stream()
+                        .flatMap(feature -> feature.unwrapKey().stream())
+                        .map(key -> key.location().toString())
+                        .collect(Collectors.toUnmodifiableSet()));
+            }
+        });
+        return groups;
     }
 
     private static Optional<RimSettings> rimOf(RavineCarve carve) {
