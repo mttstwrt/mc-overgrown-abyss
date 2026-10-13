@@ -2948,6 +2948,77 @@ not in it. No spawn was watched.
 that the mark of 55% was left unmet and the dark-ground marks kept. **The owner's to say:** whether to count the mark
 without the ground, give up dark ground for it, or leave it.
 
+### Dials in place of the testing datapacks (2026-10-12)
+
+The testing datapacks had grown to 34, each a whole copy of `carve.json`, and every new setting meant the same edit in two
+dozen of them. Asked what should make them from now on, the owner: "I would actually get rid of these. I have not used them
+and datapacks are annoying to install with prism. I would prefer settings driven adjustment maybe with presets." Asked what
+the settings should hold and where, they chose a file in the config folder, dials only (one number for each thing; no
+presets, no values by path), and a change that applies to every world at its next load.
+
+**What was built.** `config/overgrown_abyss.json`, written the first time a world loads and read each time one does:
+`holes`, `roots`, `falls`, `springs`, `ruins`, `troves`, `rough_ground`, one dial for each group of growth and one for each
+theme. 0 is none, 1 is as the settings have it, 2 is twice as much. `docs/SETTINGS.md` has what each turns.
+
+- A dial turns the settings a level has loaded (`ravine/Dials`): the settings are written out through their own codec as the
+  JSON a datapack would give, the numbers are changed there, and the result is read back through the same codec. So the
+  codec stays the one schema, every limit and rule it has holds for what the dials give, and a dial needs no copy of a
+  settings record. With every dial at 1 nothing is written or read, and the settings are the same object.
+- A group of growth is a tag of configured features under `overgrown_abyss:dial/`. The mod has `lights`, `giants` and `rim`,
+  made from what the `no-lights` and `no-giants` packs took out and from every feature grown on a rim; the glowing bulbs are
+  in two and are turned by both. The groups and the themes are named by the data, so a pack's tag or theme gets a dial
+  without a change to the mod.
+- The file is read in `compat/DialsFile` from Architectury's `Platform.getConfigFolder()`. A name it lacks is written in at
+  1. A file that cannot be read is left alone, and the level loads with every dial at 1.
+- The limits the dials hold their results to (16 great roots, a branch every 8 blocks at the most, and so on) now have names
+  in the settings' types, which their codecs use as well.
+
+**What a dial cannot do.**
+
+- `holes` only takes holes away. The mod's `chance` is 1, and more holes would need a smaller `cell_size`. The city's
+  placement (`RavineCentrePlacement`, `RavineCityStructure`) reads the cell grid from the registry's copy of the settings,
+  which a level's dials do not reach, so no dial touches the salt, the cell size, a hole's reach, the floor or the top. The
+  holes that are kept are the same holes: `chance` is compared with a draw each cell already has.
+- A dial at 0 takes entries out of a growth list, which moves the plants of the entries after it.
+- What some packs did has no dial: the lip's height (`low-lip`, `high-lip`), the layers' spacing (`tall-rings`), an even wall
+  (`smooth-walls`), thicker roots (`huge-roots`), curtains (`curtain-falls`), lights spread evenly (`even-lights`), lava
+  wherever a pond lies (`loose-lava`), borrowed ruins (`borrowed-ruins`), and the berries on the mod's own hanging vines,
+  which the two light packs changed with a feature file. Those are changes to the file again.
+
+**What went.** `dev-datapacks/`: the 34 packs, `make-zips.py` and `DevPacksTest`. Its README, which was the only full
+description of every setting, is `docs/SETTINGS.md`, with the dials at its head and the lists of packs taken out. Eight of
+the packs were not edits of the mod's file but older states of it (the first cone, the fixed top, the hand-tuned themes and
+five of the long ravine); they are in the history up to the commit before this one. One of them, what the mod shipped
+before the cone, is kept as `common/src/test/resources/ravine-settings.json`, so that the long ravine's part of the settings
+still has a file the tests read.
+
+**What the runs showed.** Dedicated servers of both loaders on seed 11, with the largest of its four holes (x=-1572
+z=2594) generated whole, 729 chunks, and read back from the region files: once with no file, once with `roots` 0 and
+`growth.lights` 2.
+
+| Blocks in those chunks | NeoForge, as shipped | turned | Fabric, as shipped | turned |
+|---|---|---|---|---|
+| Jungle and mangrove wood, which roots are made of | 144,966 | 89 | 144,954 | 94 |
+| Froglights | 146 | 287 | 147 | 300 |
+| Sea pickles | 1,159 | 1,998 | 1,183 | 1,997 |
+| Shroomlights | 467 | 729 | 476 | 705 |
+| Glow lichen | 14,693 | 18,169 | 14,720 | 18,094 |
+
+The load log said `Dials: all at 1`, and `Dials: {roots=0.0, growth.lights=2.0}` with `Roots: none`. The lichen rose by
+less than the rest because what hung under the roots went with them, and the shroomlights because the jungle's lights in
+leaves are tried in every column already. Both loaders wrote the same file on their first boot. With `holes` 0 the log
+listed no hole. With a file holding `{"roots": 11}` it said why the file is not read, loaded with every dial at 1 and left
+the file as it was.
+
+The unit tests of `common` have 22 more: each dial at none, at half, at twice and all the way, the settings out through
+the codec and back unchanged, nothing the city's placement reads moved, every feature a tag names grown by the mod's own
+settings, and the file made, filled in, not written again, and left alone.
+
+**Not verified.** Nothing was looked at in game. The owner's pack (Larion, C2ME) was not run. In a generated world only
+`roots`, `growth.lights` and `holes` were turned: the other dials are checked by the settings they give, in the unit tests,
+and not by what grows. A world explored under one set of dials and reopened under another was not looked at; new chunks
+will meet old ones at a seam there.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -2956,8 +3027,7 @@ without the ground, give up dark ground for it, or leave it.
 2. Wall styles (Phase 2) and `BiomeInjector`.
 3. Decide whether lush caves features on the city floor suit the look, or whether the city should keep its own ground.
 4. Extract `ravine-core` into a shared source module when Rift starts.
-5. Disc ruins: look at them in game (the `many-ruins` pack puts them on every disc that has room, `borrowed-ruins` shows
-   borrowed ones without another mod), settle the ramps by height, how many and which kinds, and the weight of other mods'
+5. Disc ruins: look at them in game (the `ruins` dial brings more of them, `docs/SETTINGS.md`), settle the ramps by height, how many and which kinds, and the weight of other mods'
    ruins. Then pieces of our own, built for a disc rather than borrowed from the city: the placement takes any template
    pool and measures it, so that is templates and JSON only.
 6. Room for a temple: Epic's are 48 high and the tallest dome is about 29. The owner's answer (2026-10-09) is a disc made
@@ -2966,13 +3036,13 @@ without the ground, give up dark ground for it, or leave it.
    Lootr's lists for chests that refill.
 8. The owner's goals of 2026-10-09 (section 9, with the levers of each): suggested next the penalty for going up or down
    too fast, then the disc made for ruins, then fights that reset and traps. The owner has not set that order.
-9. Wilder discs: look at the rims, the giants and the ground in game (`bare-rims`, `heavy-rims`, `no-giants`,
-   `many-giants`, `flat-discs` and `rugged-discs` to compare) and settle how much hangs over a rim, the edge trees,
+9. Wilder discs: look at the rims, the giants and the ground in game (the dials `growth.rim`, `growth.giants` and
+   `rough_ground` to compare) and settle how much hangs over a rim, the edge trees,
    `wildness`, what the giants are made of, and how rough the ground should be. The falls and springs: how many, whether
-   falls should reach the city, and how running water behaves in the owner's pack (`no-falls`, `many-falls`,
-   `curtain-falls`, `many-springs`). That is the whole of the plan the owner approved on 2026-10-10; of the ideas they
+   falls should reach the city, and how running water behaves in the owner's pack (the dials `falls` and
+   `springs`). That is the whole of the plan the owner approved on 2026-10-10; of the ideas they
    passed over, a ragged rim is the one that would change a disc's look most.
-10. Roots: look at them in game (`huge-roots`, `many-roots`, `few-roots` and `no-roots` to compare), settle how many and how
+10. Roots: look at them in game (the `roots` dial for how many; how thick is the file's), settle how many and how
    thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
    them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
    code; and whether a disc's ruins should keep clear of them.
@@ -3102,13 +3172,13 @@ an item says was read from a jar is known; nothing of theirs was run for these i
 - **Order suggested:** treasure (built), then the penalty for going up or down too fast, then the disc made for ruins, then
   fights and traps, which lean on the penalty. The owner agreed to the first.
 
-**The levers there are today.** All in `ravine/carve.json` unless it says otherwise; `dev-datapacks/README.md` describes each,
+**The levers there are today.** All in `ravine/carve.json` unless it says otherwise; `docs/SETTINGS.md` describes each,
 and `docs/TUNING.md` says for those of the wilder discs how far each goes and which way to turn it for which look.
 
 | What it balances | Setting | As shipped |
 |---|---|---|
 | How many discs have ruins, and how many each | a theme's `ruins`: `chance`, `every`, `by_height` | jungle 0.6, 3000, 1.6 to 0.4; lush 0.3, 4000, 1.8 to 0.4; mangrove 0.25, 4000, 1.8 to 0.4 |
-| Which kinds, and where in a hole | each kind's `weight` and `by_height` | the table in `dev-datapacks/README.md` |
+| Which kinds, and where in a hole | each kind's `weight` and `by_height` | the table in `docs/SETTINGS.md` |
 | Other mods' ruins among the mod's own | `weight` of a tag in `structures` | 15 on jungle, 5 on lush |
 | How many chests | follows from the kinds: only towers, keeps, the vault, chambers, houses and huts hold one | about 23 ruins with a chest in a hole of vanilla's height |
 | Which discs hold which table | `ruins.loot`: `depth`, `distance`, and each table's `from` | 2 and 1; from 0, 0.6 and 0.85, which gives the tables a third, a half and a fifth of the chests |

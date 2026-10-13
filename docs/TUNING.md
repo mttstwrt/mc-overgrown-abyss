@@ -7,7 +7,7 @@ is set to, how far it can go, which way to turn it for which look, and what was 
 Every number here is a first guess. None of it has been looked at in game.
 
 Other levers are not repeated here: the hole's shape, the discs' sizes and spacing, roots, ruins and loot are in the table
-of levers in SCOPE.md section 9, and `dev-datapacks/README.md` describes every setting in full.
+of levers in SCOPE.md section 9, and `docs/SETTINGS.md` describes every setting in full.
 
 ## Where the levers are, and how to try one
 
@@ -15,9 +15,12 @@ of levers in SCOPE.md section 9, and `dev-datapacks/README.md` describes every s
   A theme's levers are in its entry of `disc_themes`; the falls and springs are in `falls` at the top of the file.
 - What a single plant is made of (a curtain's length, a cap's width, a bulb's lights) is in its own file under
   `worldgen/configured_feature/disc/`.
-- To try a change without building the mod: copy a folder from `dev-datapacks/` (it is `pack.mcmeta` and a whole
-  `carve.json`), edit the copy, and put it in a new world's `datapacks` folder. A feature file can be overridden in the
-  same pack, at the same path under `data/overgrown_abyss/`. Only chunks not yet generated use the new values.
+- To try more or less of a thing without building the mod or making a datapack, turn its dial:
+  `config/overgrown_abyss.json` in the game's folder, which the mod writes the first time a world loads (`docs/SETTINGS.md`,
+  "Dials"). 0 is none, 1 is as the mod ships, 2 is twice as much. It is read when a world loads, and only chunks not yet
+  generated use the new values.
+- Anything a dial does not turn is a change to `carve.json` or to a feature file: in the mod, or in a datapack that holds
+  a whole copy of the file at the same path under `data/overgrown_abyss/`.
 - The log lines `Ravine settings:` and `Falls:` at world load show the values that are live. A value outside its range,
   or one of the rules below broken, fails the load with a message that names it.
 - Each entry of a theme's `growth` has its own draw for every column, made from its place in the list. So lowering an
@@ -88,7 +91,8 @@ platform's edge. Where the rim lies in the hole's wall nothing grows.
 - Measured, rim columns with something hanging in the 10 blocks under the lip, before and after: jungle 19% and 46%,
   mangrove 15% and 39%, lush 16% and 37%. Leaves at the rim's own height in the first 2 blocks outside a jungle disc: 1%
   and 36%.
-- The two ends: `bare-rims` (none of this) and `heavy-rims` (every `every` halved).
+- The two ends: the dial `growth.rim` at 0 (nothing on a rim; `rim_fade` and `wildness` stay as they are) and at 2 (every
+  `every` halved).
 
 ## The treeline: where a disc's trees stop
 
@@ -134,7 +138,7 @@ Entries at the head of a theme's `growth`, before its trees: a cap needs the air
 - Inside the feature files: `foliage_radius` is the cap's width (3 on the mushrooms, 4 on the pad, which is nine across);
   `cap_provider` and `stem_provider` are the blocks; in the bulbs the trunk's height and the shape of the lights ("Light"
   below).
-- The two ends: `no-giants` and `many-giants` (every `every` a quarter).
+- The two ends: the dial `growth.giants` at 0 and at 4 (every `every` a quarter).
 
 ## Ground: mounds and outcrops
 
@@ -155,7 +159,8 @@ not change.
   ground stays level within 4 blocks of the rim, under each ruin and 2 blocks round it, and at water.
 - Mounds do not get in a player's way: jungle ground blocked at foot or head height was 32.1% with them and 31.9% without.
   Outcrops do, by design: their sides are as steep as they come. `outcrops.block` is what they are made of.
-- The two ends: `flat-discs` and `rugged-discs`.
+- The two ends: the dial `rough_ground` at 0 (every top the smooth bowl it was) and at 2 (mounds and outcrops over twice as
+  much of each top; the dial does not make them higher).
 
 ## Falls
 
@@ -183,7 +188,8 @@ not change.
   came down on buildings of the city. No setting keeps a fall off the floor today (see the last section).
 - The game runs the falling water at about 4 blocks a second the first time a chunk comes alive: a fall of 60 blocks takes
   a quarter of a minute to arrive, once.
-- The ends: `no-falls`, `many-falls` (8 to 10 a hole, `chain` 0.9) and `curtain-falls` (every fall that can be is wide).
+- The ends: the dial `falls` at 0 and at 3 (6 to 12 a hole). Making every fall that can be a curtain is the file's
+  (`curtain.chance` 1).
 
 ## Springs
 
@@ -205,7 +211,7 @@ not change.
   `#overgrown_abyss:spring_rock`; a wall of some other mod's stone needs that stone added to the tag, or no spring takes.
 - Where no place will do, the hole has the pool and no spring over it. Measured: 6 of 6 took.
 - Vanilla puts springs of its own in the hole's wall as well, so a hole had the odd fall from the wall before this.
-- A spring's pool is not joined to a fall. The end to look at: `many-springs` (6 to 8 a hole).
+- A spring's pool is not joined to a fall. The end to look at: the dial `springs` at 5 (5 to 10 a hole).
 
 ## The lava disc
 
@@ -249,8 +255,8 @@ rest, every number is a first guess and none of it has been looked at in game. T
 - What the rules do not reach: what hangs from a disc higher up (vines, glow berries), and what vanilla builds in a hole,
   such as the props of a mineshaft.
 - A pack that turns `doFireTick` off needs none of it, and can have `clear` 0.
-- The two ends: `many-lava` (about two fifths of the discs low in a hole) and `loose-lava` (the same with `clear` 0 and
-  `bank` 3).
+- To find one: the dial `themes.overgrown_abyss:disc_lava` at 6, which is the weight 12 that made about two fifths of the
+  discs low in a hole lava discs. Lava wherever a pond lies (`clear` 0 and `bank` 3) is the file's.
 
 ## Light: how much of a disc is dark
 
@@ -325,11 +331,13 @@ place is a block with a whole top under two blocks a body fits in. Four holes, r
   - A lava disc is lit by its lava.
   - A ruin's lamps: where a borrowed piece has a sea lantern the disc ruins put a shroomlight (`disc_ruins/overgrown.json`),
     about 40 of them in four holes, bare as the piece has them.
-- The two ends: `no-lights` (no bulbs, lights in leaves, pickles, lichen or berries of the mod's own, and nothing under
-  the roots) and `many-lights` (twice of each, and a berry on one vine in five; the jungle's lights in leaves are at
-  their most already). Measured on NeoForge, dark standing places on jungle, mangrove and lush discs: 93%, 90% and 94% with the
-  first, which is as dark as the game's own berries and the ruins' lamps let a disc be; 53%, 45% and 44% with the
-  second, which lights 52%, 53% and 58% of what is seen.
+- The two ends: the dial `growth.lights` at 0 and at 2. It turns the bulbs, the lights in leaves, the pickles, the lichen
+  overhead and what hangs under the roots (the jungle's lights in leaves are at their most already). The berries on the
+  mod's own hanging vines are part of `glow_berries_hanging.json` and not growths of their own, so the dial leaves them.
+  Measured on NeoForge on 2026-10-11, with two settings files that also took those berries away or put one on a vine in
+  five, dark standing places on jungle, mangrove and lush discs: 93%, 90% and 94% with no lights, which is as dark as the
+  game's own berries and the ruins' lamps let a disc be; 53%, 45% and 44% with twice of each, which lights 52%, 53% and
+  58% of what is seen.
 
 ### Seen as well as dark: the second mark
 
@@ -369,8 +377,8 @@ more. For the roots, the same of their bark, outside the middle of the hole wher
   vines and the lichen overhead are gathered, and on the lush disc its lichen (`size` 24). The jungle's lights in leaves are not: one
   try in seventy takes, so they are tried in every column and there is no rate left to gather. Gathering costs
   about a point of seen surface for the same dark ground, since lights that stand together light the same leaves
-  twice: `even-lights`, the mod's file with nothing gathered, has 44%, 45% and 47% lit on 67%, 57% and 64% dark. The
-  mangrove's leaves are the other way round, 51% gathered to 49% spread. The pack is for comparing the two in game.
+  twice: the mod's file with nothing gathered (no `patches` on its lights) had 44%, 45% and 47% lit on 67%, 57% and 64%
+  dark. The mangrove's leaves are the other way round, 51% gathered to 49% spread.
 - **Under the roots** only the lowest part of a root's round counts as its underside (`RootBlocks.UNDER`, 0.7 of the
   radius under its middle line): from a flank a light would shine onto the root's top, where a player walks. A root
   that lies on the ground, on a platform or in the wall has nothing under it.

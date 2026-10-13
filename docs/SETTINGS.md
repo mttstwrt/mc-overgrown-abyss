@@ -1,22 +1,51 @@
-# Testing datapacks
+# Settings
 
-Each folder here is a datapack that overrides `overgrown_abyss:ravine/carve` with different values, for trying shape
-settings without rebuilding the mod. They are not shipped with the mod.
-
-## Install
-
-1. Open the world's save folder (`saves/<world name>/`) and go into its `datapacks` folder.
-2. Copy the pack folder (for example `wide-bays`) there, or the zip made from it (`python3 make-zips.py`).
-3. Start the world. Only chunks that have not generated yet use the new values, so use a new world, or fly to unexplored
-   ground.
-
-A pack replaces the whole `carve.json`, so when the mod's schema changes an old pack stops loading; regenerate it from
-the mod's file. The log line `Ravine settings:` at world load shows which values are live.
+Everything the mod's holes are made from is in one file,
+`common/src/main/resources/data/overgrown_abyss/worldgen/density_function/ravine/carve.json`, and this describes every
+setting in it. A datapack may hold a file of its own at the same path under `data/`; it replaces the whole of the mod's, so
+it has to keep up when the mod's settings change. The log line `Ravine settings:` at world load shows which values are live.
 
 For the settings that make discs wilder (rims, treeline, wildness, giants, ground, falls, springs), `docs/TUNING.md` has
 each one's limits and which way to turn it for which look.
 
-## Packs
+## Dials
+
+For more or less of a thing without touching that file there are the dials: `config/overgrown_abyss.json` in the game's
+folder (in Prism, the instance's `.minecraft/config`; on a server, the `config` folder beside `server.properties`, and on
+the server alone). The mod writes it the first time a world loads, with every dial at 1. 0 is none, 1 is as the settings
+have it, 2 is twice as much; `holes` goes from 0 to 1 and the rest from 0 to 10. The file is read each time a world loads,
+so a change is tried by leaving the world and coming back. Only chunks made after that show it: in a world that has been
+explored, new ground meets old at a seam.
+
+| Dial | What it turns |
+|---|---|
+| `holes` | `chance`: the share of the holes that are kept. Those kept stay where they were |
+| `roots` | both ends of `roots.great.count` and `roots.crossing.count`, the branches (`roots.branches.every` is divided) and `roots.links.chance`. 0 takes `roots` out |
+| `falls` | both ends of `falls.count` |
+| `springs` | both ends of `falls.springs.count` |
+| `ruins`, `troves` | each theme's `ruins` or `troves`: `chance` first, up to 1, and what the dial asks beyond that comes off `every`, so more discs have them before a disc has more. 0 takes the block out |
+| `rough_ground` | each theme's `ground`: the `cover` of its mounds and of its outcrops, not their height. 0 takes `ground` out |
+| `growth.<name>` | the `every` of each growth, on a disc or under the roots, whose feature is in the tag `#overgrown_abyss:dial/<name>` (`tags/worldgen/configured_feature/dial/`). The mod has `lights`, `giants` and `rim`; a feature in two of them, as the glowing bulbs are, is turned by both. 0 takes those growths out of their lists |
+| `themes.<biome id>` | that theme's `weight` |
+
+What a dial gives is held to the limits each setting has and then checked by the same rules as the file. If it does not
+hold, the log says why and the world loads with every dial at 1. A file the mod cannot read is left as it is and logged,
+with the same result. The log line `Dials:` at world load lists the dials that are not at 1, and `Ravine settings:`,
+`Roots:` and `Falls:` after it show the values they gave.
+
+Three things to know:
+
+- `holes` cannot make more holes. The mod's `chance` is 1 already. More of them needs a smaller `cell_size`, which is a
+  change to the file: the city's placement reads the cell grid from the file and not from a world's dials.
+- A dial at 0 takes entries out of a growth list, and that moves the plants of the entries listed after it (see
+  `docs/TUNING.md`). Any other value leaves every other plant where it was.
+- New names come by themselves: a tag added under `dial/` by a datapack, or another theme, is written into the file at 1
+  the next time a world loads. A name in the file that matches nothing is kept, and logged.
+
+There is no dial for the lip's height, the layers' spacing, the wall's unevenness, how thick roots are, curtains, or what a
+disc's ruins borrow. Those are the file's.
+
+## The settings
 
 The mod's own hole is now the cone: a single round hole, `base_radius` 150 at the floor (a little wider than the city cavern's
 136) and narrowing to `top_radius` 45, with free-standing discs in layers at least `layer_spacing` 20 apart around the clear air
@@ -279,7 +308,7 @@ measured for blocked ground since the jungle's trees were thinned and the ground
       in seven when lava discs lay at every height). In four holes it then took the blocks lava
       could set alight from 2337 to 52. What it does not cover: what hangs from a
       disc higher up, and what vanilla builds in the hole (a mineshaft's props). SCOPE.md, "A lava disc", has the counts.
-    - To have lava wherever a pond lies and take the fires with it, set `clear` to 0 (the `loose-lava` pack).
+    - To have lava wherever a pond lies and take the fires with it, set `clear` to 0.
 
 Jungle and mangrove grow their own trees because the parent's may not grow on a disc at all: an overworld overhaul such as
 William Wythers' Overhauled Overworld replaces those biomes with trees that only grow at certain heights above sea level and on
@@ -448,12 +477,8 @@ near, and is there from then on. Landing in a pool it stops. Landing on the floo
 blocks and further downhill, and takes grass, flowers and vines with it.
 
 Nothing of a theme's own growth is started within 2 blocks of a fall's water or 7 of where one comes down, and the ground
-stays level there. To have none, take the block out; to see many, use the pack.
-
-- `no-falls`: the mod's file without `falls`.
-- `many-falls`: 8 to 10 falls a hole, `chain` 0.9. For finding them, and for seeing a hole with too many.
-- `curtain-falls`: every fall that can be is a curtain (`chance` 1, any disc from 25 in radius).
-- `many-springs`: 6 to 8 springs a hole.
+stays level there. To have none, take the block out or turn the `falls` dial to 0; for more, the dial or the block's
+`count`.
 
 ### Ruins
 
@@ -516,84 +541,12 @@ To change how many ruins there are, change `chance`, `every` and `by_height`; to
 the chests hold, the tables' files, and which discs hold which, `loot`. A pool of your own is a kind like the mod's: name it
 and say how many of its pieces' lowest layers lie in the ground.
 
-- `many-ruins`: the mod's file with `chance` 1, `every` 1200 and no `by_height` on all three themes or on any kind: ruins on
-  every disc that has room for one, up to six on a disc, every kind at every height. For looking at the kinds without
-  searching for them.
-- `borrowed-ruins`: the mod's file with ruins on every jungle and lush disc that has room, most of them borrowed (the tag's
-  weight is 200), and a tag that lends the discs three of vanilla's structures: the centres of plains villages, the plate a
-  pillager outpost stands on, and trail ruins. For seeing borrowed ruins work without another mod. The plate builds two
-  layers and is saved with the air of a box 30 high, so it only stands where 29 blocks over it are clear; the trail ruins
-  start 15 under the ground and none of their towers is taller than that, so the log says none of them is offered.
-- `tall-rings`: the mod's file with `layer_spacing` 28 in place of 20. It was measured for the ruins and left out of the
-  mod's own file: a hole 200 blocks deep goes from 7 layers and about 65 discs to 5 layers and about 43, and what it gains
-  is towers, about 1.4 to a hole in place of 0.7. The lower kinds lose more discs than they gain room. For judging the look.
+### The long ravine (set aside for now)
 
-- `bare-rims`: the mod's file without any growth on a rim, without `rim_fade` and without `wildness`: discs as they were
-  before those three, every disc of a theme alike and its trees standing as thick at the edge as in the middle.
-- `heavy-rims`: the mod's file with twice as much on every rim (each `every` halved) and trees kept further back
-  (`width` 16, `to` 0, `wander` 0.9, `reach` 0.35). For judging how much is too much.
-
-- `flat-discs`: the mod's file without any `ground`: every disc's top the smooth bowl it was.
-- `rugged-discs`: the mod's file with mounds a block higher over 1.6 times as much of each top, and outcrops 2 higher
-  over 2.5 times as much. For judging how far to go, and what it does to walking.
-
-- `many-lava`: the mod's file with the lava theme's `weight` 12: about two fifths of the discs low in a hole are lava discs,
-  and as in the mod's file none higher up. For finding one and judging it.
-- `loose-lava`: the same, with `clear` 0 and `bank` 3: lava wherever a pond lies, beside the next disc's trees and under
-  roots. For judging what keeping clear costs in lava against what it saves in fires; a player has to stay near for the
-  game to light any.
-
-- `no-giants`: the mod's file without the giant mushrooms, pads and glowing bulbs.
-- `many-giants`: the mod's file with four times as many of each (every `every` a quarter). For finding them and judging them.
-
-- `no-lights`: the mod's file without glowing bulbs, lights in the leaves, sea pickles, lichen overhead and anything under
-  the roots, and with a copy of `glow_berries_hanging.json` in which no vine has a berry, and none of the second vine under
-  discs. A disc at its darkest: what light is left is the game's own glow berries in the hole's lush caves, lava, and a
-  ruin's lamps. Measured, standing ground with no block light on jungle, mangrove and lush discs: 93%, 90% and 94%, where the mod's
-  own file gives 67%, 58% and 64%.
-- `many-lights`: the mod's file with twice of every light of its own (each `every` halved, on discs and under roots; the
-  jungle's lights in leaves are at their most already) and a berry on one vine in five. For judging how much light is too
-  much again: 53%, 45% and 44% dark. These two packs each carry one feature file beside `carve.json`.
-- `even-lights`: the mod's file with no `patches` on its lights in leaves, berry vines and lichen, so they are spread
-  evenly over a disc and not gathered into groves. For choosing between the two looks in game. Measured: 67%, 57% and 64% dark, and
-  of what is seen 44%, 45% and 47% lit where the mod's own file gives 43%, 44% and 46%.
-
-- `huge-roots`: the mod's file with roots half as thick again: great roots of radius 7 down to 5.5 (14 blocks across to 11),
-  crossing roots 5.5, links 3, nothing under 2.
-- `many-roots`: 5 to 7 great roots, 2 to 3 crossing, a branch for every 80 blocks of root, and a link to every disc that can
-  have one (`chance` 1).
-- `few-roots`: 2 to 3 great roots, at most one crossing, a branch for every 400 blocks, and `links.chance` 0.25.
-- `no-roots`: the mod's file without `roots`, the hole as it was before them.
-
-- `tuned-themes`: the mod's file as it was before biomes were inherited, with the hand-made palettes and growth lists for lush,
-  jungle and mangrove (denser foliage, mangrove roots on stems). For comparing the two in game. It inherits spawns only
-  (`"stages": []`), so its foliage is all its own.
-- `cone`: the mod's own file plus a fifth theme with no biome, in plain concrete (white top, black underside, light grey body,
-  orange stem surface, yellow stem core), that makes each part of a disc easy to tell apart.
-- `fixed-top`: the mod's file as it was before the top followed the ground: every hole's top at y=80 whatever the ground, a
-  bore above it, three layers, a clear cylinder, and a hole in half the land cells of 2048. For comparing the two in game.
-
-- `low-lip` and `high-lip`: the mod's file with `rim.low_share` 0 and 1, the lip under the lowest and under the highest
-  ground round the mouth. For choosing between them and the mod's 0.5 on the same seed: the holes are in the same places,
-  only as deep as each lip makes them.
-- `smooth-walls`: the mod's file without `wall_noise`, an exact round hole. For comparing with the uneven wall.
-
-`cone` and `tuned-themes` were made from the file before that change and have no `rim`, `upper` or `wall_noise` either, so
-they also keep the fixed top and the even wall. They and `fixed-top` have no `roots`; every other cone pack has the mod's. To try them with the new shape, copy the mod's `top`, `cell_size`, `chance`,
-`ceiling_margin`, `wall_noise`, `rim` and `upper` into them.
-
-### Ravine packs (set aside for now)
-
-The long ravine with discs cut into its walls is no longer the mod's default; these packs still give it. They keep the discs they
-had before the cone became the default: stems `stem_fraction` 0.2 with `min_stem_radius` 2.5 (never below 5 blocks across), flat
-discs (bowl depths 0) and no hanging. Their own numbers are `spacing` (blocks of ravine per disc in a row), `row_spacing`,
-`row_jitter`, `side_stagger`, `max_overshoot` and the offsets (how far a disc's centre sits inside the wall).
-
-- `painted-ravine`: what the mod shipped before the cone (spacing 64, row spacing 20, row jitter 0.4, side stagger 0.5, max
-  overshoot 4, large offset bonus 0.8, radius 20 to 48, offset 0 to 0.1), with two themes that are only palettes: a mossy one and
-  the concrete one of the `cone` pack.
-- `wide-bays`: spacing 57, radius 22 to 48, offset 0.4 to 0.75. Rooms reach deeper into the rock and merge into one
-  large cavity with a scalloped edge.
-- `small-bays`: spacing 78, row spacing 14, radius 18 to 40, offset 0 to 0.3. Fewer, smaller bays; the slot is more visible.
-- `sparse-discs`: spacing 85, row spacing 28, row jitter 0.3. Few discs, each with plenty of room above and below.
-- `dense-discs`: spacing 51, row spacing 15, row jitter 0.4. Many discs, overlapping heavily; floors at least 9 apart.
+The long ravine with discs cut into its walls is no longer the mod's default. Its settings are still read: a file with a
+`ravine` block in place of `cone` gives it. `common/src/test/resources/ravine-settings.json` is what the mod shipped before
+the cone (spacing 64, row spacing 20, row jitter 0.4, side stagger 0.5, max overshoot 4, large offset bonus 0.8, radius 20
+to 48, offset 0 to 0.1, with two themes that are only palettes), kept so that the tests still read one. It has the discs of
+that time: stems `stem_fraction` 0.2 with `min_stem_radius` 2.5 (never below 5 blocks across), flat discs (bowl depths 0)
+and no hanging. The ravine's own numbers are `spacing` (blocks of ravine per disc in a row), `row_spacing`, `row_jitter`,
+`side_stagger`, `max_overshoot` and the offsets (how far a disc's centre sits inside the wall).
