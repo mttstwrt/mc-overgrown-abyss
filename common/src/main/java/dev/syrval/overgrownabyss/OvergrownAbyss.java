@@ -2,7 +2,11 @@ package dev.syrval.overgrownabyss;
 
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
+import dev.architectury.event.events.common.LifecycleEvent;
+import dev.architectury.event.events.common.PlayerEvent;
+import dev.architectury.event.events.common.TickEvent;
 import dev.architectury.registry.registries.DeferredRegister;
+import dev.syrval.overgrownabyss.compat.CurseTicker;
 import dev.syrval.overgrownabyss.compat.DiscRuinsPlacement;
 import dev.syrval.overgrownabyss.compat.DiscRuinsStructure;
 import dev.syrval.overgrownabyss.compat.NestedProcessorListProcessor;
@@ -12,6 +16,7 @@ import dev.syrval.overgrownabyss.compat.SwapBlocksProcessor;
 import dev.syrval.overgrownabyss.ravine.RavineCarve;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.placement.StructurePlacementType;
@@ -48,7 +53,23 @@ public final class OvergrownAbyss {
         processorTypes.register("processor_list", () -> NestedProcessorListProcessor.TYPE);
         processorTypes.register();
 
+        registerCurse();
+
         LOGGER.info("Overgrown Abyss initialised (build {})", buildDescription());
+    }
+
+    // The curse of descent is the mod's only code that runs outside world generation; a level without a `curse` block does nothing.
+    private static void registerCurse() {
+        CurseTicker curse = new CurseTicker();
+        TickEvent.PLAYER_POST.register(player -> {
+            if (player instanceof ServerPlayer serverPlayer) {
+                curse.tick(serverPlayer);
+            }
+        });
+        PlayerEvent.PLAYER_QUIT.register(curse::forget);
+        PlayerEvent.PLAYER_RESPAWN.register((player, conqueredEnd, reason) -> curse.forget(player));
+        PlayerEvent.CHANGE_DIMENSION.register((player, from, to) -> curse.forget(player));
+        LifecycleEvent.SERVER_STOPPED.register(server -> curse.clear());
     }
 
     // The jar carries the commit it was built from, so a log line shows whether a world ran the latest code.

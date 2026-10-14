@@ -3,6 +3,7 @@ package dev.syrval.overgrownabyss.ravine;
 import com.mojang.serialization.MapCodec;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.KeyDispatchDataCodec;
@@ -137,6 +138,24 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
         return holeAt(x, z)
                 .filter(hole -> hole.cell().distanceToCentre(x, z) <= settings.maxReach())
                 .isPresent();
+    }
+
+    /**
+     * How far down its hole a point is, 0 at the mouth's height to 1 at the floor, or empty if the point is not in the hole's
+     * open air, its discs' domes or within {@code margin} blocks of them.
+     */
+    public OptionalDouble depthShareIn(int x, int y, int z, double margin) {
+        Optional<Hole> found = holeAt(x, z);
+        if (found.isEmpty()) {
+            return OptionalDouble.empty();
+        }
+        Hole hole = found.get();
+        double distance = RavineShape.signedDistance(settings, hole.bounds(), hole.cell(), discsOf(hole).layout(), x, y, z);
+        if (distance > margin) {
+            return OptionalDouble.empty();
+        }
+        double floor = hole.bounds().floorY();
+        return OptionalDouble.of(Math.clamp((hole.bounds().topY() - y) / (hole.bounds().topY() - floor), 0, 1));
     }
 
     /** Whether a point is in the cavern's biome volume: the dome plus a margin around its surfaces. */

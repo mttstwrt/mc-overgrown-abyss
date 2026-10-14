@@ -310,6 +310,7 @@ public final class RavineDensityHook {
                         roots.woodReach(), roots.woodBlend()),
                 () -> OvergrownAbyss.LOGGER.info("Roots: none"));
         s.falls().ifPresentOrElse(falls -> OvergrownAbyss.LOGGER.info("Falls: {}", falls), () -> OvergrownAbyss.LOGGER.info("Falls: none"));
+        s.curse().ifPresentOrElse(curse -> OvergrownAbyss.LOGGER.info("Curse: {}", curse), () -> OvergrownAbyss.LOGGER.info("Curse: none"));
     }
 
     /**

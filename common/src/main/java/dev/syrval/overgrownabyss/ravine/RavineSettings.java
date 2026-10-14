@@ -76,6 +76,10 @@ public record RavineSettings(
         return dressing.falls();
     }
 
+    public Optional<CurseSettings> curse() {
+        return dressing.curse();
+    }
+
     // A cone's cell is a round hole: no length and no curves.
     private RavineGeometry geometry() {
         return ravine.orElse(RavineGeometry.ROUND_HOLE);

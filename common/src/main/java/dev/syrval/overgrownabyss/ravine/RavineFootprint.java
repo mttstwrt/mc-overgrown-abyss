@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
@@ -25,6 +26,16 @@ public interface RavineFootprint {
         @Override
         public Optional<Holder<Biome>> biomeAt(int x, int y, int z) {
             return Optional.empty();
+        }
+
+        @Override
+        public Optional<CurseSettings> curse() {
+            return Optional.empty();
+        }
+
+        @Override
+        public OptionalDouble depthShareIn(int x, int y, int z, double margin) {
+            return OptionalDouble.empty();
         }
 
         @Override
@@ -71,6 +82,12 @@ public interface RavineFootprint {
      * one, or else the cavern's, if it is inside a cavern that has one configured.
      */
     Optional<Holder<Biome>> biomeAt(int x, int y, int z);
+
+    /** The curse of descent the level's holes carry, if their settings have one. */
+    Optional<CurseSettings> curse();
+
+    /** How far down a hole a point is, 0 at its mouth to 1 at its floor, or empty if it is outside every hole by more than {@code margin}. */
+    OptionalDouble depthShareIn(int x, int y, int z, double margin);
 
     /**
      * Calls {@code sink} with every block that takes a disc's material in the chunk whose lowest corner is {@code (minX, minZ)},
@@ -164,6 +181,22 @@ public interface RavineFootprint {
                     }
                 }
                 return Optional.empty();
+            }
+
+            @Override
+            public Optional<CurseSettings> curse() {
+                return copy.get(0).carve().settings().curse();
+            }
+
+            @Override
+            public OptionalDouble depthShareIn(int x, int y, int z, double margin) {
+                for (Region region : copy) {
+                    OptionalDouble share = region.carve().depthShareIn(x, y, z, margin);
+                    if (share.isPresent()) {
+                        return share;
+                    }
+                }
+                return OptionalDouble.empty();
             }
 
             @Override

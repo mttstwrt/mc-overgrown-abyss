@@ -45,6 +45,24 @@ Three things to know:
 There is no dial for the lip's height, the layers' spacing, the wall's unevenness, how thick roots are, curtains, or what a
 disc's ruins borrow. Those are the file's.
 
+## The curse of descent
+
+A block `curse` in the settings file. Inside a hole each player has a depth they are adjusted to, which follows their real
+height at `rate_down` or `rate_up` blocks a tick; the gap between the two gives wither, level by level. A lift at or under the
+rate never opens a gap. A drop, a pearl or a knock does, and waiting closes it. Without the block there is no curse.
+
+| Setting | Meaning |
+|---|---|
+| `rate_down`, `rate_up` | blocks a tick the adjusted depth follows a player going down or up (0.12 is about a ladder's 2.35 a second) |
+| `levels` | the gaps, widest last, at which wither I, II, ... begin; under the first costs nothing. Layers are 20 apart, so a first gap just over 20 makes one drop between discs free and two in a row not |
+| `duration` | ticks each dose of wither lasts, so it lapses a little after the gap closes |
+| `margin` | blocks outside the hole's open air and discs' domes that still count as inside (default 4) |
+| `depth_strictness` | 0 to 0.9: how much the gaps shrink toward the floor (default 0; 0.5 is half the gaps at the floor) |
+
+Players in creative or spectating are not cursed; coming into the hole, dying and changing dimension all start a player over
+adjusted to where they stand. The log line `Curse:` at world load shows what is live. Milk and Artifacts' antidote vessel clear
+wither, so they clear this too.
+
 ## The settings
 
 The mod's own hole is now the cone: a single round hole, `base_radius` 150 at the floor (a little wider than the city cavern's
