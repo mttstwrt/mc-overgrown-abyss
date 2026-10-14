@@ -1729,7 +1729,7 @@
   "curse": {
     "rate_down": 0.12,
     "rate_up": 0.12,
-    "levels": [25, 40, 60, 90],
+    "levels": [25, 80, 140, 200],
     "duration": 100,
     "margin": 4,
     "depth_strictness": 0
