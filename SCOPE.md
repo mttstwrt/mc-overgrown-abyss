@@ -3334,11 +3334,11 @@ modifier that names the mod's tables; a datapack over any of the files above.
   are the intended relics, or the mod deals the damage and shows the effect as a sign. It must never act on ordinary
   movement, which only playing can show. Not looked up: how a player aboard an Aeronautics craft reports their height, and
   bubble columns.
-- **Built 2026-10-13 (uncommitted, unplayed):** the adjusted-depth shape, wither only, inside a hole's open air and domes
+- **Built and played 2026-10-13 (owner played it):** the adjusted-depth shape, wither only, inside a hole's open air and domes
   plus `margin`, as a `curse` block in `carve.json` (`docs/SETTINGS.md`). Stepped each tick by Architectury's player tick, so
   nothing is loader-specific and nothing is on the client. A pearl counts because a teleport opens a gap. `depth_strictness`
-  is 0 by default. No warning stage (wither has no free level), no dial. The numbers are mine and unjudged. Not looked at in
-  game: how it feels, an Aeronautics craft's height, bubble columns, falling in water.
+  is 0 by default. No warning stage (wither has no free level), no dial. The numbers are mine; the owner has played it but
+  not yet said what to change. Not looked at: an Aeronautics craft's height, bubble columns, falling in water.
 - **Open:** the suggested shape; the three tentative answers above; whether its strictness reads the same rank as loot.
 
 ### Getting about: airships and what players build (owner's view)
