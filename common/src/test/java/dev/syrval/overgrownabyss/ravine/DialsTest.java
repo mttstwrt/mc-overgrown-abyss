@@ -265,18 +265,19 @@ class DialsTest {
     }
 
     @Test
-    void hazeTurnsTheRateOfTheHazeAndNoOtherGas() throws Exception {
+    void hazeTurnsTheThicknessOfTheFogAndNoOtherGas() throws Exception {
         GasSettings was = DiscThemeTest.shipped().dressing().gas().orElseThrow();
         GasSettings twice = turned("{\"haze\": 2}").dressing().gas().orElseThrow();
-        GasSettings.Haze before = was.haze().orElseThrow();
-        GasSettings.Haze after = twice.haze().orElseThrow();
-        assertEquals(before.rate() * 2, after.rate(), 1e-6);
-        assertEquals(new GasSettings.Haze(before.medium(), before.spacing(), before.layerSpacing(), before.shape(), after.rate()), after);
+        GasSettings.Fog before = was.fog().orElseThrow();
+        GasSettings.Fog after = twice.fog().orElseThrow();
+        assertEquals(before.bottomDensity() * 2, after.bottomDensity(), 1e-6);
+        assertEquals(before.topDensity() * 2, after.topDensity(), 1e-6);
+        assertEquals(new GasSettings.Fog(before.medium(), after.bottomDensity(), after.topDensity(), before.edge()), after);
         assertEquals(was.falls(), twice.falls());
         assertEquals(was.cavern(), twice.cavern());
 
         GasSettings none = turned("{\"haze\": 0}").dressing().gas().orElseThrow();
-        assertTrue(none.haze().isEmpty());
+        assertTrue(none.fog().isEmpty());
         assertEquals(was.falls(), none.falls());
     }
 

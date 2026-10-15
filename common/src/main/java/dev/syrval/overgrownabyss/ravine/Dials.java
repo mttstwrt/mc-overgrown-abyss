@@ -37,7 +37,7 @@ import net.minecraft.util.InclusiveRange;
  * @param ruins       how many ruins stand on discs: on more of the discs first and, once every disc has them, more to a disc
  * @param troves      the same of troves
  * @param roughGround how much of a disc's top its mounds and outcrops cover
- * @param haze        how thick the haze through a hole's air is, by the rate of its sources
+ * @param haze        how thick the fog through a hole's air is, by its densities
  * @param growth      how much grows of each group of features, by the group's name. A group is a tag of configured features
  *                    under {@code overgrown_abyss:dial/}, and a feature in two groups is turned by both
  * @param themes      how often a disc gets each theme, by the id of the theme's biome
@@ -169,13 +169,16 @@ public record Dials(
         at(settings, "roots").ifPresent(found -> turnGrowth(found, growthGroups));
     }
 
-    // By the rate alone: how many sources there are and where stays as it was.
+    // By its densities alone: where it is and how it thins stay as they were.
     private void turnHaze(JsonObject settings) {
         if (haze == 0) {
-            at(settings, "gas").ifPresent(gas -> gas.remove("haze"));
+            at(settings, "gas").ifPresent(gas -> gas.remove("fog"));
             return;
         }
-        at(settings, "gas", "haze").ifPresent(found -> times(found, "rate", haze, 0, GasSettings.MOST_RATE));
+        at(settings, "gas", "fog").ifPresent(found -> {
+            times(found, "bottom_density", haze, 0, GasSettings.MOST_DENSITY);
+            times(found, "top_density", haze, 0, GasSettings.MOST_DENSITY);
+        });
     }
 
     // On more of the theme's discs first. Once every disc has them there is no more of that to give, and the rest goes to

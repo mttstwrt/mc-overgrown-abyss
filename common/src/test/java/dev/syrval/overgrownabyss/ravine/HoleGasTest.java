@@ -182,33 +182,31 @@ class HoleGasTest {
     }
 
     @Test
-    void hazeHangsInTheHolesOpenAirFromItsFloorToItsTop() throws Exception {
+    void theFogHoldsTheWholeConeAndItsCavernAtItsFullThickness() throws Exception {
         RavineSettings settings = DiscThemeTest.shipped();
-        GasSettings.Haze haze = settings.dressing().gas().flatMap(GasSettings::haze).orElseThrow();
-        RavineBounds bounds = DiscThemeTest.LEVEL;
-        RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
-        CellDiscs discs = CellDiscs.of(settings, bounds, cell);
-        List<GasSource> sources = HoleGas.of(settings, bounds, cell, discs).sources().stream()
-                .filter(source -> source.shape().equals(haze.shape()) && source.rate() == haze.rate()).toList();
-        double lowest = Double.MAX_VALUE;
-        double highest = -Double.MAX_VALUE;
-        for (GasSource source : sources) {
-            assertTrue(RavineShape.signedDistance(settings, bounds, cell, discs.layout(), source.x(), source.y(), source.z()) < 0,
-                    () -> "haze in the ground at " + source);
-            assertTrue(RavineShape.rockDistance(settings, bounds, cell, discs.layout(), source.x(), source.y(), source.z()) > 0,
-                    () -> "haze in a disc at " + source);
-            lowest = Math.min(lowest, source.y());
-            highest = Math.max(highest, source.y());
+        GasSettings.Fog given = settings.dressing().gas().flatMap(GasSettings::fog).orElseThrow();
+        ConeSettings cone = settings.cone().orElseThrow();
+        for (RavineBounds bounds : List.of(DiscThemeTest.LEVEL, DiscThemeTest.VANILLA)) {
+            RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
+            List<GasFog> fogs = gasOf(settings, bounds, 0).fogs();
+            assertEquals(1, fogs.size());
+            GasFog fog = fogs.getFirst();
+            assertEquals(cell.centreX(), fog.x());
+            assertEquals(cell.centreZ(), fog.z());
+            assertEquals(given.bottomDensity(), fog.bottomDensity());
+            // Full thickness is an edge in from the fog's surface: at the floor, and at the cone's wall or the cavern's at every
+            // height up to the top, where the fog ends.
+            assertTrue(fog.y() + fog.edge() <= bounds.floorY(), "the fog's foot at " + fog.y());
+            assertEquals(bounds.topY(), fog.y() + fog.height(), 1e-6);
+            for (int y = bounds.floorY(); y <= bounds.topY() - fog.edge(); y++) {
+                double up = (y - fog.y()) / fog.height();
+                double radius = fog.bottomRadius() + (fog.topRadius() - fog.bottomRadius()) * up;
+                double t = (y - bounds.floorY()) / (double) settings.cavernHeight();
+                double cavern = t < 1 ? settings.cavernRadius() * Math.sqrt(1 - t * t) : 0;
+                double wall = Math.max(ConeShape.radiusAt(settings, cone, bounds, y), cavern);
+                assertTrue(radius - fog.edge() >= wall, "at " + y + " the fog is full to " + (radius - fog.edge()) + ", the wall at " + wall);
+            }
         }
-        assertTrue(lowest < bounds.floorY() + haze.layerSpacing(), "lowest haze at " + lowest);
-        assertTrue(highest > bounds.topY() - 2 * haze.layerSpacing() && highest < bounds.topY(), "highest haze at " + highest);
-        // About one in each box of the lattice the hole's air fills: a cone 45 blocks across at its top and 150 at its floor.
-        double boxes = 0;
-        for (double y = bounds.floorY(); y < bounds.topY(); y++) {
-            double radius = ConeShape.radiusAt(settings, settings.cone().orElseThrow(), bounds, y);
-            boxes += Math.PI * radius * radius / (haze.spacing() * haze.spacing() * haze.layerSpacing());
-        }
-        assertTrue(sources.size() > boxes * 0.8 && sources.size() < boxes * 1.6, sources.size() + " haze sources for " + Math.round(boxes) + " boxes of the cone");
     }
 
     @Test

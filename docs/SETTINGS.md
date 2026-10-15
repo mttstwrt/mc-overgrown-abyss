@@ -500,15 +500,16 @@ stays level there. To have none, take the block out or turn the `falls` dial to 
 
 ### Gas
 
-Gas is mist, swamp breath, smoke off lava and a violet shimmer, drawn by the owner's gas library, Volumetrics
+Gas is a haze through each hole, mist, swamp breath, smoke off lava and a violet shimmer, drawn by the owner's gas
+library, Volumetrics
 (`mc-volumetric-effects-lib`). It is optional. Without it on the server nothing is sent, and the rest of this section does
 nothing. To see the gas, Volumetrics must be on the server and the client, and Overgrown Abyss on the client. The world's
 blocks are never changed by it.
 
-The four kinds are the library's media, in `data/overgrown_abyss/volumetrics/medium/`: `mist`, `bog`, `ember` and
-`shimmer`. A medium is how the gas moves and looks: `gravity` (positive sinks), `dispersion`, `decay`, `color`, `opacity`,
-`emissive` and the rest, all as the library's own SCOPE has them. The library draws at most four kinds at once near the
-camera, so the mod uses all four and no more.
+The kinds are the library's media, in `data/overgrown_abyss/volumetrics/medium/`: `haze`, `mist`, `bog`, `ember` and
+`shimmer`. A medium is how the gas moves and looks: `gravity` (positive sinks), `dispersion`, `decay`,
+`color`, `opacity`, `emissive` and the rest, all as the library's own SCOPE has them. The library holds up to 32 kinds at
+once near the camera, so a use that wants a look of its own can have a medium of its own.
 
 Where gas comes from is in `carve.json`, in two places. Every place is worked out from the hole's hashes, as growth is, and
 the server sends each player the gas of the holes within 512 blocks.
@@ -524,13 +525,20 @@ the server sends each player the gas of the holes within 512 blocks.
     `{"type": "sphere", "radius"}`, resting on it or hanging from it.
   - `rate`: density each cell of the shape gains per second, as the library counts it (0 to 64).
 - `gas` at the top of the file, for the hole itself:
+  - `fog`: the haze through the whole hole, one of the library's fogs, which are not simulated and are drawn at any
+    distance. `medium` is its look (the haze's simulation plays no part). It is `bottom_density` thick at the floor and
+    thins by the same share each block up to `top_density` at the top; over its outermost `edge` blocks (16 if left out)
+    it fades to nothing. It fills a cone from round the hole's cone and cavern at the floor to round the mouth at the top,
+    reaching an edge past the walls and below the floor so that it is at its full thickness where they are; what of it
+    lies in the rock is never seen. Light through `n` blocks of it is dimmed to `exp(-opacity × density × n)`; the
+    `haze` medium's opacity is 1, so at the floor (0.022 as shipped) a fifth of the light is gone in 10 blocks.
   - `falls.spray` rests on the water each fall lands in.
   - `falls.curtain` fills a cylinder up the whole drop, as wide as the fall and `margin` (1.5) blocks more each side.
   - `springs` rests on the pool where each spring's water comes down.
   - `cavern` (a list) spreads sources over the cavern floor, one for every `every` blocks, within 95% of its radius.
 
 A hole sends at most 4096 sources. Past that the themes' last ones are left out, and the log says so once for the hole.
-The hole's own come first. The dials do not turn gas.
+The hole's own come first. The `haze` dial turns the fog's two densities, and at 0 takes it away; no other dial turns gas.
 
 ### Ruins
 

@@ -80,7 +80,7 @@ public final class GasTicker {
             kept.add(hole.hole());
             if (Math.hypot(hole.x() - x, hole.z() - z) <= SEND_WITHIN && known.holes.add(hole.hole())) {
                 warnIfCut(hole);
-                NetworkManager.sendToPlayer(player, new HoleGasPayload(hole.hole(), hole.gas().sources()));
+                NetworkManager.sendToPlayer(player, new HoleGasPayload(hole.hole(), hole.gas().sources(), hole.gas().fogs()));
             }
         }
         for (Long hole : List.copyOf(known.holes)) {

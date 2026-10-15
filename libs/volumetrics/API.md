@@ -7,8 +7,9 @@ Maven repository holding one build of its API:
 dev.syrval.volumetrics:volumetrics-common:0.1.0+mc1.21.1    jar, sources jar, POM
 ```
 
-Published 2026-10-14 from the library's `1.21.1` branch at `d92fe27`. Everything below was read from that
-commit's sources; where it and this file disagree, the sources jar beside the jar wins.
+Published 2026-10-15 from the library's branch `agent/G-001-chasm-volumetrics` (off its `1.21.1` line) at `144dc7f`.
+Everything below was read from that commit's sources; where it and this file disagree, the sources jar beside the jar
+wins.
 
 ## How this mod takes it
 
@@ -24,8 +25,9 @@ commit's sources; where it and this file disagree, the sources jar beside the ja
 
 ## Publishing a new build here
 
-After the library's API changes. From wherever the library's `1.21.1` branch is checked out (on 2026-10-14, the
-worktree `mc-volumetric-effects-lib/.claude/worktrees/port-1.21.1`):
+After the library's API changes. From wherever the library's 1.21.1 line is checked out (on 2026-10-15, the kit's
+`mods/mc-volumetric-effects-lib` on `agent/G-001-chasm-volumetrics`; in the kit, `bin/mcg mc-volumetric-effects-lib
+:common:publishToMavenLocal -Dmaven.repo.local=<absolute path of this folder>` does the same):
 
 ```sh
 rm -rf ~/dev/my-projects/mc-mods/mc-abyss-ruins/libs/volumetrics/dev
@@ -73,6 +75,40 @@ handle.remove();
 - **Gas already given off stays** where it is when the emitter moves or goes, and thins by the medium's `decay`.
 - The simulation runs ten steps a second. A move or a rate change counts from the next one.
 - Emitters are kept while the player has gas turned off (`/volumetrics enabled false`) and feed again when it is on.
+
+### `client.GasFogs`: fogs from code
+
+```java
+Medium haze = media.getOptional(ResourceLocation.fromNamespaceAndPath("overgrown_abyss", "haze")).orElseThrow();
+Fog fog = new Fog(haze.appearance(), new FogShape.Round(174f, 69f, 344f), new Vec3(x, floor - 24, z), 0.022f, 0.004f, 24f);
+GasFogs.Handle handle = GasFogs.of(level).add(fog);
+handle.set(fog);      // another fog in its place, from the next frame
+handle.remove();
+```
+
+A fog is gas that is not simulated: one look filling a shape, its density by a formula. It follows no floor and blocks do
+not stop it (what is in rock is never seen), it costs the simulation nothing, and it is drawn at any distance, lit as gas
+is by the game's light where the windows reach and by their edge's light beyond.
+
+| Member | What it does |
+|---|---|
+| `static GasFogs of(ClientLevel level)` | The level's own fogs. Throws `IllegalStateException` off the client thread |
+| `Handle add(Fog fog)` | A new fog |
+| `Handle.set(Fog fog)` | Replaces it, from the next frame |
+| `Handle.remove()` | Takes it away for good; harmless a second time |
+
+- `Fog(Appearance appearance, FogShape shape, Vec3 anchor, float bottomDensity, float topDensity, float edge)`: the
+  anchor is the middle of the shape's base. The density goes from `bottomDensity` at the base to `topDensity` at the top,
+  by the same share each block when both are above zero and evenly when either is zero; over the outermost `edge` blocks
+  of the shape it thins to nothing. Light through `n` blocks at density `d` is dimmed to `exp(-opacity * d * n)`, the
+  opacity being the appearance's. The appearance's noise gives it wisps that drift sideways at the noise's speed.
+  `Fog(appearance, shape, anchor, density, edge)` is as thick throughout. Negative or non-finite numbers throw.
+- `FogShape.Round(float bottomRadius, float topRadius, float height)`, upright, standing on the anchor: a cylinder when
+  the radii are equal (`Round(radius, height)`), a cone or a funnel when not. `FogShape.Box(width, height, depth)`, along
+  the axes. Sizes must be positive.
+- The sixteen fogs nearest the camera are drawn, of those within the render distance and 32 blocks. A ray that meets
+  none costs nothing more.
+- Client thread only, on this client only, and they go with the level, as emitters do. Kept while gas is turned off.
 
 ### `EmitterShape`: the region an emitter fills
 
@@ -170,14 +206,14 @@ by `offset`. Clients find them as they read the world around the camera.
 
 ## Limits that matter here
 
-- **Four kinds of gas at once** in the simulated windows; a fifth waits until a kind has no emitter in range and its
-  last gas has thinned away. This mod has four media; where all four are in range they take every slot, and the
-  library's own gases or another mod's wait. The owner wants the limit lifted in the library (this mod's `SCOPE.md`).
-- **The windows end**: gas is simulated and drawn to 256 blocks from the camera each way and 128 up and down, half
-  that in fine detail. An emitter beyond them costs next to nothing and holds no slot.
+- **32 kinds of gas at once** in the simulated windows, this mod's and every other's together; a 33rd waits until a
+  kind has no emitter in range and its last gas has thinned away. A kind costs the simulation in proportion to how much
+  of it there is, and the renderer a page of its textures for every four kinds in use.
+- **The windows end**: gas is simulated and drawn to 256 blocks from the camera each way and 192 up and down (the
+  coarse window, which keeps inside the world's height, so in a world of the usual 384 blocks it holds all of it), and
+  to 128 each way and 64 up and down in fine detail. An emitter beyond them costs next to nothing and holds no slot.
+  Fogs have no such end.
 - **Every emitter in range is visited every step**, about 13 ns each in the library's measurements.
-- **`remove()` searches a list of all the level's emitters**, so removing thousands at once, as leaving a hole does,
-  costs in proportion to their number times the total. Not measured with this mod's 2,300 to 3,200 sources a hole.
 - **Gas starts from nothing** when the world loads or the player teleports, and takes time to build up.
 - **Gas is as dark as the blocks around it**: lit by the lightmap where it is, so nearly black in an unlit place
   without `emissive`.

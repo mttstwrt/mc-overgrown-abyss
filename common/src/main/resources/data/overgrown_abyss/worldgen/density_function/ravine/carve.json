@@ -1880,15 +1880,11 @@
     "depth_strictness": 0
   },
   "gas": {
-    "haze": {
-      "medium": "overgrown_abyss:mist",
-      "spacing": 20,
-      "layer_spacing": 14,
-      "shape": {
-        "type": "sphere",
-        "radius": 3
-      },
-      "rate": 0.04
+    "fog": {
+      "medium": "overgrown_abyss:haze",
+      "bottom_density": 0.022,
+      "top_density": 0.004,
+      "edge": 24
     },
     "falls": {
       "spray": {

@@ -2,12 +2,16 @@ package dev.syrval.overgrownabyss.compat.client;
 
 import dev.syrval.overgrownabyss.OvergrownAbyss;
 import dev.syrval.overgrownabyss.compat.HoleGasPayload;
+import dev.syrval.overgrownabyss.ravine.GasFog;
 import dev.syrval.overgrownabyss.ravine.GasShape;
 import dev.syrval.overgrownabyss.ravine.GasSource;
 import dev.syrval.volumetrics.api.EmitterShape;
+import dev.syrval.volumetrics.api.Fog;
+import dev.syrval.volumetrics.api.FogShape;
 import dev.syrval.volumetrics.api.Medium;
 import dev.syrval.volumetrics.api.VolumetricsRegistries;
 import dev.syrval.volumetrics.api.client.GasEmitters;
+import dev.syrval.volumetrics.api.client.GasFogs;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,14 +27,14 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Gas drawn through the gas library: each source sent becomes one of its emitters from code, in the client's level. The
- * only class of the mod that knows that library; it is loaded only when the library is there.
+ * Gas drawn through the gas library: each source sent becomes one of its emitters from code, and each fog one of its fogs, in
+ * the client's level. The only class of the mod that knows that library; it is loaded only when the library is there.
  *
  * <p>Each gas is looked up among the library's media, which the server's datapacks give the client: the mod's own are in
  * its data, so the server needs the library too. A gas the client was not given is skipped, and named once in the log.
  */
 final class VolumetricsGas implements GasDrawer {
-    private final Map<Long, List<GasEmitters.Handle>> holes = new HashMap<>();
+    private final Map<Long, Drawn> holes = new HashMap<>();
     private final Set<ResourceLocation> missing = new HashSet<>();
     // The level the emitters were made in. They go with it, so a payload for another level starts afresh.
     private @Nullable ClientLevel level;
@@ -50,11 +54,11 @@ final class VolumetricsGas implements GasDrawer {
             holes.clear();
             this.level = client;
         }
-        List<GasEmitters.Handle> old = holes.remove(payload.hole());
+        Drawn old = holes.remove(payload.hole());
         if (old != null) {
-            old.forEach(GasEmitters.Handle::remove);
+            old.remove();
         }
-        if (payload.sources().isEmpty()) {
+        if (payload.isGone()) {
             return;
         }
         Optional<Registry<Medium>> media = client.registryAccess().registry(VolumetricsRegistries.MEDIUM);
@@ -69,13 +73,32 @@ final class VolumetricsGas implements GasDrawer {
             }
             made.add(emitters.add(medium.get(), shapeOf(source.shape()), new Vec3(source.x(), source.y(), source.z()), source.rate()));
         }
-        holes.put(payload.hole(), made);
+        GasFogs fogs = GasFogs.of(client);
+        List<GasFogs.Handle> madeFogs = new ArrayList<>(payload.fogs().size());
+        for (GasFog fog : payload.fogs()) {
+            Optional<Medium> medium = found.computeIfAbsent(fog.medium(), id -> media.flatMap(registry -> registry.getOptional(id)));
+            if (medium.isEmpty()) {
+                warnOfMissing(fog.medium());
+                continue;
+            }
+            madeFogs.add(fogs.add(new Fog(medium.get().appearance(), new FogShape.Round(fog.bottomRadius(), fog.topRadius(), fog.height()),
+                    new Vec3(fog.x(), fog.y(), fog.z()), fog.bottomDensity(), fog.topDensity(), fog.edge())));
+        }
+        holes.put(payload.hole(), new Drawn(made, madeFogs));
     }
 
     @Override
     public void clear() {
         holes.clear();
         level = null;
+    }
+
+    /** What one hole has in the library: its emitters and its fogs. */
+    private record Drawn(List<GasEmitters.Handle> emitters, List<GasFogs.Handle> fogs) {
+        void remove() {
+            emitters.forEach(GasEmitters.Handle::remove);
+            fogs.forEach(GasFogs.Handle::remove);
+        }
     }
 
     private static EmitterShape shapeOf(GasShape shape) {

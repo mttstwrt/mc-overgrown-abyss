@@ -47,7 +47,7 @@ Layers, mapped to code:
 | Wall ruins (later) | Jigsaw structures anchored on ledges | JSON in `common` | Yes |
 | Disc ruins | Custom `overgrown_abyss:disc_ruins` structure and placement: one piece of a template pool at each place the discs' own code finds for a ruin | Sites in `common/…/ravine`, structure and placement in `common/…/compat`, pools and processors in JSON | Yes |
 | Roots | Winding wooden roots grown once for each hole and written into each chunk with the discs' materials; a block tag keeps the mod's structures from building over them | Growing and blocks in `common/…/ravine`, written by `compat/DiscPainter`, numbers and the tag in JSON | Yes |
-| Gas | Mist, bog, ember and shimmer from each disc theme's surfaces, the falls, springs and cavern floor, drawn by the owner's gas library (Volumetrics) when it is installed | Sources worked out in `common/…/ravine` (`HoleGas`); sent by `compat/GasTicker` and `HoleGasPayload`; drawn by `compat/client/VolumetricsGas`, the one class that imports the library; media and sources in JSON | Yes (optional dependency) |
+| Gas | A haze through each hole, and mist, bog, ember and shimmer from each disc theme's surfaces, the falls, springs and cavern floor, drawn by the owner's gas library (Volumetrics) when it is installed | Sources and the haze worked out in `common/…/ravine` (`HoleGas`); sent by `compat/GasTicker` and `HoleGasPayload`; drawn by `compat/client/VolumetricsGas`, the one class that imports the library; media, sources and the haze in JSON | Yes (optional dependency) |
 
 Custom Java is limited to: density-function type(s), a structure-placement type, the fluid-override mixin, the
 density-wrap mixin, and the `BiomeInjector` glue. Everything else is data.
@@ -3088,6 +3088,25 @@ through the session's sandbox, and the ways round that were refused. So:
 
 Not seen at all: the loader jars, the payload crossing a real connection on either loader, and the gas in game.
 
+### A haze through the hole, and more kinds of gas (2026-10-15)
+
+The owner, having seen the gas in game: the discs look good, but the gas ends too near ("the chasm is plenty big to notice
+the cutoff"), four kinds is too few ("consumers of the API should be able to define as many types, colors, movements, etc.
+as they need"), and there is not "enough general fog to create the 'looming' effect of the discs when looking up from the
+bottom, or enough fog to obscure the bottom of the chasm when looking in from the top". All three were met in the library
+first, on a branch of its `1.21.1` line, and taken up here:
+
+- **The haze is a fog.** The library has fogs now: gas that is not simulated, one look filling a shape with a density by
+  height, drawn at any distance and lit as the gas is. `gas.haze` (thousands of sources on a lattice, which also took the
+  first places under the cap of 4096) is gone; `gas.fog` makes one fog a hole, a cone from round the hole's cone and
+  cavern at the floor to round its mouth at the top, dense below and thin above (`HoleGas.fromFog`). The `haze` dial
+  turns its thickness. Its look is the medium `haze`.
+- **Kinds.** The library holds 32 kinds at once, so a use that wants a look of its own can have a medium of its own.
+- **Range.** The library's coarse window reaches 192 blocks up and down and keeps inside the world's height, so in a
+  world of the usual height it holds all of it: the floor is in reach from the rim. The fog has no reach at all.
+
+What was run and what was not is in the kit's report for the goal (`.agent/reports/`); the look is the owner's to judge.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -3115,11 +3134,10 @@ Not seen at all: the loader jars, the payload crossing a real connection on eith
    thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
    them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
    code; and whether a disc's ruins should keep clear of them.
-11. Gas: build both projects (the library's API is in `libs/volumetrics`; its `API.md` says how to publish a new one),
-   run the tests, then look in game with the library installed: each theme's disc, a fall's landing, the cavern floor, and
-   `/volumetrics stats` at the bottom of a hole. Then how much of each kind, and the library's limit of four kinds, which
-   the owner wants lifted in the library itself before the shared `mist` is split (fall spray, the cavern's own). Mist round
-   the city and ruins is for later.
+11. Gas: look in game with the library installed (both built from their branches of 2026-10-15): the haze from the rim
+   and from the floor, each theme's disc, a fall's landing, the cavern floor, and `/volumetrics stats` at the bottom of a
+   hole. Then how thick the haze should be (`gas.fog`, or the `haze` dial to try), and how much of each kind. Mist round the
+   city and ruins is for later.
 
 ## 9. Future additions (owner wishlist)
 

@@ -48,13 +48,14 @@ class GasCodecTest {
     @Test
     void aHolesGasRoundTrips() {
         var json = JsonParser.parseString("""
-                {"haze": {"medium": "overgrown_abyss:mist", "spacing": 16, "layer_spacing": 12, "shape": {"type": "sphere", "radius": 3}, "rate": 0.05},
+                {"fog": {"medium": "overgrown_abyss:haze", "bottom_density": 0.03, "top_density": 0.005},
                  "falls": {"spray": {"medium": "overgrown_abyss:mist", "shape": {"type": "sphere", "radius": 3}, "rate": 1.5},
                            "curtain": {"medium": "overgrown_abyss:mist", "rate": 0.25}},
                  "cavern": [{"medium": "overgrown_abyss:mist", "every": 300, "shape": {"type": "cylinder", "radius": 4}, "rate": 0.4}]}
                 """);
         GasSettings gas = GasSettings.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
         assertEquals(1.5F, gas.falls().orElseThrow().curtain().orElseThrow().margin(), "the curtain's margin by default");
+        assertEquals(16F, gas.fog().orElseThrow().edge(), "the fog's edge by default");
         assertTrue(gas.springs().isEmpty());
         var written = GasSettings.CODEC.encodeStart(JsonOps.INSTANCE, gas).getOrThrow();
         assertEquals(gas, GasSettings.CODEC.parse(JsonOps.INSTANCE, written).getOrThrow());
@@ -67,6 +68,6 @@ class GasCodecTest {
             assertFalse(theme.gas().isEmpty(), () -> theme.biome() + " gives off no gas");
         }
         GasSettings gas = settings.dressing().gas().orElseThrow();
-        assertTrue(gas.haze().isPresent() && gas.falls().isPresent() && gas.springs().isPresent() && !gas.cavern().isEmpty());
+        assertTrue(gas.fog().isPresent() && gas.falls().isPresent() && gas.springs().isPresent() && !gas.cavern().isEmpty());
     }
 }

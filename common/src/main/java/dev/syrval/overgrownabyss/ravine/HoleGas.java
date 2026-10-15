@@ -7,43 +7,50 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 /**
- * Where one hole gives off gas: from its discs, as each theme lists (see {@link DiscTheme.Gas}), through the whole of its air,
- * at its falls and springs, and over its cavern's floor (see {@link GasSettings}). It is worked out from the same hashes and shapes as the rest of the hole,
- * not from the world's blocks, so a source may stand where a player has since built; the gas library only feeds the open
- * cells it finds.
+ * Where one hole gives off gas: from its discs, as each theme lists (see {@link DiscTheme.Gas}), at its falls and springs, and
+ * over its cavern's floor, and the fog that fills its air (see {@link GasSettings}). It is worked out from the same hashes and
+ * shapes as the rest of the hole, not from the world's blocks, so a source may stand where a player has since built; the gas
+ * library only feeds the open cells it finds.
  *
  * @param sources the hole's sources, at most {@link #MAX_SOURCES}
- * @param dropped how many more there were, left out so that what a player is sent stays bounded
+ * @param fogs    the hole's fogs, at most {@link #MAX_FOGS}
+ * @param dropped how many more sources there were, left out so that what a player is sent stays bounded
  */
-public record HoleGas(List<GasSource> sources, int dropped) {
-    public static final HoleGas NONE = new HoleGas(List.of(), 0);
+public record HoleGas(List<GasSource> sources, List<GasFog> fogs, int dropped) {
+    public static final HoleGas NONE = new HoleGas(List.of(), List.of(), 0);
     /** The most sources one hole sends. */
     public static final int MAX_SOURCES = 4096;
+    /** The most fogs one hole sends. */
+    public static final int MAX_FOGS = 4;
     private static final int GAS_HASH_BASE = 2_000_000;
     // Hash indices kept apart for this many gas entries per theme.
     private static final int MAX_GASES = 64;
     private static final int CAVERN_HASH_BASE = 2_100_000;
-    private static final int HAZE_HASH_BASE = 2_200_000;
     private static final int CHUNK_SIZE = 16;
     // Sources on the cavern's floor keep this share of its radius in, clear of the wall's bumps.
     private static final double CAVERN_INSIDE = 0.95;
 
     public HoleGas {
         sources = List.copyOf(sources);
+        fogs = List.copyOf(fogs);
+        if (fogs.size() > MAX_FOGS) {
+            throw new IllegalArgumentException("A hole has at most " + MAX_FOGS + " fogs, got " + fogs.size());
+        }
     }
 
     static HoleGas of(RavineSettings settings, RavineBounds bounds, RavineCell cell, CellDiscs discs) {
         List<GasSource> found = new ArrayList<>();
+        List<GasFog> fogs = new ArrayList<>();
         // The hole's own first: there are few of them, and a cap that bites takes the last of the themes' many.
         settings.dressing().gas().ifPresent(gas -> {
-            gas.haze().ifPresent(haze -> fromHaze(settings, haze, bounds, cell, discs.layout(), found));
+            gas.fog().ifPresent(fog -> fogs.add(fromFog(settings, fog, bounds, cell)));
             gas.falls().ifPresent(falls -> fromFalls(falls, discs.falls(), found));
             gas.springs().ifPresent(springs -> fromSprings(springs, discs.falls(), found));
             fromCavern(settings, gas.cavern(), bounds, cell, found);
         });
         fromThemes(settings, cell, discs, found);
         int dropped = Math.max(0, found.size() - MAX_SOURCES);
-        return new HoleGas(found.subList(0, found.size() - dropped), dropped);
+        return new HoleGas(found.subList(0, found.size() - dropped), fogs, dropped);
     }
 
     // Chunk by chunk, as growth is, because what keeps lava clear of what burns is worked out for a chunk at a time.
@@ -120,23 +127,36 @@ public record HoleGas(List<GasSource> sources, int dropped) {
         };
     }
 
-    // One source in each box of the lattice, moved anywhere inside it so that no rows show, and kept where it is in open air.
-    private static void fromHaze(RavineSettings settings, GasSettings.Haze haze, RavineBounds bounds, RavineCell cell, DiscLayout layout, List<GasSource> found) {
-        int across = (int) Math.ceil(settings.maxReach() / haze.spacing());
-        int layers = (bounds.topY() - bounds.floorY()) / haze.layerSpacing();
-        for (int layer = 0; layer < layers; layer++) {
-            for (int i = -across; i < across; i++) {
-                for (int j = -across; j < across; j++) {
-                    double x = cell.centreX() + (i + RavineCells.unitAt(cell.hash(), HAZE_HASH_BASE, i, layer, j)) * haze.spacing();
-                    double y = bounds.floorY() + (layer + RavineCells.unitAt(cell.hash(), HAZE_HASH_BASE + 1, i, layer, j)) * haze.layerSpacing();
-                    double z = cell.centreZ() + (j + RavineCells.unitAt(cell.hash(), HAZE_HASH_BASE + 2, i, layer, j)) * haze.spacing();
-                    if (RavineShape.signedDistance(settings, bounds, cell, layout, x, y, z) < 0
-                            && RavineShape.rockDistance(settings, bounds, cell, layout, x, y, z) > 0) {
-                        found.add(new GasSource(haze.medium(), haze.shape(), x, y, z, haze.rate()));
-                    }
-                }
-            }
+    // Of a cone, from round its base and the cavern at the floor to round its mouth at the top; of a ravine, the cavern. It
+    // reaches an edge past the walls, and as far again as their unevenness moves them, and an edge below the floor, so that it
+    // is at its full thickness wherever they are.
+    private static GasFog fromFog(RavineSettings settings, GasSettings.Fog fog, RavineBounds bounds, RavineCell cell) {
+        float edge = fog.edge();
+        double base = bounds.floorY() - edge;
+        double reach = edge + settings.wallNoise().maxDisplacement();
+        if (settings.cone().isEmpty()) {
+            float radius = (float) (settings.cavernRadius() + reach);
+            return new GasFog(fog.medium(), cell.centreX(), base, cell.centreZ(), radius, radius, settings.cavernHeight() + 2 * edge,
+                    fog.bottomDensity(), fog.topDensity(), edge);
         }
+        ConeSettings cone = settings.cone().get();
+        double height = bounds.topY() - base;
+        double top = cone.topRadius() + reach;
+        // The narrowest that, with that top, holds the wall that far in at every height of the hole.
+        double bottom = top;
+        for (int y = bounds.floorY(); y < bounds.topY(); y++) {
+            double up = (y - base) / height;
+            bottom = Math.max(bottom, (wallAt(settings, cone, bounds, y) + reach - top * up) / (1 - up));
+        }
+        return new GasFog(fog.medium(), cell.centreX(), base, cell.centreZ(), (float) bottom, (float) top, (float) height,
+                fog.bottomDensity(), fog.topDensity(), edge);
+    }
+
+    // How far the hole's wall is from its axis before its unevenness: the cone's, or the cavern's dome where that is wider.
+    private static double wallAt(RavineSettings settings, ConeSettings cone, RavineBounds bounds, int y) {
+        double t = (y - bounds.floorY()) / (double) settings.cavernHeight();
+        double cavern = t >= 0 && t < 1 ? settings.cavernRadius() * Math.sqrt(1 - t * t) : 0;
+        return Math.max(ConeShape.radiusAt(settings, cone, bounds, y), cavern);
     }
 
     // A fall's water comes down through `drop` open blocks under its level onto the water it lands in, whose top is the floor of

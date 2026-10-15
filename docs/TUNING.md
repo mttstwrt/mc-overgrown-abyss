@@ -395,7 +395,8 @@ hole's gas out once.
 
 | Kind | Where, as shipped | Its look, and the lever |
 |---|---|---|
-| `mist` | lush top in patches, under the disc and over the rim; jungle top in patches and over its water; falls, springs, the cavern floor | pale, sinking (`gravity` 1.2), thinning by `decay` 0.05. Up `decay` for less of it far from where it comes from; `opacity` for thicker |
+| `haze` | a fog through the whole hole (`gas.fog`) | grey-green, as thick as `bottom_density` 0.022 at the floor and `top_density` 0.004 at the top; `opacity` 1. Its `emissive` 0.06 keeps it from going black in the dark; `forward_scatter` 0.6 makes it glow looking up at the sun |
+| `mist` | lush top in patches, under the disc and over the rim; jungle top in patches and over its water; falls, springs, the cavern floor | pale, sinking (`gravity` 0.5), thinning by `decay` 0.05. Up `decay` for less of it far from where it comes from; `opacity` for thicker |
 | `bog` | mangrove top, ponds and underside | green and heavy (`gravity` 2): it lies on mud and drips off. `opacity` 0.55 |
 | `ember` | over the lava disc's lava, a few on its top | rises (`gravity` -1.5) and fades fast (`decay` 0.12): a plume about as tall as one over `decay`'s reach. Lit by the lava (`block_light` 1) |
 | `shimmer` | crystal top and underside | faint violet, glowing of itself (`emissive` 0.35), short-lived (`decay` 0.15) |
@@ -404,8 +405,14 @@ hole's gas out once.
 - Gas is dark where the discs are dark, as blocks are. `emissive` is the lever for gas that should show in the dark. Mist
   is already lit by glow berries and lights inside leaves, through `block_light` 0.8.
 - Leaves stop gas, so mist on a jungle disc lies under the canopy.
-- The library holds four kinds at once near the camera, and other mods' gas shares the four. Near the bottom of a hole
-  all four of these can be in view, so a fifth kind from another mod waits for a slot.
+- The library holds 32 kinds at once near the camera, other mods' gas included, so a use that wants its own look gets a
+  medium of its own: copy one, rename it, and point the source at it.
+- The haze: `bottom_density` and `top_density` in `gas.fog`, or the dial `haze` to try. What of the floor's light reaches
+  the rim is about `exp(-depth × (bottom - top) / ln(bottom / top))`: with the shipped 0.022 and 0.004, about a fifth
+  over a hole 140 blocks deep and a twentieth over one of 300. From the floor, a disc 60 blocks up keeps about half its
+  light and one 120 up a third; across the city floor, half is gone in about 40 blocks. `edge` softens it at the mouth
+  and the floor. The fog costs no simulation; on the GPU, where a ray passes through it, up to 28 more samples at medium
+  quality.
 - How many sources a hole has, of the 4096 it may send: 2,300 to 3,200 in the eight holes of seed 11 counted (cells 0,0 to
   0,7, outside the game), each worked out in 30 to 70 ms. About half is mist, and up to a third bog. The mangrove's bog
   was thinned to that from 2,500 to 3,700 (ponds `every` 50 to 90, top 120 to 160) to leave room under the cap.

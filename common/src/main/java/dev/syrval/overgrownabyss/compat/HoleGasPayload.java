@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.compat;
 
 import dev.syrval.overgrownabyss.OvergrownAbyss;
+import dev.syrval.overgrownabyss.ravine.GasFog;
 import dev.syrval.overgrownabyss.ravine.GasShape;
 import dev.syrval.overgrownabyss.ravine.GasSource;
 import dev.syrval.overgrownabyss.ravine.HoleGas;
@@ -16,13 +17,13 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * The gas of one hole, sent to a player who comes near it: every source, or none to take the hole's gas away again. The kinds
- * of source (a gas, a shape and a rate) are written once and each source names its kind, since a hole has thousands of
- * sources and a handful of kinds.
+ * The gas of one hole, sent to a player who comes near it: every source and every fog, or none to take the hole's gas away
+ * again. The kinds of source (a gas, a shape and a rate) are written once and each source names its kind, since a hole has
+ * thousands of sources and a handful of kinds.
  *
  * @param hole the id the server gives the hole (see {@code RavineCarve.gasNear}); a later payload for it replaces this one
  */
-public record HoleGasPayload(long hole, List<GasSource> sources) implements CustomPacketPayload {
+public record HoleGasPayload(long hole, List<GasSource> sources, List<GasFog> fogs) implements CustomPacketPayload {
     public static final Type<HoleGasPayload> TYPE = new Type<>(OvergrownAbyss.id("hole_gas"));
     public static final StreamCodec<ByteBuf, HoleGasPayload> STREAM_CODEC = StreamCodec.of(HoleGasPayload::write, HoleGasPayload::read);
     private static final byte CYLINDER = 0;
@@ -32,12 +33,21 @@ public record HoleGasPayload(long hole, List<GasSource> sources) implements Cust
         if (sources.size() > HoleGas.MAX_SOURCES) {
             throw new IllegalArgumentException("A hole sends at most " + HoleGas.MAX_SOURCES + " sources, got " + sources.size());
         }
+        if (fogs.size() > HoleGas.MAX_FOGS) {
+            throw new IllegalArgumentException("A hole sends at most " + HoleGas.MAX_FOGS + " fogs, got " + fogs.size());
+        }
         sources = List.copyOf(sources);
+        fogs = List.copyOf(fogs);
     }
 
     /** The payload that takes a hole's gas away. */
     public static HoleGasPayload gone(long hole) {
-        return new HoleGasPayload(hole, List.of());
+        return new HoleGasPayload(hole, List.of(), List.of());
+    }
+
+    /** Whether this takes the hole's gas away, sending nothing in its place. */
+    public boolean isGone() {
+        return sources.isEmpty() && fogs.isEmpty();
     }
 
     @Override
@@ -66,6 +76,19 @@ public record HoleGasPayload(long hole, List<GasSource> sources) implements Cust
             buf.writeDouble(source.y());
             buf.writeDouble(source.z());
         }
+        ByteBufCodecs.VAR_INT.encode(buf, payload.fogs.size());
+        for (GasFog fog : payload.fogs) {
+            ResourceLocation.STREAM_CODEC.encode(buf, fog.medium());
+            buf.writeDouble(fog.x());
+            buf.writeDouble(fog.y());
+            buf.writeDouble(fog.z());
+            buf.writeFloat(fog.bottomRadius());
+            buf.writeFloat(fog.topRadius());
+            buf.writeFloat(fog.height());
+            buf.writeFloat(fog.bottomDensity());
+            buf.writeFloat(fog.topDensity());
+            buf.writeFloat(fog.edge());
+        }
     }
 
     private static HoleGasPayload read(ByteBuf buf) {
@@ -85,13 +108,23 @@ public record HoleGasPayload(long hole, List<GasSource> sources) implements Cust
             Kind kind = kinds.get(index);
             sources.add(new GasSource(kind.medium(), kind.shape(), buf.readDouble(), buf.readDouble(), buf.readDouble(), kind.rate()));
         }
-        return new HoleGasPayload(hole, sources);
+        int fogCount = count(buf, HoleGas.MAX_FOGS);
+        List<GasFog> fogs = new ArrayList<>(fogCount);
+        for (int f = 0; f < fogCount; f++) {
+            fogs.add(new GasFog(ResourceLocation.STREAM_CODEC.decode(buf), buf.readDouble(), buf.readDouble(), buf.readDouble(),
+                    buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat()));
+        }
+        return new HoleGasPayload(hole, sources, fogs);
     }
 
     // A count read from the wire is checked before anything is made that size.
     private static int count(ByteBuf buf) {
+        return count(buf, HoleGas.MAX_SOURCES);
+    }
+
+    private static int count(ByteBuf buf, int most) {
         int count = ByteBufCodecs.VAR_INT.decode(buf);
-        if (count < 0 || count > HoleGas.MAX_SOURCES) {
+        if (count < 0 || count > most) {
             throw new DecoderException("Gas count out of range: " + count);
         }
         return count;
