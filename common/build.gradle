@@ -2,10 +2,24 @@ architectury {
     common rootProject.enabled_platforms.split(',')
 }
 
+repositories {
+    // Only the gas library, which is the owner's own and kept in this tree (libs/volumetrics/API.md).
+    maven {
+        name = 'Volumetrics'
+        url = rootProject.file('libs/volumetrics')
+        content {
+            includeGroup 'dev.syrval.volumetrics'
+        }
+    }
+}
+
 dependencies {
     // Needed on the compile classpath for Architectury's annotations; the purity check bans loader imports in sources.
     modImplementation "net.fabricmc:fabric-loader:$rootProject.fabric_loader_version"
     modImplementation "dev.architectury:architectury:$rootProject.architectury_api_version"
+    // The gas library is optional: only compat/client/VolumetricsGas uses it, and only when it is loaded. Its jar is in
+    // Mojang's names already, so it is not a mod* configuration, which would remap it and refuse its newer Loom.
+    compileOnly "dev.syrval.volumetrics:volumetrics-common:$rootProject.volumetrics_version"
 
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'

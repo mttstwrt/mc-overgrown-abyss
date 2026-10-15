@@ -95,6 +95,43 @@
           "on": "rim"
         }
       ],
+      "gas": [
+        {
+          "medium": "overgrown_abyss:mist",
+          "every": 160,
+          "patches": {
+            "size": 24,
+            "cover": 0.6
+          },
+          "shape": {
+            "type": "cylinder",
+            "radius": 3,
+            "height": 1
+          },
+          "rate": 0.6
+        },
+        {
+          "medium": "overgrown_abyss:mist",
+          "on": "underside",
+          "every": 300,
+          "shape": {
+            "type": "cylinder",
+            "radius": 2,
+            "height": 2
+          },
+          "rate": 0.4
+        },
+        {
+          "medium": "overgrown_abyss:mist",
+          "on": "rim",
+          "every": 24,
+          "shape": {
+            "type": "sphere",
+            "radius": 1.5
+          },
+          "rate": 0.5
+        }
+      ],
       "ground": {
         "mounds": {
           "height": 2,
@@ -634,6 +671,33 @@
           "on": "rim"
         }
       ],
+      "gas": [
+        {
+          "medium": "overgrown_abyss:mist",
+          "every": 200,
+          "patches": {
+            "size": 30,
+            "cover": 0.3
+          },
+          "shape": {
+            "type": "cylinder",
+            "radius": 3,
+            "height": 2
+          },
+          "rate": 0.5
+        },
+        {
+          "medium": "overgrown_abyss:mist",
+          "on": "water",
+          "every": 40,
+          "shape": {
+            "type": "cylinder",
+            "radius": 2,
+            "height": 1
+          },
+          "rate": 0.5
+        }
+      ],
       "wildness": {
         "min": 0.5,
         "max": 1.4
@@ -1108,6 +1172,44 @@
           "on": "rim"
         }
       ],
+      "gas": [
+        {
+          "medium": "overgrown_abyss:bog",
+          "every": 160,
+          "patches": {
+            "size": 40,
+            "cover": 0.65
+          },
+          "shape": {
+            "type": "cylinder",
+            "radius": 3,
+            "height": 1
+          },
+          "rate": 0.7
+        },
+        {
+          "medium": "overgrown_abyss:bog",
+          "on": "water",
+          "every": 90,
+          "shape": {
+            "type": "cylinder",
+            "radius": 2.5,
+            "height": 1
+          },
+          "rate": 0.6
+        },
+        {
+          "medium": "overgrown_abyss:bog",
+          "on": "underside",
+          "every": 250,
+          "shape": {
+            "type": "cylinder",
+            "radius": 2,
+            "height": 2
+          },
+          "rate": 0.5
+        }
+      ],
       "wildness": {
         "min": 0.5,
         "max": 1.4
@@ -1304,6 +1406,27 @@
           "feature": "overgrown_abyss:disc/amethyst_cluster_hanging",
           "every": 12,
           "on": "underside"
+        }
+      ],
+      "gas": [
+        {
+          "medium": "overgrown_abyss:shimmer",
+          "every": 50,
+          "shape": {
+            "type": "sphere",
+            "radius": 1.5
+          },
+          "rate": 0.8
+        },
+        {
+          "medium": "overgrown_abyss:shimmer",
+          "on": "underside",
+          "every": 90,
+          "shape": {
+            "type": "sphere",
+            "radius": 1.5
+          },
+          "rate": 0.6
         }
       ],
       "ground": {
@@ -1561,7 +1684,29 @@
             ]
           }
         }
-      }
+      },
+      "gas": [
+        {
+          "medium": "overgrown_abyss:ember",
+          "on": "lava",
+          "every": 40,
+          "shape": {
+            "type": "cylinder",
+            "radius": 2,
+            "height": 2
+          },
+          "rate": 1.2
+        },
+        {
+          "medium": "overgrown_abyss:ember",
+          "every": 600,
+          "shape": {
+            "type": "sphere",
+            "radius": 1.5
+          },
+          "rate": 0.8
+        }
+      ]
     }
   ],
   "environment": {
@@ -1733,5 +1878,52 @@
     "duration": 100,
     "margin": 4,
     "depth_strictness": 0
+  },
+  "gas": {
+    "haze": {
+      "medium": "overgrown_abyss:mist",
+      "spacing": 20,
+      "layer_spacing": 14,
+      "shape": {
+        "type": "sphere",
+        "radius": 3
+      },
+      "rate": 0.04
+    },
+    "falls": {
+      "spray": {
+        "medium": "overgrown_abyss:mist",
+        "shape": {
+          "type": "sphere",
+          "radius": 3
+        },
+        "rate": 1.5
+      },
+      "curtain": {
+        "medium": "overgrown_abyss:mist",
+        "margin": 1.5,
+        "rate": 0.25
+      }
+    },
+    "springs": {
+      "medium": "overgrown_abyss:mist",
+      "shape": {
+        "type": "sphere",
+        "radius": 1.5
+      },
+      "rate": 0.8
+    },
+    "cavern": [
+      {
+        "medium": "overgrown_abyss:mist",
+        "every": 300,
+        "shape": {
+          "type": "cylinder",
+          "radius": 4,
+          "height": 1
+        },
+        "rate": 0.15
+      }
+    ]
   }
 }

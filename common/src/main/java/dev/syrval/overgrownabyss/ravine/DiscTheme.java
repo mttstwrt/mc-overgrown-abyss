@@ -40,11 +40,13 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  *                   both or neither
  * @param rootWood   what the hole's roots are made of where they pass near one of the theme's discs (see {@link RootSettings});
  *                   without one the theme has no say in it
+ * @param gas        where gas comes from on the theme's discs, for the gas library to draw; nothing of it reaches the world's
+ *                   blocks, and without that library it is never sent
  */
 public record DiscTheme(
         Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
         Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Wildness wildness,
-        DiscRelief ground, Optional<DiscRuins> ruins, Optional<DiscRuins> troves, Optional<RootWood> rootWood) {
+        DiscRelief ground, Optional<DiscRuins> ruins, Optional<DiscRuins> troves, Optional<RootWood> rootWood, List<Gas> gas) {
     static final float MOST_WEIGHT = 1000;
 
     /** A multiplier that changes steadily across one trait of a disc: {@code from} where the trait is 0, {@code to} where it is 1. */
@@ -188,6 +190,39 @@ public record DiscTheme(
     }
 
     /**
+     * A source of gas on one surface of the platform: on average one for every {@code every} blocks of that surface, spread as a
+     * growth is, with draws of its own and the disc's wildness. Over dry ground, water and lava the shape rests on the open
+     * block over the surface; under the disc it hangs from the lowest rock; on the rim it rests level with the rim's top
+     * block, in the open beside it, so what sinks pours over the edge. Growths and gas with patches of the same size share them.
+     *
+     * @param medium the gas, by its id among the gas library's media; an id that library does not know gives off nothing
+     * @param rate   density each cell of the shape gains per second, as the library counts it
+     */
+    public record Gas(ResourceLocation medium, int every, Surface on, Optional<Patches> patches, Optional<RimFade> rimFade, GasShape shape, float rate) {
+        static final Codec<Gas> CODEC = RecordCodecBuilder.<Gas>create(i -> i.group(
+                ResourceLocation.CODEC.fieldOf("medium").forGetter(Gas::medium),
+                Codec.intRange(1, Growth.MOST_EVERY).fieldOf("every").forGetter(Gas::every),
+                Surface.CODEC.optionalFieldOf("on", Surface.TOP).forGetter(Gas::on),
+                Patches.CODEC.optionalFieldOf("patches").forGetter(Gas::patches),
+                RimFade.CODEC.optionalFieldOf("rim_fade").forGetter(Gas::rimFade),
+                GasShape.CODEC.fieldOf("shape").forGetter(Gas::shape),
+                Codec.floatRange(0, GasSettings.MOST_RATE).fieldOf("rate").forGetter(Gas::rate)
+        ).apply(i, Gas::new)).validate(Gas::validate);
+
+        private static DataResult<Gas> validate(Gas gas) {
+            return gas.on == Surface.RIM && gas.rimFade.isPresent()
+                    ? DataResult.error(() -> "gas on the rim has no rim to fade towards")
+                    : DataResult.success(gas);
+        }
+
+        /** How many times its average rate this comes from one column of {@code disc}, the {@code index}-th disc of a hole. */
+        double weightAt(long hash, int index, Disc disc, int x, int z) {
+            return patches.map(found -> found.weightAt(hash, index, x, z)).orElse(1.0)
+                    * rimFade.map(found -> found.weightAt(hash, index, disc, x, z)).orElse(1.0);
+        }
+    }
+
+    /**
      * Where on a disc a growth gathers: in patches about {@code size} blocks across that take up {@code cover} of the surface,
      * thickest in their middles and thinning to nothing at their edges, with none of it between them. The growth keeps its
      * average over the whole disc, so the less it covers the thicker its patches: twice the average in the middle of patches
@@ -287,7 +322,8 @@ public record DiscTheme(
             DiscRelief.CODEC.optionalFieldOf("ground", DiscRelief.FLAT).forGetter(DiscTheme::ground),
             DiscRuins.CODEC.optionalFieldOf("ruins").forGetter(DiscTheme::ruins),
             DiscRuins.CODEC.optionalFieldOf("troves").forGetter(DiscTheme::troves),
-            RootWood.CODEC.optionalFieldOf("root_wood").forGetter(DiscTheme::rootWood)
+            RootWood.CODEC.optionalFieldOf("root_wood").forGetter(DiscTheme::rootWood),
+            Gas.CODEC.listOf().optionalFieldOf("gas", List.of()).forGetter(DiscTheme::gas)
     ).apply(i, DiscTheme::new)).validate(DiscTheme::validate);
 
     // What is inherited is given to the theme's own biome, and grown where that biome is stamped.
@@ -314,6 +350,15 @@ public record DiscTheme(
 
     public DiscTheme {
         growth = List.copyOf(growth);
+        gas = List.copyOf(gas);
+    }
+
+    /** A theme that gives off no gas. */
+    public DiscTheme(
+            Optional<ResourceKey<Biome>> biome, Optional<Inherits> inherits, float weight, Ramp byHeight, Ramp byDistance, Ramp bySize,
+            Limits only, DiscPalette palette, Optional<DiscWater> water, List<Growth> growth, Wildness wildness,
+            DiscRelief ground, Optional<DiscRuins> ruins, Optional<DiscRuins> troves, Optional<RootWood> rootWood) {
+        this(biome, inherits, weight, byHeight, byDistance, bySize, only, palette, water, growth, wildness, ground, ruins, troves, rootWood, List.of());
     }
 
     /** Whether the theme's ponds and streams hold lava, which a fall's water is kept away from. */

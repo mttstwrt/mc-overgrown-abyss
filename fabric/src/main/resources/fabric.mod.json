@@ -21,6 +21,9 @@
     "architectury": ">=13.0.0",
     "fabric-api": "*"
   },
+  "suggests": {
+    "volumetrics": "*"
+  },
   "mixins": [
     "overgrown_abyss.mixins.json"
   ]

@@ -2,6 +2,7 @@ package dev.syrval.overgrownabyss.compat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
@@ -28,7 +29,7 @@ final class DialsFile {
     private static final String ABOUT = "0 is none, 1 is as the mod ships, 2 is twice as much (holes: 0 to 1). "
             + "Read when a world loads; only chunks made after that change.";
     // The codec writes its fields in an order of its own. The file has the dials in the order they are described in.
-    private static final List<String> ORDER = List.of("holes", "roots", "falls", "springs", "ruins", "troves", "rough_ground", "growth", "themes");
+    private static final List<String> ORDER = List.of("holes", "roots", "falls", "springs", "ruins", "troves", "rough_ground", "haze", "growth", "themes");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private DialsFile() {}
@@ -43,34 +44,42 @@ final class DialsFile {
         Path file = folder.resolve(NAME);
         boolean there = Files.exists(file);
         Dials given = Dials.NEUTRAL;
+        // A dial left out reads as 1, so one the file lacks, a new one say, is told by the names the file has.
+        boolean lacksADial = !there;
         if (there) {
-            Optional<Dials> parsed = parse(file);
+            Optional<JsonElement> json = readJson(file);
+            Optional<Dials> parsed = json.flatMap(found -> parse(file, found));
             if (parsed.isEmpty()) {
                 return Dials.NEUTRAL;
             }
             given = parsed.get();
+            lacksADial = !ORDER.stream().allMatch(json.get().getAsJsonObject()::has);
         }
         warnOfNamesThatTurnNothing(given, growthNames, themeNames);
         Dials full = given.withNames(growthNames, themeNames);
-        if (!there || !full.equals(given)) {
+        if (lacksADial || !full.equals(given)) {
             write(file, full);
         }
         return given;
     }
 
-    private static Optional<Dials> parse(Path file) {
+    private static Optional<JsonElement> readJson(Path file) {
         try {
-            DataResult<Dials> parsed = Dials.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(Files.readString(file)));
-            if (parsed.isError()) {
-                OvergrownAbyss.LOGGER.error(
-                        "{} is not what the dials can read ({}); every dial is at 1 and the file is left as it is",
-                        file, parsed.error().map(DataResult.Error::message).orElse(""));
-            }
-            return parsed.result();
+            return Optional.of(JsonParser.parseString(Files.readString(file)));
         } catch (IOException | JsonParseException e) {
             OvergrownAbyss.LOGGER.error("{} could not be read ({}); every dial is at 1 and the file is left as it is", file, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private static Optional<Dials> parse(Path file, JsonElement json) {
+        DataResult<Dials> parsed = Dials.CODEC.parse(JsonOps.INSTANCE, json);
+        if (parsed.isError()) {
+            OvergrownAbyss.LOGGER.error(
+                    "{} is not what the dials can read ({}); every dial is at 1 and the file is left as it is",
+                    file, parsed.error().map(DataResult.Error::message).orElse(""));
+        }
+        return parsed.result();
     }
 
     // A name is kept in the file whatever it is: it may be for a pack or a mod that is not there this time.

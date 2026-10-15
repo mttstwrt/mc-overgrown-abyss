@@ -385,6 +385,31 @@ more. For the roots, the same of their bark, outside the middle of the hole wher
 - **Not counted here and so understated:** a pond's glow. Water is not an open block to this count, so the pickles in
   pond middles add almost nothing to it, though the water over them is lit.
 
+## Gas
+
+Gas needs the gas library, Volumetrics, on the server and the client (`docs/SETTINGS.md`, Gas). In game,
+`/volumetrics stats` shows what it costs, and `/volumetrics enabled false` turns it off to compare. The kinds are files of
+their own in `data/overgrown_abyss/volumetrics/medium/`. Where they come from is in `carve.json`: a theme's `gas`, and
+`gas` at the top. Restart the world after a change: the library reads its media when a world loads, and the mod works a
+hole's gas out once.
+
+| Kind | Where, as shipped | Its look, and the lever |
+|---|---|---|
+| `mist` | lush top in patches, under the disc and over the rim; jungle top in patches and over its water; falls, springs, the cavern floor | pale, sinking (`gravity` 1.2), thinning by `decay` 0.05. Up `decay` for less of it far from where it comes from; `opacity` for thicker |
+| `bog` | mangrove top, ponds and underside | green and heavy (`gravity` 2): it lies on mud and drips off. `opacity` 0.55 |
+| `ember` | over the lava disc's lava, a few on its top | rises (`gravity` -1.5) and fades fast (`decay` 0.12): a plume about as tall as one over `decay`'s reach. Lit by the lava (`block_light` 1) |
+| `shimmer` | crystal top and underside | faint violet, glowing of itself (`emissive` 0.35), short-lived (`decay` 0.15) |
+
+- How much of a kind there is: a source's `rate`, and how many there are, `every`. Halving `every` doubles the sources.
+- Gas is dark where the discs are dark, as blocks are. `emissive` is the lever for gas that should show in the dark. Mist
+  is already lit by glow berries and lights inside leaves, through `block_light` 0.8.
+- Leaves stop gas, so mist on a jungle disc lies under the canopy.
+- The library holds four kinds at once near the camera, and other mods' gas shares the four. Near the bottom of a hole
+  all four of these can be in view, so a fifth kind from another mod waits for a slot.
+- How many sources a hole has, of the 4096 it may send: 2,300 to 3,200 in the eight holes of seed 11 counted (cells 0,0 to
+  0,7, outside the game), each worked out in 30 to 70 ms. About half is mist, and up to a third bog. The mangrove's bog
+  was thinned to that from 2,500 to 3,700 (ponds `every` 50 to 90, top 120 to 160) to leave room under the cap.
+
 ## Fixed in the code, so not levers yet
 
 These are numbers of mine in Java. Each would be a small change to move into `carve.json` if it turns out to want turning.

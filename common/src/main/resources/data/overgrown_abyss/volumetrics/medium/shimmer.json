@@ -1,0 +1,12 @@
+{
+  "simulation": { "gravity": -0.2, "dispersion": 0.6, "decay": 0.15 },
+  "appearance": {
+    "color": "#B48CFF",
+    "opacity": 0.15,
+    "sky_light": 0.8,
+    "block_light": 0.5,
+    "emissive": 0.35,
+    "forward_scatter": 0.4,
+    "noise": { "scale": 0.3, "speed": 0.8, "strength": 0.85 }
+  }
+}

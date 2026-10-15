@@ -69,6 +69,11 @@ public interface RavineFootprint {
         public List<RuinSite> sitesIn(DiscSites which, int minX, int minZ) {
             return List.of();
         }
+
+        @Override
+        public List<GasNear> gasNear(double x, double z, double reach) {
+            return List.of();
+        }
     };
 
     /** Whether the column is touched by an active ravine, including wall noise and falloff. */
@@ -133,6 +138,12 @@ public interface RavineFootprint {
 
     /** The ruins or the troves that stand on discs with their middle in the chunk whose lowest corner is {@code (minX, minZ)}. */
     List<RuinSite> sitesIn(DiscSites which, int minX, int minZ);
+
+    /** The gas of each hole whose middle is within {@code reach} blocks of the column {@code (x, z)}; see {@link HoleGas}. */
+    List<GasNear> gasNear(double x, double z, double reach);
+
+    /** The gas of one hole, the id a client knows the hole by, and the column of the hole's middle. */
+    record GasNear(long hole, double x, double z, HoleGas gas) {}
 
     /** One bound carve, the biome (if any) resolved for its cavern, and the biomes of its disc themes that exist in the level. */
     record Region(RavineCarve carve, Optional<Holder<Biome>> cavernBiome, Map<ResourceKey<Biome>, Holder<Biome>> discBiomes) {
@@ -267,6 +278,15 @@ public interface RavineFootprint {
                 var found = new ArrayList<RuinSite>();
                 for (Region region : copy) {
                     found.addAll(region.carve().sitesIn(which, minX, minZ));
+                }
+                return found;
+            }
+
+            @Override
+            public List<GasNear> gasNear(double x, double z, double reach) {
+                var found = new ArrayList<GasNear>();
+                for (Region region : copy) {
+                    found.addAll(region.carve().gasNear(x, z, reach));
                 }
                 return found;
             }

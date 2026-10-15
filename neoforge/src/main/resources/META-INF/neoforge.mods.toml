@@ -32,5 +32,13 @@ versionRange = "[13.0.0,)"
 ordering = "AFTER"
 side = "BOTH"
 
+# Draws the holes' gas when present, on the server and on the client.
+[[dependencies.overgrown_abyss]]
+modId = "volumetrics"
+type = "optional"
+versionRange = "[0,)"
+ordering = "NONE"
+side = "BOTH"
+
 [[mixins]]
 config = "overgrown_abyss.mixins.json"

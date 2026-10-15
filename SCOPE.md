@@ -47,6 +47,7 @@ Layers, mapped to code:
 | Wall ruins (later) | Jigsaw structures anchored on ledges | JSON in `common` | Yes |
 | Disc ruins | Custom `overgrown_abyss:disc_ruins` structure and placement: one piece of a template pool at each place the discs' own code finds for a ruin | Sites in `common/…/ravine`, structure and placement in `common/…/compat`, pools and processors in JSON | Yes |
 | Roots | Winding wooden roots grown once for each hole and written into each chunk with the discs' materials; a block tag keeps the mod's structures from building over them | Growing and blocks in `common/…/ravine`, written by `compat/DiscPainter`, numbers and the tag in JSON | Yes |
+| Gas | Mist, bog, ember and shimmer from each disc theme's surfaces, the falls, springs and cavern floor, drawn by the owner's gas library (Volumetrics) when it is installed | Sources worked out in `common/…/ravine` (`HoleGas`); sent by `compat/GasTicker` and `HoleGasPayload`; drawn by `compat/client/VolumetricsGas`, the one class that imports the library; media and sources in JSON | Yes (optional dependency) |
 
 Custom Java is limited to: density-function type(s), a structure-placement type, the fluid-override mixin, the
 density-wrap mixin, and the `BiomeInjector` glue. Everything else is data.
@@ -3032,6 +3033,61 @@ chunk that was made under other settings, in a cell where today's settings put n
 and not by what grows. A world explored under one set of dials and reopened under another was not looked at; new chunks
 will meet old ones at a seam there.
 
+### Gas through the gas library (2026-10-14)
+
+The owner asked for "the mc-volumetric-effects-lib effects" in the abyss: "place generators in places they make sense
+within the cavern and the disc biomes. Goal is maximum ambiance". The library is the owner's own and names this mod as its
+first user. The shared rules allow a sibling project only as an optional dependency, so the mod loads and makes the same
+worlds without it.
+
+Asked how the gas should be placed, the owner chose sources the mod works out from its own geometry, sent by a packet of
+its own and placed on the client with the library's emitters from code (`GasEmitters`, on its `1.21.1` branch). That
+branch, "the branch that allows greater control", is the one meant for this mod. On the cavern: "our biome discs would
+place their own sources based on individual disc biome logic. Putting extra mist around structures sounds like it might be
+cool but leave that for later". On the library's limit of four kinds at once: "an artificial limitation, we control the
+source code of the volumetrics library so that is something we can fix. For initial chasm testing I would say all 4".
+
+**What was built.**
+
+- Sources:
+  - A theme lists `gas` as it lists `growth`. Both are spread by one draw, `ravine/DiscScatter`, taken out of
+    `DiscGrowth` with a test that holds growth to the places it had (`DiscScatterTest`).
+  - The hole's own gas is `gas` at the top of the file: falls, springs and the cavern floor.
+  - `ravine/HoleGas` works a hole's sources out once and `RavineSites` keeps them, as it keeps the discs.
+  - A source is a medium id, a cylinder or a sphere, an anchor and a rate. The server needs nothing of the library to read
+    or send it.
+- Sending, `compat/GasTicker`:
+  - Twice a second it asks, off the server thread, which holes are within 576 blocks of each player.
+  - It sends a hole within 512 that the player has not had (`HoleGasPayload`, the kinds of source written once and each
+    source naming its kind), and takes away a hole they have left.
+  - A respawn, a change of dimension or a logout starts them over.
+- Drawing, `compat/client/VolumetricsGas`: each source becomes one emitter in the client's level, with the medium looked
+  up in the library's synced registry.
+- Where the library is not:
+  - Nothing of the gas is registered. There is no payload, so a client without the library is never sent one.
+  - NeoForge's payloads from Architectury are optional, so a client without Overgrown Abyss still joins.
+- The four media, in `data/overgrown_abyss/volumetrics/medium/`:
+  - `mist`: pale, sinking.
+  - `bog`: heavy, green, on the mangrove discs.
+  - `ember`: rising off lava.
+  - `shimmer`: violet glints on the crystal discs.
+
+  Each has a little `emissive`, since the discs are dark and the library draws unlit gas near black. Which surfaces each
+  theme uses is in `docs/TUNING.md`, Gas.
+
+**What was run, and what was not.** Gradle could not be run in the session that wrote this. It could not reach the network
+through the session's sandbox, and the ways round that were refused. So:
+
+- Neither project was built, the library's API was not published, and no jar exists.
+- `common` (main and tests) was compiled with `javac` against the cached jars, with no errors: the game's 1.21.1 on Mojang's
+  names, Architectury 13.0.11 and the library's own classes.
+- The tracked tests and the new ones were run through JUnit outside Gradle: 310 of 310 passed.
+- The new tests were also checked against changed copies of the code: a different draw for the scatter, gas a block
+  higher on top and at a fall's landing, and a source's `z` sent as its `y`. Each was caught.
+- Counted outside the game, for eight holes of seed 11: 2,300 to 3,200 sources each, worked out in 30 to 70 ms.
+
+Not seen at all: the loader jars, the payload crossing a real connection on either loader, and the gas in game.
+
 ## 8. Next steps
 
 1. Review the rim, mid-air and floor views; tune carve and city numbers. For the cone: look at the new top, mouth, bowl,
@@ -3059,6 +3115,11 @@ will meet old ones at a seam there.
    thick, whether great roots going through discs reads well, and how many links there should be. Then what grows on
    them (vines, hanging roots, moss, leaves, glow berries), which the growth a theme already has can place with no new game
    code; and whether a disc's ruins should keep clear of them.
+11. Gas: build both projects (the library's API is in `libs/volumetrics`; its `API.md` says how to publish a new one),
+   run the tests, then look in game with the library installed: each theme's disc, a fall's landing, the cavern floor, and
+   `/volumetrics stats` at the bottom of a hole. Then how much of each kind, and the library's limit of four kinds, which
+   the owner wants lifted in the library itself before the shared `mist` is split (fall spray, the cavern's own). Mist round
+   the city and ruins is for later.
 
 ## 9. Future additions (owner wishlist)
 

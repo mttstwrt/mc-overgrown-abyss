@@ -106,7 +106,7 @@ class DialsTest {
     void theDialsAreAllWrittenEvenAtOne() {
         var written = Dials.CODEC.encodeStart(JsonOps.INSTANCE, Dials.NEUTRAL.withNames(Set.of("lights"), Set.of(LAVA))).getOrThrow().getAsJsonObject();
 
-        assertEquals(Set.of("holes", "roots", "falls", "springs", "ruins", "troves", "rough_ground", "growth", "themes"), written.keySet());
+        assertEquals(Set.of("holes", "roots", "falls", "springs", "ruins", "troves", "rough_ground", "haze", "growth", "themes"), written.keySet());
         assertEquals(Set.of("lights"), written.getAsJsonObject("growth").keySet());
         assertEquals(Set.of(LAVA), written.getAsJsonObject("themes").keySet());
     }
@@ -262,6 +262,22 @@ class DialsTest {
         assertTrue(was.stream().anyMatch(theme -> theme.ground().mounds().isPresent()));
         assertTrue(turned("{\"rough_ground\": 0}").discThemes().stream()
                 .allMatch(theme -> theme.ground().mounds().isEmpty() && theme.ground().outcrops().isEmpty()));
+    }
+
+    @Test
+    void hazeTurnsTheRateOfTheHazeAndNoOtherGas() throws Exception {
+        GasSettings was = DiscThemeTest.shipped().dressing().gas().orElseThrow();
+        GasSettings twice = turned("{\"haze\": 2}").dressing().gas().orElseThrow();
+        GasSettings.Haze before = was.haze().orElseThrow();
+        GasSettings.Haze after = twice.haze().orElseThrow();
+        assertEquals(before.rate() * 2, after.rate(), 1e-6);
+        assertEquals(new GasSettings.Haze(before.medium(), before.spacing(), before.layerSpacing(), before.shape(), after.rate()), after);
+        assertEquals(was.falls(), twice.falls());
+        assertEquals(was.cavern(), twice.cavern());
+
+        GasSettings none = turned("{\"haze\": 0}").dressing().gas().orElseThrow();
+        assertTrue(none.haze().isEmpty());
+        assertEquals(was.falls(), none.falls());
     }
 
     @Test

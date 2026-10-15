@@ -498,6 +498,40 @@ Nothing of a theme's own growth is started within 2 blocks of a fall's water or 
 stays level there. To have none, take the block out or turn the `falls` dial to 0; for more, the dial or the block's
 `count`.
 
+### Gas
+
+Gas is mist, swamp breath, smoke off lava and a violet shimmer, drawn by the owner's gas library, Volumetrics
+(`mc-volumetric-effects-lib`). It is optional. Without it on the server nothing is sent, and the rest of this section does
+nothing. To see the gas, Volumetrics must be on the server and the client, and Overgrown Abyss on the client. The world's
+blocks are never changed by it.
+
+The four kinds are the library's media, in `data/overgrown_abyss/volumetrics/medium/`: `mist`, `bog`, `ember` and
+`shimmer`. A medium is how the gas moves and looks: `gravity` (positive sinks), `dispersion`, `decay`, `color`, `opacity`,
+`emissive` and the rest, all as the library's own SCOPE has them. The library draws at most four kinds at once near the
+camera, so the mod uses all four and no more.
+
+Where gas comes from is in `carve.json`, in two places. Every place is worked out from the hole's hashes, as growth is, and
+the server sends each player the gas of the holes within 512 blocks.
+
+- A theme's `gas` (a list): sources spread over one surface of each of its discs, as a `growth` entry is.
+  - `medium`: the gas, by its id.
+  - `every`: on average one source for this many blocks of the surface. Times the disc's `wildness`.
+  - `on` (default `top`): `top` rests on the ground, `water` on the water, `lava` over clear lava, and `underside` hangs
+    from the disc's lowest rock. `rim` rests in the open beside the rim's top block, so what sinks pours over the edge.
+  - `patches`, `rim_fade`: as for growth. Patches of the same `size` as a growth's are the same patches, so mist can gather
+    in the groves.
+  - `shape`: `{"type": "cylinder", "radius", "height"}`, standing on the place (height 1 if left out), or
+    `{"type": "sphere", "radius"}`, resting on it or hanging from it.
+  - `rate`: density each cell of the shape gains per second, as the library counts it (0 to 64).
+- `gas` at the top of the file, for the hole itself:
+  - `falls.spray` rests on the water each fall lands in.
+  - `falls.curtain` fills a cylinder up the whole drop, as wide as the fall and `margin` (1.5) blocks more each side.
+  - `springs` rests on the pool where each spring's water comes down.
+  - `cavern` (a list) spreads sources over the cavern floor, one for every `every` blocks, within 95% of its radius.
+
+A hole sends at most 4096 sources. Past that the themes' last ones are left out, and the log says so once for the hole.
+The hole's own come first. The dials do not turn gas.
+
 ### Ruins
 
 Ruins stand on some discs, and on more of them the lower in a hole the disc is. A jungle disc has them three times in five

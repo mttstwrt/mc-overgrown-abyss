@@ -1,6 +1,7 @@
 package dev.syrval.overgrownabyss.ravine;
 
 import com.mojang.serialization.MapCodec;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -122,6 +123,32 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
      */
     public Optional<RavineBounds> boundsOf(RavineCell cell) {
         return bounds == null ? Optional.empty() : sites.boundsOf(cell);
+    }
+
+    /**
+     * The gas of each hole whose middle is within {@code reach} blocks of the column {@code (x, z)}, each with the id the
+     * client knows it by: the column of its middle.
+     */
+    public List<RavineFootprint.GasNear> gasNear(double x, double z, double reach) {
+        int size = settings.cellSize();
+        long cellX = Math.floorDiv((long) Math.floor(x), size);
+        long cellZ = Math.floorDiv((long) Math.floor(z), size);
+        int ring = (int) Math.ceil(reach / size);
+        List<RavineFootprint.GasNear> near = new ArrayList<>();
+        for (long dx = -ring; dx <= ring; dx++) {
+            for (long dz = -ring; dz <= ring; dz++) {
+                RavineCells.at(seed, settings, cellX + dx, cellZ + dz)
+                        .filter(cell -> cell.distanceToCentre(x, z) <= reach)
+                        .ifPresent(cell -> boundsOf(cell).ifPresent(own -> near.add(
+                                new RavineFootprint.GasNear(holeId(cell), cell.centreX(), cell.centreZ(), sites.gasOf(cell, own)))));
+            }
+        }
+        return near;
+    }
+
+    // The column of a hole's middle, which tells the holes of a level apart and is no secret: it is there to be seen.
+    private static long holeId(RavineCell cell) {
+        return ((long) Math.floor(cell.centreX()) << 32) | ((long) Math.floor(cell.centreZ()) & 0xFFFFFFFFL);
     }
 
     /** Whether the cell holds a ravine in this level. */

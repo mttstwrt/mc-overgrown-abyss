@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.UUID;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -25,7 +24,7 @@ public final class CurseTicker {
             forget(player);
             return;
         }
-        RavineFootprint footprint = footprintOf(player.serverLevel());
+        RavineFootprint footprint = RavineFootprintHolder.of(player.serverLevel());
         CurseSettings settings = footprint.curse().orElse(null);
         if (settings == null) {
             forget(player);
@@ -48,9 +47,5 @@ public final class CurseTicker {
 
     public void clear() {
         adjusted.clear();
-    }
-
-    private static RavineFootprint footprintOf(ServerLevel level) {
-        return ((RavineFootprintHolder) (Object) level.getChunkSource().randomState()).overgrownAbyss$footprint();
     }
 }

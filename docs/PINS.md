@@ -36,6 +36,16 @@ Not dependencies: the mod loads and works without them, and nothing of theirs is
 | Epic Structures: Jungle Temples (`mr_epic_structuresjungletemples`, data namespace `epic`) | 1.0.2 jar, metadata for both loaders | Its three structures are optional entries of `#overgrown_abyss:on_discs/jungle`; its ruins stand on discs when it is installed. Run on NeoForge and Fabric 2026-10-09 |
 | Dungeons and Taverns: Ancient City Overhaul | v2 jar, NeoForge metadata only | Replaces the vanilla city templates the disc ruins and the city use; the disc ruins measure what it gives them. Run on NeoForge 2026-10-09 |
 
+## Optional integration
+
+Not a dependency. The mod loads and generates the same worlds without it, and is compiled against it only
+(`compileOnly`: the jar is in Mojang's names, and Loom 1.13's `modCompileOnly` refuses a jar from the library's newer
+Loom).
+
+| Mod | Version | What it is to this mod |
+|---|---|---|
+| Volumetrics (`volumetrics`, the owner's `mc-volumetric-effects-lib`) | `0.1.0+mc1.21.1`, its `volumetrics-common` jar (`volumetrics_version`), from the library's `1.21.1` branch, kept as a Maven repository in `libs/volumetrics` | Draws the holes' gas. `libs/volumetrics/API.md` is the API and says how to publish a new build of it there. For a run, its loader jar goes into `<loader>/run/mods`, as the test targets do. It is declared `suggests` in `fabric.mod.json` and an `optional` dependency in `neoforge.mods.toml`. Chosen over writing gas of our own: it is the owner's library, and this mod is the user it was made for |
+
 ## Version-specific files
 
 Re-check these on every Minecraft bump:
@@ -92,3 +102,7 @@ Re-check these on every Minecraft bump:
 | `common/src/test/.../compat/DiscRuinPiecesTest.java`, `common/src/test/resources/ruin-test-pack/**` | Loading vanilla's worldgen registries outside the game as `DiscFeatureFilesTest` does. Vanilla's pool `ancient_city/structures` (20 elements: 17 single templates, 2 lists, 1 empty) and `village/plains/town_centers` (8 legacy single templates); the structures `pillager_outpost`, `village_plains` (start height 0 on a heightmap), `trail_ruins` (-15, and none of its five towers taller than 16), `ancient_city` and `trial_chambers` (no heightmap), `jungle_pyramid` (not jigsaw). `JigsawStructure`'s public constructor (11 parameters) and `Structure.StructureSettings` |
 | `common/src/test/.../compat/DiscLootFilesTest.java` | `LootTable.DIRECT_CODEC` reading a table with the ops of vanilla's worldgen registries, where 1.21.1 keeps enchantments; `TagLoader` and `Registry.bindTags` (gone in 1.21.2) giving that registry its tags outside the game, which a table's `options` need |
 | `common/.../OvergrownAbyss.java`, `compat/CurseTicker.java` | Architectury 13.0.11 events `TickEvent.PLAYER_POST`, `PlayerEvent.PLAYER_QUIT`, `PLAYER_RESPAWN`, `CHANGE_DIMENSION`, `LifecycleEvent.SERVER_STOPPED` (read from the jar); `ServerLevel.getChunkSource().randomState()` for a level's footprint; `MobEffects.WITHER` |
+| `common/.../compat/HoleGasPayload.java` | `CustomPacketPayload` and its `Type`, `StreamCodec.of`, `ByteBufCodecs.VAR_INT` and `VAR_LONG`, `ResourceLocation.STREAM_CODEC`. Architectury's `NetworkManager.registerS2CPayloadType` (on a dedicated server) and `registerReceiver` (on a client, which serves its own integrated server too), `canPlayerReceive` and `sendToPlayer`; NeoForge's payloads registered `optional()` by Architectury 13.0.11 (read from its jar), which is what lets a client without the mod join |
+| `common/.../compat/GasTicker.java` | `ServerPlayer.tickCount`, `hasDisconnected()`, its public `server` as the executor of the server thread, `Util.backgroundExecutor()` |
+| `common/.../compat/client/VolumetricsGas.java`, `HoleGasReceiver.java` | The gas library's API on its `1.21.1` branch: `GasEmitters.of(ClientLevel)` and `add(Medium, EmitterShape, Vec3, float)` on the client thread, `GasEmitters.Handle.remove()`, `EmitterShape.Disc` and `Sphere`, `VolumetricsRegistries.MEDIUM` as a registry synced to the client. `RegistryAccess.registry(ResourceKey)`, `Registry.getOptional(ResourceLocation)`. Architectury's `ClientPlayerEvent.CLIENT_PLAYER_QUIT` and `PacketContext.queue`/`getPlayer` |
+| `data/overgrown_abyss/volumetrics/medium/*.json` | The gas library's medium format (`simulation`: `gravity`, `dispersion`, `decay`; `appearance`: `color`, `opacity`, `sky_light`, `block_light`, `emissive`, `forward_scatter`, `noise`) and its registry folder `volumetrics/medium`, which a level without the library does not read |

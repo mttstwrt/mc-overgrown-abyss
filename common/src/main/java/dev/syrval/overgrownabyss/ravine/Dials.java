@@ -37,17 +37,18 @@ import net.minecraft.util.InclusiveRange;
  * @param ruins       how many ruins stand on discs: on more of the discs first and, once every disc has them, more to a disc
  * @param troves      the same of troves
  * @param roughGround how much of a disc's top its mounds and outcrops cover
+ * @param haze        how thick the haze through a hole's air is, by the rate of its sources
  * @param growth      how much grows of each group of features, by the group's name. A group is a tag of configured features
  *                    under {@code overgrown_abyss:dial/}, and a feature in two groups is turned by both
  * @param themes      how often a disc gets each theme, by the id of the theme's biome
  */
 public record Dials(
-        float holes, float roots, float falls, float springs, float ruins, float troves, float roughGround,
+        float holes, float roots, float falls, float springs, float ruins, float troves, float roughGround, float haze,
         Map<String, Float> growth, Map<String, Float> themes) {
 
     // The most of anything a dial may ask for, in times what the settings have.
     private static final float MOST = 10;
-    public static final Dials NEUTRAL = new Dials(1, 1, 1, 1, 1, 1, 1, Map.of(), Map.of());
+    public static final Dials NEUTRAL = new Dials(1, 1, 1, 1, 1, 1, 1, 1, Map.of(), Map.of());
 
     public static final Codec<Dials> CODEC = RecordCodecBuilder.create(i -> i.group(
             dial("holes", 1).forGetter(Dials::holes),
@@ -57,6 +58,7 @@ public record Dials(
             dial("ruins", MOST).forGetter(Dials::ruins),
             dial("troves", MOST).forGetter(Dials::troves),
             dial("rough_ground", MOST).forGetter(Dials::roughGround),
+            dial("haze", MOST).forGetter(Dials::haze),
             named("growth").forGetter(Dials::growth),
             named("themes").forGetter(Dials::themes)
     ).apply(i, Dials::new));
@@ -86,7 +88,7 @@ public record Dials(
 
     /** These dials with one at 1 for every name given that they lack, which is how the file is filled in. */
     public Dials withNames(Set<String> growthNames, Set<String> themeNames) {
-        return new Dials(holes, roots, falls, springs, ruins, troves, roughGround, filled(growth, growthNames), filled(themes, themeNames));
+        return new Dials(holes, roots, falls, springs, ruins, troves, roughGround, haze, filled(growth, growthNames), filled(themes, themeNames));
     }
 
     private static Map<String, Float> filled(Map<String, Float> given, Set<String> names) {
@@ -105,6 +107,7 @@ public record Dials(
         all.put("ruins", ruins);
         all.put("troves", troves);
         all.put("rough_ground", roughGround);
+        all.put("haze", haze);
         growth.forEach((name, dial) -> all.put("growth." + name, dial));
         themes.forEach((name, dial) -> all.put("themes." + name, dial));
         all.values().removeIf(dial -> dial == 1);
@@ -137,6 +140,7 @@ public record Dials(
         turnRoots(settings, growthGroups);
         at(settings, "falls").ifPresent(found -> count(found, falls, FallSettings.MOST));
         at(settings, "falls", "springs").ifPresent(found -> count(found, springs, FallSettings.MOST));
+        turnHaze(settings);
         if (!settings.has("disc_themes")) {
             return;
         }
@@ -163,6 +167,15 @@ public record Dials(
                 branches -> times(branches, "every", 1.0 / roots, RootSettings.Branches.LEAST_EVERY, RootSettings.Branches.MOST_EVERY));
         at(settings, "roots", "links").ifPresent(links -> times(links, "chance", roots, 0, 1));
         at(settings, "roots").ifPresent(found -> turnGrowth(found, growthGroups));
+    }
+
+    // By the rate alone: how many sources there are and where stays as it was.
+    private void turnHaze(JsonObject settings) {
+        if (haze == 0) {
+            at(settings, "gas").ifPresent(gas -> gas.remove("haze"));
+            return;
+        }
+        at(settings, "gas", "haze").ifPresent(found -> times(found, "rate", haze, 0, GasSettings.MOST_RATE));
     }
 
     // On more of the theme's discs first. Once every disc has them there is no more of that to give, and the rest goes to

@@ -24,6 +24,8 @@ final class RavineSites {
     private final ConcurrentHashMap<RavineCell, Optional<RavineBounds>> bounds = new ConcurrentHashMap<>();
     // The discs of each cell, built once: they never change, and each sample would otherwise rebuild them from hashes.
     private final ConcurrentHashMap<RavineCell, CellDiscs> discs = new ConcurrentHashMap<>();
+    // The gas of each cell's hole, worked out once from its discs when a player first comes near it.
+    private final ConcurrentHashMap<RavineCell, HoleGas> gas = new ConcurrentHashMap<>();
     private volatile LandCheck land = LandCheck.EVERYWHERE;
     private volatile Ground ground = new Ground(SurfaceProbe.SOLID, 0);
     private volatile RuinPieces ruinPieces = RuinPieces.NONE;
@@ -54,6 +56,7 @@ final class RavineSites {
     private void forget() {
         bounds.clear();
         discs.clear();
+        gas.clear();
     }
 
     /**
@@ -67,6 +70,11 @@ final class RavineSites {
     /** The discs of a cell that holds a hole between {@code bounds}, which is what {@link #boundsOf} gave for it. */
     CellDiscs discsOf(RavineCell cell, RavineBounds bounds) {
         return discs.computeIfAbsent(cell, c -> CellDiscs.of(settings, bounds, c, ground.probe(), ruinPieces));
+    }
+
+    /** The gas of a cell's hole, which lies between {@code bounds} as {@link #boundsOf} gave for it. */
+    HoleGas gasOf(RavineCell cell, RavineBounds bounds) {
+        return gas.computeIfAbsent(cell, c -> HoleGas.of(settings, bounds, c, discsOf(c, bounds)));
     }
 
     private Optional<RavineBounds> survey(RavineCell cell) {
