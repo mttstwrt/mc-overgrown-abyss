@@ -396,7 +396,9 @@ hole's gas out once.
 | Kind | Where, as shipped | Its look, and the lever |
 |---|---|---|
 | `haze` | a fog through the whole hole (`gas.fog`) | grey-green, as thick as `bottom_density` 0.022 at the floor and `top_density` 0.004 at the top; `opacity` 1. Its `emissive` 0.06 keeps it from going black in the dark; `forward_scatter` 0.6 makes it glow looking up at the sun |
-| `mist` | lush top in patches, under the disc and over the rim; jungle top in patches and over its water; falls, springs, the cavern floor | pale, sinking (`gravity` 0.5), thinning by `decay` 0.05. Up `decay` for less of it far from where it comes from; `opacity` for thicker |
+| `mist` | lush top in patches, under the disc and over the rim; jungle top in patches and over its water; springs | pale, sinking (`gravity` 0.5), thinning by `decay` 0.05. Up `decay` for less of it far from where it comes from; `opacity` for thicker |
+| `spray` | where each fall lands, and up its drop | white, light (`gravity` 0.2), spreading fast (`dispersion` 2) and short-lived (`decay` 0.12); glows towards the sun (`forward_scatter` 0.9) |
+| `cavern_mist` | the cavern floor | a heavier mist (`gravity` 1, `max_density` 0.4) that lies over the city |
 | `bog` | mangrove top, ponds and underside | green and heavy (`gravity` 2): it lies on mud and drips off. `opacity` 0.55 |
 | `ember` | over the lava disc's lava, a few on its top | rises (`gravity` -1.5) and fades fast (`decay` 0.12): a plume about as tall as one over `decay`'s reach. Lit by the lava (`block_light` 1) |
 | `shimmer` | crystal top and underside | faint violet, glowing of itself (`emissive` 0.35), short-lived (`decay` 0.15) |

@@ -500,14 +500,14 @@ stays level there. To have none, take the block out or turn the `falls` dial to 
 
 ### Gas
 
-Gas is a haze through each hole, mist, swamp breath, smoke off lava and a violet shimmer, drawn by the owner's gas
-library, Volumetrics
+Gas is a haze through each hole, mist, spray at the falls, swamp breath, smoke off lava and a violet shimmer, drawn by the
+owner's gas library, Volumetrics
 (`mc-volumetric-effects-lib`). It is optional. Without it on the server nothing is sent, and the rest of this section does
 nothing. To see the gas, Volumetrics must be on the server and the client, and Overgrown Abyss on the client. The world's
 blocks are never changed by it.
 
-The kinds are the library's media, in `data/overgrown_abyss/volumetrics/medium/`: `haze`, `mist`, `bog`, `ember` and
-`shimmer`. A medium is how the gas moves and looks: `gravity` (positive sinks), `dispersion`, `decay`,
+The kinds are the library's media, in `data/overgrown_abyss/volumetrics/medium/`: `haze`, `mist`, `spray`, `cavern_mist`,
+`bog`, `ember` and `shimmer`. A medium is how the gas moves and looks: `gravity` (positive sinks), `dispersion`, `decay`,
 `color`, `opacity`, `emissive` and the rest, all as the library's own SCOPE has them. The library holds up to 32 kinds at
 once near the camera, so a use that wants a look of its own can have a medium of its own.
 

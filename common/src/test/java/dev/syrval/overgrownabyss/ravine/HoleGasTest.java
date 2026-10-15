@@ -20,6 +20,7 @@ class HoleGasTest {
 
     private static final ResourceLocation MIST = ResourceLocation.fromNamespaceAndPath("overgrown_abyss", "mist");
     private static final ResourceLocation EMBER = ResourceLocation.fromNamespaceAndPath("overgrown_abyss", "ember");
+    private static final ResourceLocation SPRAY = ResourceLocation.fromNamespaceAndPath("overgrown_abyss", "spray");
 
     private record Column(int x, int y, int z) {}
 
@@ -155,9 +156,9 @@ class HoleGasTest {
             for (DiscFalls.Fall fall : discs.falls().falls()) {
                 falls++;
                 double landing = fall.level() - fall.drop();
-                assertTrue(sources.contains(new GasSource(MIST, new GasShape.Sphere(3), fall.x() + 0.5, landing + 3, fall.z() + 0.5, 1.5F)),
+                assertTrue(sources.contains(new GasSource(SPRAY, new GasShape.Sphere(3), fall.x() + 0.5, landing + 3, fall.z() + 0.5, 1.5F)),
                         () -> "no spray where " + fall + " lands");
-                assertTrue(sources.contains(new GasSource(MIST, new GasShape.Cylinder(fall.width() / 2F + 1.5F, fall.drop()), fall.x() + 0.5, landing, fall.z() + 0.5, 0.25F)),
+                assertTrue(sources.contains(new GasSource(SPRAY, new GasShape.Cylinder(fall.width() / 2F + 1.5F, fall.drop()), fall.x() + 0.5, landing, fall.z() + 0.5, 0.25F)),
                         () -> "no curtain along " + fall);
             }
         }

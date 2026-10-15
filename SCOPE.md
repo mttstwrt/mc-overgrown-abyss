@@ -47,7 +47,7 @@ Layers, mapped to code:
 | Wall ruins (later) | Jigsaw structures anchored on ledges | JSON in `common` | Yes |
 | Disc ruins | Custom `overgrown_abyss:disc_ruins` structure and placement: one piece of a template pool at each place the discs' own code finds for a ruin | Sites in `common/…/ravine`, structure and placement in `common/…/compat`, pools and processors in JSON | Yes |
 | Roots | Winding wooden roots grown once for each hole and written into each chunk with the discs' materials; a block tag keeps the mod's structures from building over them | Growing and blocks in `common/…/ravine`, written by `compat/DiscPainter`, numbers and the tag in JSON | Yes |
-| Gas | A haze through each hole, and mist, bog, ember and shimmer from each disc theme's surfaces, the falls, springs and cavern floor, drawn by the owner's gas library (Volumetrics) when it is installed | Sources and the haze worked out in `common/…/ravine` (`HoleGas`); sent by `compat/GasTicker` and `HoleGasPayload`; drawn by `compat/client/VolumetricsGas`, the one class that imports the library; media, sources and the haze in JSON | Yes (optional dependency) |
+| Gas | A haze through each hole, and mist, spray, cavern mist, bog, ember and shimmer from each disc theme's surfaces, the falls, springs and cavern floor, drawn by the owner's gas library (Volumetrics) when it is installed | Sources and the haze worked out in `common/…/ravine` (`HoleGas`); sent by `compat/GasTicker` and `HoleGasPayload`; drawn by `compat/client/VolumetricsGas`, the one class that imports the library; media, sources and the haze in JSON | Yes (optional dependency) |
 
 Custom Java is limited to: density-function type(s), a structure-placement type, the fluid-override mixin, the
 density-wrap mixin, and the `BiomeInjector` glue. Everything else is data.
@@ -3101,7 +3101,8 @@ first, on a branch of its `1.21.1` line, and taken up here:
   first places under the cap of 4096) is gone; `gas.fog` makes one fog a hole, a cone from round the hole's cone and
   cavern at the floor to round its mouth at the top, dense below and thin above (`HoleGas.fromFog`). The `haze` dial
   turns its thickness. Its look is the medium `haze`.
-- **Kinds.** The library holds 32 kinds at once, so a use that wants a look of its own can have a medium of its own.
+- **Kinds.** The library holds 32 kinds at once. The falls' mist is `spray` and the cavern floor's is `cavern_mist`, so
+  each can be tuned apart from the discs' `mist`.
 - **Range.** The library's coarse window reaches 192 blocks up and down and keeps inside the world's height, so in a
   world of the usual height it holds all of it: the floor is in reach from the rim. The fog has no reach at all.
 

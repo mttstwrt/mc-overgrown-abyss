@@ -1888,7 +1888,7 @@
     },
     "falls": {
       "spray": {
-        "medium": "overgrown_abyss:mist",
+        "medium": "overgrown_abyss:spray",
         "shape": {
           "type": "sphere",
           "radius": 3
@@ -1896,7 +1896,7 @@
         "rate": 1.5
       },
       "curtain": {
-        "medium": "overgrown_abyss:mist",
+        "medium": "overgrown_abyss:spray",
         "margin": 1.5,
         "rate": 0.25
       }
@@ -1911,7 +1911,7 @@
     },
     "cavern": [
       {
-        "medium": "overgrown_abyss:mist",
+        "medium": "overgrown_abyss:cavern_mist",
         "every": 300,
         "shape": {
           "type": "cylinder",
