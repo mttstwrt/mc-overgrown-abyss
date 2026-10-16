@@ -101,11 +101,13 @@ final class VolumetricsGas implements GasDrawer {
         }
     }
 
+    // Each kind returns on its own. Where two branches met holding two of the library's types, the dev client's class
+    // transformer would have to load the library to find what they share, and the library is not on its path.
     private static EmitterShape shapeOf(GasShape shape) {
-        return switch (shape) {
-            case GasShape.Cylinder cylinder -> new EmitterShape.Disc(cylinder.radius(), cylinder.height());
-            case GasShape.Sphere sphere -> new EmitterShape.Sphere(sphere.radius());
-        };
+        if (shape instanceof GasShape.Cylinder cylinder) {
+            return new EmitterShape.Disc(cylinder.radius(), cylinder.height());
+        }
+        return new EmitterShape.Sphere(((GasShape.Sphere) shape).radius());
     }
 
     private void warnOfMissing(ResourceLocation medium) {
