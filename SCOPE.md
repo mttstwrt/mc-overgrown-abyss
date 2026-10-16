@@ -3106,7 +3106,13 @@ first, on a branch of its `1.21.1` line, and taken up here:
 - **Range.** The library's coarse window reaches 192 blocks up and down and keeps inside the world's height, so in a
   world of the usual height it holds all of it: the floor is in reach from the rim. The fog has no reach at all.
 
-What was run and what was not is in the kit's report for the goal (`.agent/reports/`); the look is the owner's to judge.
+Seen in the dev client on both loaders, on a software renderer (no GPU could be used), in a world of seed 11 with the
+library's jar beside the mod, at the hole at x -1572 z 2594 (floor -40, top 134). With six kinds of gas in play and the
+haze drawn, the discs and roots overhead loom out of the haze from the floor, the depths are lost in it from over the
+mouth, and the land round the mouth has none on it; with gas turned off the same views are sharp to the mouth. The
+dev client first had to be made to start with the library at all: `VolumetricsGas` joined two of its types in one switch,
+which Architectury's transformer could not resolve there. How thick the haze is, and how bright by day, is the owner's to
+judge; the kit's report for the goal (`.agent/reports/`) has the stills.
 
 ## 8. Next steps
 
