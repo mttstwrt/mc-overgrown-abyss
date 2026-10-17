@@ -221,6 +221,12 @@
         {
           "type": "minecraft:item",
           "name": "minecraft:enchanted_golden_apple"
+        },
+        {
+          "type": "minecraft:tag",
+          "expand": true,
+          "name": "c:ingots",
+          "weight": 1
         }
       ]
     },
