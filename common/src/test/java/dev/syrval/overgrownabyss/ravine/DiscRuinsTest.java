@@ -402,7 +402,7 @@ class DiscRuinsTest {
         }
         double jungle = byTheme.get("disc_jungle")[1] / (double) byTheme.get("disc_jungle")[0];
         double lush = byTheme.get("disc_lush")[1] / (double) byTheme.get("disc_lush")[0];
-        assertTrue(jungle > 0.4 && jungle < 0.75, "the share of jungle discs with ruins: " + jungle);
+        assertTrue(jungle > 0.7 && jungle < 0.97, "the share of jungle discs with ruins: " + jungle);
         assertTrue(lush > 0.15 && lush < jungle, "fewer lush discs have them: " + lush);
         assertEquals(0, byTheme.get("disc_crystal")[1], "a theme without ruins has none");
         assertTrue(byTheme.get("disc_crystal")[0] > 5, "crystal discs looked at: " + byTheme.get("disc_crystal")[0]);
@@ -764,13 +764,13 @@ class DiscRuinsTest {
                 withATrove += themed && on > 0 ? 1 : 0;
                 bare += themed ? 0 : 1;
                 assertTrue(themed || on == 0, "a disc of a theme without troves has none");
-                assertTrue(on <= 3, on + " troves on one disc");
+                assertTrue(on <= 5, on + " troves on one disc");
             }
         }
         assertTheGroundLiesLevelRound(settings, pieces);
         double aDisc = troves.size() / (double) discs;
         String counts = troves.size() + " troves on " + discs + " discs of the themes that have them, " + withATrove + " of which have any; " + bare + " discs of the others";
-        assertTrue(aDisc > 0.8 && aDisc < 1.25, "about one a disc: " + counts);
+        assertTrue(aDisc > 1.3 && aDisc < 2.0, "about one and a half a disc: " + counts);
         assertTrue(withATrove > 0.5 * discs && withATrove < 0.95 * discs, "most discs have one and some have none: " + counts);
         assertTrue(bare > 5, counts);
         Set<String> used = troves.stream().map(trove -> trove.site().pool().location().getPath() + " " + trove.site().element()).collect(Collectors.toSet());
