@@ -775,10 +775,6 @@ class DiscRuinsTest {
         assertTrue(bare > 5, counts);
         Set<String> used = troves.stream().map(trove -> trove.site().pool().location().getPath() + " " + trove.site().element()).collect(Collectors.toSet());
         assertEquals(6, used.size(), "each of the three cairns and three marker stones stands somewhere: " + used);
-        Set<String> tables = troves.stream().map(trove -> trove.site().loot().orElseThrow().location().getPath()).collect(Collectors.toSet());
-        assertTrue(tables.containsAll(Set.of("chests/disc/jungle_stash", "chests/disc/lush_stash", "chests/disc/mangrove_stash", "chests/disc/jungle_1", "chests/disc/jungle_2")),
-                "tables held: " + tables);
-        assertTrue(tables.stream().noneMatch(table -> table.endsWith("_3")), "no trove holds a theme's richest table: " + tables);
     }
 
     // What the chunks round one hand out of one of the two lists, each site seen to be in the chunk that handed it out.

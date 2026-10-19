@@ -91,49 +91,13 @@ class DiscLootFilesTest {
     }
 
     @Test
-    void everyThemeWithRuinsOfItsOwnNamesTablesOfItsOwn() throws IOException {
-        Map<String, List<ResourceLocation>> tables = tablesByTheme("ruins");
-        assertEquals(List.of("overgrown_abyss:disc_lush", "overgrown_abyss:disc_jungle", "overgrown_abyss:disc_mangrove"), List.copyOf(tables.keySet()));
-        var all = new HashSet<ResourceLocation>();
-        for (var theme : tables.entrySet()) {
-            assertEquals(3, theme.getValue().size(), theme.getKey() + " has a poor, a middling and a rich table");
-            for (ResourceLocation table : theme.getValue()) {
-                assertEquals("overgrown_abyss", table.getNamespace(), "a table of the mod's own, so that a pack can pick the disc ruins out by it");
-                assertTrue(all.add(table), table + " is named once, by one theme");
-            }
-        }
-    }
-
-    @Test
-    void aThemesTrovesHoldAStashOfTheirOwnAndThenItsRuinsTablesOneBehind() throws IOException {
-        Map<String, List<ResourceLocation>> ruins = tablesByTheme("ruins");
-        Map<String, List<ResourceLocation>> troves = tablesByTheme("troves");
-        assertEquals(ruins.keySet(), troves.keySet(), "the themes with ruins of their own have troves");
-        var stashes = new HashSet<ResourceLocation>();
-        for (var theme : troves.entrySet()) {
-            List<ResourceLocation> ofRuins = ruins.get(theme.getKey());
-            assertEquals(3, theme.getValue().size(), theme.getKey() + " has three tables for its troves");
-            ResourceLocation stash = theme.getValue().getFirst();
-            assertEquals("overgrown_abyss", stash.getNamespace(), "a table of the mod's own, so that a pack can pick the troves out by it");
-            assertFalse(ofRuins.contains(stash), stash + " is the troves' own, poorer than any of the ruins'");
-            assertTrue(stashes.add(stash), stash + " is named once, by one theme");
-            assertEquals(ofRuins.subList(0, 2), theme.getValue().subList(1, 3),
-                    "where a ruin of " + theme.getKey() + " holds its second and third tables a trove holds its first and second");
-        }
-    }
-
-    @Test
-    void everyTableReadsAsTheGameReadsIt() throws IOException {
-        DynamicOps<JsonElement> ops = ops();
-        var named = new ArrayList<>(tablesByTheme("ruins").values());
-        named.addAll(tablesByTheme("troves").values());
-        for (List<ResourceLocation> tables : named) {
-            for (ResourceLocation table : tables) {
-                JsonElement json = file("/data/" + table.getNamespace() + "/loot_table/" + table.getPath() + ".json");
-                var read = LootTable.DIRECT_CODEC.parse(ops, json);
-                assertTrue(read.isSuccess(), table + ": " + read.error().map(Object::toString).orElse(""));
-                assertEquals("minecraft:chest", json.getAsJsonObject().get("type").getAsString(), table + " is rolled for a chest");
-            }
+    void everyThemeRollsTheVanillaTempleTable() throws IOException {
+        var all = new ArrayList<>(tablesByTheme("ruins").values());
+        all.addAll(tablesByTheme("troves").values());
+        assertEquals(6, all.size(), "the ruins and the troves of the three themes");
+        for (List<ResourceLocation> tables : all) {
+            assertEquals(List.of(ResourceLocation.withDefaultNamespace("chests/jungle_temple")), tables,
+                    "a table other mods' loot injection reaches");
         }
     }
 }
