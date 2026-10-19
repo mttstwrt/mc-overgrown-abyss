@@ -449,7 +449,7 @@
         {
           "type": "minecraft:tag",
           "expand": true,
-          "name": "c:gems",
+          "name": "overgrown_abyss:loot/gems",
           "weight": 2
         },
         {
@@ -461,7 +461,7 @@
         {
           "type": "minecraft:tag",
           "expand": true,
-          "name": "c:ingots",
+          "name": "overgrown_abyss:loot/ingots",
           "weight": 1
         },
         {

@@ -181,7 +181,7 @@
         {
           "type": "minecraft:tag",
           "expand": true,
-          "name": "c:gems",
+          "name": "overgrown_abyss:loot/gems",
           "weight": 2
         },
         {
