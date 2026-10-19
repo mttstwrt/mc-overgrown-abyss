@@ -227,6 +227,11 @@
           "expand": true,
           "name": "c:ingots",
           "weight": 1
+        },
+        {
+          "type": "minecraft:loot_table",
+          "value": "overgrown_abyss:chests/scrolls/t3",
+          "weight": 4
         }
       ]
     },

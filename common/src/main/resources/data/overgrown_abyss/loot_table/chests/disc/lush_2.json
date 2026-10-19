@@ -220,6 +220,11 @@
               "options": "#minecraft:on_random_loot"
             }
           ]
+        },
+        {
+          "type": "minecraft:loot_table",
+          "value": "overgrown_abyss:chests/scrolls/t2",
+          "weight": 4
         }
       ]
     },

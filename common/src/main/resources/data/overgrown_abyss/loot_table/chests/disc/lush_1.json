@@ -281,6 +281,11 @@
           "expand": true,
           "name": "irons_spellbooks:inscribed_rune",
           "weight": 2
+        },
+        {
+          "type": "minecraft:loot_table",
+          "value": "overgrown_abyss:chests/scrolls/t1",
+          "weight": 4
         }
       ]
     },

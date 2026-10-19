@@ -138,6 +138,11 @@
           "type": "minecraft:item",
           "name": "minecraft:golden_apple",
           "weight": 2
+        },
+        {
+          "type": "minecraft:loot_table",
+          "value": "overgrown_abyss:chests/scrolls/t2",
+          "weight": 1
         }
       ],
       "rolls": {
