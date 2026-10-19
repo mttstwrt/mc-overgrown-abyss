@@ -174,7 +174,7 @@
         }
       },
       "ruins": {
-        "chance": 0.3,
+        "chance": 0.6,
         "every": 4000,
         "by_height": {
           "bottom": 1.8,
@@ -236,8 +236,8 @@
         ]
       },
       "troves": {
-        "chance": 0.75,
-        "every": 5000,
+        "chance": 1,
+        "every": 3333,
         "by_height": {
           "bottom": 1.3,
           "top": 0.8
@@ -750,8 +750,8 @@
         }
       },
       "ruins": {
-        "chance": 0.6,
-        "every": 3000,
+        "chance": 1,
+        "every": 2500,
         "by_height": {
           "bottom": 1.6,
           "top": 0.4
@@ -853,8 +853,8 @@
         ]
       },
       "troves": {
-        "chance": 0.75,
-        "every": 5000,
+        "chance": 1,
+        "every": 3333,
         "by_height": {
           "bottom": 1.3,
           "top": 0.8
@@ -1222,7 +1222,7 @@
         }
       },
       "ruins": {
-        "chance": 0.25,
+        "chance": 0.5,
         "every": 4000,
         "by_height": {
           "bottom": 1.8,
@@ -1279,8 +1279,8 @@
         ]
       },
       "troves": {
-        "chance": 0.75,
-        "every": 5000,
+        "chance": 1,
+        "every": 3333,
         "by_height": {
           "bottom": 1.3,
           "top": 0.8
