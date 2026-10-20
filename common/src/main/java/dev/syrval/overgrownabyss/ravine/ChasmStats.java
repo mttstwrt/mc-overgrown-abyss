@@ -12,7 +12,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * What one cell's hole holds: its discs, how many carry each theme, its troves, and the chests, barrels and spawners that the mod's
+ * What one cell's hole holds: its discs, how many carry each theme, its troves, and the chests, barrels, spawners and decorated pots that the mod's
  * own ruins and troves place. Nothing of other mods or of vanilla's structures is counted, since only the pieces the mod puts on
  * its discs are asked. Built from the cell's discs and a function that says what a piece holds, so it needs no level.
  *
@@ -28,11 +28,11 @@ public record ChasmStats(int discs, Map<String, Integer> themes, int ruins, int 
     }
 
     /** The containers of one piece, or of many. */
-    public record Containers(int chests, int barrels, int spawners) {
-        public static final Containers NONE = new Containers(0, 0, 0);
+    public record Containers(int chests, int barrels, int spawners, int pots) {
+        public static final Containers NONE = new Containers(0, 0, 0, 0);
 
         public Containers plus(Containers other) {
-            return new Containers(chests + other.chests, barrels + other.barrels, spawners + other.spawners);
+            return new Containers(chests + other.chests, barrels + other.barrels, spawners + other.spawners, pots + other.pots);
         }
 
         /**
@@ -47,15 +47,17 @@ public record ChasmStats(int discs, Map<String, Integer> themes, int ruins, int 
             int chests = 0;
             int barrels = 0;
             int spawners = 0;
+            int pots = 0;
             for (Tag each : template.getList("blocks", Tag.TAG_COMPOUND)) {
                 switch (palette.getCompound(((CompoundTag) each).getInt("state")).getString("Name")) {
                     case "minecraft:chest" -> chests++;
                     case "minecraft:barrel" -> barrels++;
                     case "minecraft:spawner" -> spawners++;
+                    case "minecraft:decorated_pot" -> pots++;
                     default -> {}
                 }
             }
-            return new Containers(chests, barrels, spawners);
+            return new Containers(chests, barrels, spawners, pots);
         }
     }
 
@@ -88,7 +90,7 @@ public record ChasmStats(int discs, Map<String, Integer> themes, int ruins, int 
         lines.add("Discs: " + discs);
         themes.forEach((label, count) -> lines.add("  " + label + ": " + count));
         lines.add("Ruins: " + ruins + ", troves: " + troves);
-        lines.add("Chests: " + containers.chests() + ", barrels: " + containers.barrels() + ", spawners: " + containers.spawners());
+        lines.add("Chests: " + containers.chests() + ", barrels: " + containers.barrels() + ", spawners: " + containers.spawners() + ", pots: " + containers.pots());
         return lines;
     }
 }

@@ -27,14 +27,15 @@ class ChasmStatsTest {
         palette.add(entry("minecraft:chest"));
         palette.add(entry("minecraft:barrel"));
         palette.add(entry("minecraft:spawner"));
+        palette.add(entry("minecraft:decorated_pot"));
         ListTag blocks = new ListTag();
-        // The chest entry is used three times, the barrel entry once and the spawner entry by no block.
-        for (int state : new int[] {0, 1, 1, 0, 2, 1}) {
+        // The chest entry is used three times, the barrel entry once and the spawner entry by no block, and the pot entry twice.
+        for (int state : new int[] {0, 1, 1, 0, 2, 1, 4, 4}) {
             blocks.add(block(state));
         }
         CompoundTag template = new CompoundTag();
         template.put("palette", palette);
         template.put("blocks", blocks);
-        assertEquals(new ChasmStats.Containers(3, 1, 0), ChasmStats.Containers.ofTemplate(template));
+        assertEquals(new ChasmStats.Containers(3, 1, 0, 2), ChasmStats.Containers.ofTemplate(template));
     }
 }
