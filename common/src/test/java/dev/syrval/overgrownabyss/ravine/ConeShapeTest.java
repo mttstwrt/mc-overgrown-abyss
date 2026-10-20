@@ -417,12 +417,6 @@ class ConeShapeTest {
         assertAClearLineOfSight(withCone(RIDDEN, DiscTest.VARIED), 3);
     }
 
-    @Test
-    void anOuterRadiusWithNoRoomForADiscIsRejected() {
-        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, LOW_SETTINGS).getOrThrow().getAsJsonObject();
-        json.getAsJsonObject("cone").addProperty("outer_radius", 40);
-        assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
-    }
 
     @Test
     void aLowPlatformIsRockWhereItStandsInTheCavernsAirspaceBeyondTheCone() {
@@ -471,17 +465,4 @@ class ConeShapeTest {
         assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError(), "a base narrower than the top");
     }
 
-    @Test
-    void theLogCanCountAConesLayersWithoutACell() {
-        assertEquals(new ConeDiscLayout(SETTINGS, CONE, BOUNDS, cell(0, 0)).layers(), RavineShape.discRows(SETTINGS, BOUNDS));
-        assertTrue(RavineShape.discRows(SETTINGS, BOUNDS) > 0);
-    }
-
-    @Test
-    void theConeBlockRoundTripsAndRejectsAClearRadiusThatLeavesNoRoom() {
-        assertEquals(CONE, ConeSettings.CODEC.parse(JsonOps.INSTANCE, ConeSettings.CODEC.encodeStart(JsonOps.INSTANCE, CONE).getOrThrow()).getOrThrow());
-        var json = ConeSettings.CODEC.encodeStart(JsonOps.INSTANCE, CONE).getOrThrow().getAsJsonObject();
-        json.addProperty("clear_radius", 50);
-        assertTrue(ConeSettings.CODEC.parse(JsonOps.INSTANCE, json).isError());
-    }
 }

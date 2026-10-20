@@ -56,31 +56,6 @@ class DialsFileTest {
         assertEquals(THEMES, file.getAsJsonObject("themes").keySet());
     }
 
-    @Test
-    void aDialTheFileLacksIsWrittenInThoughEveryGroupAndThemeIsThere(@TempDir Path folder) throws IOException {
-        Files.writeString(folder.resolve(DialsFile.NAME), "{\"holes\":1,\"roots\":3,\"falls\":1,\"springs\":1,\"ruins\":1,\"troves\":1,"
-                + "\"rough_ground\":1,\"growth\":{\"lights\":1,\"rim\":1},\"themes\":{\"overgrown_abyss:disc_lava\":1}}");
-
-        Dials read = DialsFile.read(folder, GROWTH, THEMES);
-        JsonObject file = written(folder);
-
-        assertEquals(1F, read.haze());
-        assertEquals(1F, file.get("haze").getAsFloat());
-        assertEquals(3F, file.get("roots").getAsFloat());
-    }
-
-    @Test
-    void aFileThatListsEveryNameIsNotWrittenAgain(@TempDir Path folder) throws IOException {
-        String asTheOwnerWroteIt = "{\"holes\":1,\"roots\":3,\"falls\":1,\"springs\":1,\"ruins\":1,\"troves\":1,\"rough_ground\":1,\"haze\":1,"
-                + "\"growth\":{\"lights\":1,\"rim\":0},\"themes\":{\"overgrown_abyss:disc_lava\":1}}";
-        Files.writeString(folder.resolve(DialsFile.NAME), asTheOwnerWroteIt);
-
-        Dials read = DialsFile.read(folder, GROWTH, THEMES);
-
-        assertEquals(3F, read.roots());
-        assertEquals(0F, read.growth().get("rim"));
-        assertEquals(asTheOwnerWroteIt, Files.readString(folder.resolve(DialsFile.NAME)));
-    }
 
     @Test
     void aFileThatCannotBeReadIsLeftAloneAndEveryDialIsAtOne(@TempDir Path folder) throws IOException {

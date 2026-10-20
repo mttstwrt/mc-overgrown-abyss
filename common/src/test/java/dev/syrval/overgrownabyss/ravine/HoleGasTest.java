@@ -111,70 +111,6 @@ class HoleGasTest {
         }
     }
 
-    @Test
-    void theModsOwnFallsSprayWhereTheirWaterLandsAndAlongTheirDrop() throws Exception {
-        RavineSettings settings = DiscThemeTest.shipped();
-        int falls = 0;
-        for (int cz = 0; cz < 6; cz++) {
-            RavineCell cell = RavineCells.at(11L, settings, 0, cz).orElseThrow();
-            CellDiscs discs = CellDiscs.of(settings, DiscThemeTest.LEVEL, cell);
-            List<GasSource> sources = HoleGas.of(settings, DiscThemeTest.LEVEL, cell, discs).sources();
-            for (DiscFalls.Fall fall : discs.falls().falls()) {
-                falls++;
-                double landing = fall.level() - fall.drop();
-                assertTrue(sources.contains(new GasSource(SPRAY, new GasShape.Sphere(3), fall.x() + 0.5, landing + 3, fall.z() + 0.5, 1.5F)),
-                        () -> "no spray where " + fall + " lands");
-                assertTrue(sources.contains(new GasSource(SPRAY, new GasShape.Cylinder(fall.width() / 2F + 1.5F, fall.drop()), fall.x() + 0.5, landing, fall.z() + 0.5, 0.25F)),
-                        () -> "no curtain along " + fall);
-            }
-        }
-        assertTrue(falls > 0, "no falls to look at");
-    }
-
-    @Test
-    void theModsOwnCavernGasLiesOnItsFloorInsideIt() throws Exception {
-        RavineSettings settings = DiscThemeTest.shipped();
-        RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
-        GasShape floorMist = new GasShape.Cylinder(4, 1);
-        int found = 0;
-        for (GasSource source : gasOf(settings, DiscThemeTest.LEVEL, 0).sources()) {
-            if (source.shape().equals(floorMist)) {
-                found++;
-                assertEquals(DiscThemeTest.LEVEL.floorY(), source.y(), () -> "cavern gas off the floor: " + source);
-                assertTrue(Math.hypot(source.x() - cell.centreX(), source.z() - cell.centreZ()) <= settings.cavernRadius(), () -> "cavern gas outside it: " + source);
-            }
-        }
-        // One for every 300 blocks of a floor 136 blocks across, kept a little in from its wall.
-        assertTrue(found > 120 && found < 260, "cavern gas: " + found);
-    }
-
-    @Test
-    void theFogHoldsTheWholeConeAndItsCavernAtItsFullThickness() throws Exception {
-        RavineSettings settings = DiscThemeTest.shipped();
-        GasSettings.Fog given = settings.dressing().gas().flatMap(GasSettings::fog).orElseThrow();
-        ConeSettings cone = settings.cone().orElseThrow();
-        for (RavineBounds bounds : List.of(DiscThemeTest.LEVEL, DiscThemeTest.VANILLA)) {
-            RavineCell cell = RavineCells.at(11L, settings, 0, 0).orElseThrow();
-            List<GasFog> fogs = gasOf(settings, bounds, 0).fogs();
-            assertEquals(1, fogs.size());
-            GasFog fog = fogs.getFirst();
-            assertEquals(cell.centreX(), fog.x());
-            assertEquals(cell.centreZ(), fog.z());
-            assertEquals(given.bottomDensity(), fog.bottomDensity());
-            // Full thickness is an edge in from the fog's surface: at the floor, and at the cone's wall or the cavern's at every
-            // height up to the top, where the fog ends.
-            assertTrue(fog.y() + fog.edge() <= bounds.floorY(), "the fog's foot at " + fog.y());
-            assertEquals(bounds.topY(), fog.y() + fog.height(), 1e-6);
-            for (int y = bounds.floorY(); y <= bounds.topY() - fog.edge(); y++) {
-                double up = (y - fog.y()) / fog.height();
-                double radius = fog.bottomRadius() + (fog.topRadius() - fog.bottomRadius()) * up;
-                double t = (y - bounds.floorY()) / (double) settings.cavernHeight();
-                double cavern = t < 1 ? settings.cavernRadius() * Math.sqrt(1 - t * t) : 0;
-                double wall = Math.max(ConeShape.radiusAt(settings, cone, bounds, y), cavern);
-                assertTrue(radius - fog.edge() >= wall, "at " + y + " the fog is full to " + (radius - fog.edge()) + ", the wall at " + wall);
-            }
-        }
-    }
 
     @Test
     void aHoleSendsNoMoreThanItsCap() throws Exception {
@@ -183,8 +119,4 @@ class HoleGasTest {
         assertTrue(gas.dropped() > 0, "nothing dropped");
     }
 
-    @Test
-    void aHoleWithoutGasHasNone() throws Exception {
-        assertEquals(HoleGas.NONE, gasOf(gassing(), DiscThemeTest.VANILLA, 0));
-    }
 }

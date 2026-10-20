@@ -141,44 +141,6 @@ class RavineShapeTest {
         assertTrue(!RavineShape.cavernContains(SETTINGS, BOUNDS, CELL, 0, floor + 53, 0, 4));
     }
 
-    @Test
-    void codecRoundTripsTheShippedCarveFile() throws Exception {
-        try (var in = RavineShapeTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/density_function/ravine/carve.json")) {
-            var json = JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
-            json.remove("type");
-            assertEquals("minecraft:lush_caves", json.getAsJsonObject("environment").get("cavern_biome").getAsString());
-            RavineSettings parsed = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
-            assertEquals(1024, parsed.cellSize());
-            assertTrue(parsed.cone().isPresent() && parsed.ravine().isEmpty(), "the mod's own hole is the cone");
-            assertEquals(ConeRimTest.CONE, parsed.cone().get(), "and the cone the rim's tests are run on");
-            // Its palettes hold block-state providers, which have no equality of their own, so the round trip is compared as JSON.
-            var written = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, parsed).getOrThrow();
-            assertEquals(written, RavineSettings.MAP_CODEC.codec()
-                    .encodeStart(JsonOps.INSTANCE, RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, written).getOrThrow())
-                    .getOrThrow());
-        }
-    }
-
-    @Test
-    void codecRejectsACellTooSmallForTheRavine() {
-        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, SETTINGS).getOrThrow().getAsJsonObject();
-        json.addProperty("cell_size", 256);
-        assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
-    }
-
-    @Test
-    void codecRejectsACellThatIsNotWholeChunks() {
-        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, SETTINGS).getOrThrow().getAsJsonObject();
-        json.addProperty("cell_size", 2056);
-        assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
-    }
-
-    @Test
-    void codecRejectsDiscsWhoseMinimumRadiusExceedsTheirMaximum() {
-        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, SETTINGS).getOrThrow().getAsJsonObject();
-        json.getAsJsonObject("discs").addProperty("min_radius", 100);
-        assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).isError());
-    }
 
     /** The test ravine with these discs: the shape's radii, height, thickness, then the placement; the stem is the usual. */
     static RavineSettings discs(

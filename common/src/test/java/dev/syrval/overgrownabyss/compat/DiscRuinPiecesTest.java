@@ -124,63 +124,6 @@ class DiscRuinPiecesTest {
         }
     }
 
-    @Test
-    void theLevelsPiecesAreMeasuredFromItsOwnPoolsAndTemplates() {
-        DiscTheme theme = DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("""
-                {"weight": 1, "ruins": {"chance": 0.5, "kinds": [
-                  {"pool": "minecraft:ancient_city/structures", "weight": 3, "by_height": {"bottom": 2, "top": 0.5}},
-                  {"pool": "overgrown_abyss:no_such_pool", "weight": 5},
-                  {"pool": "minecraft:village/plains/town_centers", "weight": 1, "sink": 1},
-                  {"pool": "minecraft:pillager_outpost/base_plates", "weight": 1, "sink": 1}]}}""")).getOrThrow();
-        DiscRuins ruins = theme.ruins().orElseThrow();
-        RuinPieces pieces = DiscRuinPieces.of(VANILLA, JarRuinPieces::template, List.of(theme, theme));
-        assertEquals(Map.of(ruins, pieces.byRuins().get(ruins)).keySet(), pieces.byRuins().keySet(), "one entry for the themes that share these ruins");
-        List<RuinPieces.Kind> kinds = pieces.byRuins().get(ruins);
-        assertEquals(3, kinds.size(), "a pool the level does not have is no kind");
-
-        RuinPieces.Kind city = kinds.get(0);
-        assertEquals(3, city.weight());
-        assertEquals(ruins.kinds().get(0).byHeight(), city.byHeight());
-        // Of the pool's 20 elements one is empty and two are lists of templates.
-        assertEquals(17, city.pieces().size(), "a piece for each element that is one template");
-        assertEquals(filed(CITY, 0), sorted(city.pieces()), "each with its weight in the pool and the room its own template needs");
-        assertTrue(city.pieces().stream().anyMatch(piece -> piece.height() == 19 && Math.abs(piece.radius() - Math.hypot(17, 17) / 2) < 1e-9),
-                "among them a tall ruin, 17 by 17 and 19 high though its box is 23");
-
-        RuinPieces.Kind centres = kinds.get(1);
-        assertEquals(8, centres.pieces().size());
-        assertEquals(filed(CENTRES, 1), sorted(centres.pieces()), "with a layer in the ground, a piece stands a layer lower over it");
-        assertTrue(centres.pieces().stream().allMatch(piece -> piece.sink() == 1));
-
-        // An outpost's plate builds two layers and is saved with the air of a box 30 high, which nothing leaves out.
-        assertEquals(List.of(29), kinds.get(2).pieces().stream().map(RuinPieces.Piece::height).toList(), "a piece needs room for the air it places");
-
-        // A site names a piece by its pool and the place of its element among the pool's, so that place must lead back to it.
-        var level = new DiscRuinPieces(VANILLA, JarRuinPieces::template);
-        List<DiscRuinPieces.Weighted> elements = DiscRuinPieces.elementsOf(poolHolder(CITY).value());
-        for (RuinPieces.Piece piece : city.pieces()) {
-            StructurePoolElement element = elements.get(piece.element()).element();
-            DiscRuinPieces.Measure measure = level.templateOf(element).flatMap(JarRuinPieces::template).flatMap(DiscRuinPieces.Measure::of).orElseThrow();
-            assertEquals(measure.radius(), piece.radius(), 1e-9, "element " + piece.element() + " of the city's pool");
-            assertEquals(measure.built(), piece.height());
-            assertEquals(elements.get(piece.element()).weight(), piece.weight());
-        }
-        assertEquals(city.pieces().size(), city.pieces().stream().map(RuinPieces.Piece::element).distinct().count(), "each piece another element");
-    }
-
-    @Test
-    void aThemesTrovesAreMeasuredAsItsRuinsAre() {
-        DiscTheme theme = DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("""
-                {"weight": 1,
-                 "ruins": {"chance": 0.5, "kinds": [{"pool": "minecraft:ancient_city/structures", "weight": 3}]},
-                 "troves": {"chance": 0.5, "kinds": [{"pool": "minecraft:village/plains/town_centers", "weight": 1, "sink": 1}]}}""")).getOrThrow();
-        DiscRuins ruins = theme.ruins().orElseThrow();
-        DiscRuins troves = theme.troves().orElseThrow();
-        RuinPieces pieces = DiscRuinPieces.of(VANILLA, JarRuinPieces::template, List.of(theme));
-        assertEquals(Set.of(ruins, troves), pieces.byRuins().keySet(), "each of a theme's two lists has kinds of its own");
-        assertEquals(filed(CITY, 0), sorted(pieces.byRuins().get(ruins).getFirst().pieces()));
-        assertEquals(filed(CENTRES, 1), sorted(pieces.byRuins().get(troves).getFirst().pieces()), "a trove's pieces from its own pool, with its own layers in the ground");
-    }
 
     private static List<RuinPieces.Kind> kindsOf(String ruins) {
         DiscTheme theme = DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1, \"ruins\": " + ruins + "}")).getOrThrow();

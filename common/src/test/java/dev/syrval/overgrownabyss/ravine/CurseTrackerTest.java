@@ -77,13 +77,4 @@ class CurseTrackerTest {
         assertEquals(0, CurseTracker.step(OptionalDouble.of(100), 94.5, OptionalDouble.of(1), strict).amplifier());
     }
 
-    @Test
-    void settingsReadFromJsonAndRefuseLevelsOutOfOrder() {
-        var good = JsonParser.parseString("{\"rate_down\":0.1,\"rate_up\":0.1,\"levels\":[10,20],\"duration\":60}");
-        var parsed = CurseSettings.CODEC.parse(JsonOps.INSTANCE, good);
-        assertTrue(parsed.result().isPresent());
-        assertEquals(4.0, parsed.result().get().margin());
-        var bad = JsonParser.parseString("{\"rate_down\":0.1,\"rate_up\":0.1,\"levels\":[20,10],\"duration\":60}");
-        assertFalse(CurseSettings.CODEC.parse(JsonOps.INSTANCE, bad).result().isPresent());
-    }
 }

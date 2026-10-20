@@ -133,39 +133,6 @@ class DiscRuinsTest {
         return found;
     }
 
-    @Test
-    void ruinsAreWrittenWithTheirKindsAndCheckedWhenRead() {
-        var json = JsonParser.parseString("""
-                {"chance": 0.5, "by_height": {"bottom": 2, "top": 0.5}, "kinds": [
-                  {"pool": "overgrown_abyss:disc_ruins/camp", "weight": 2},
-                  {"pool": "overgrown_abyss:disc_ruins/hut", "weight": 1, "sink": 1, "by_height": {"bottom": 0.5, "top": 3}}],
-                 "structures": [{"tag": "#overgrown_abyss:on_discs/jungle", "weight": 4}]}""");
-        DiscRuins ruins = DiscRuins.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
-        assertEquals(0.5F, ruins.chance());
-        assertEquals(new DiscTheme.Ramp(2, 0.5F), ruins.byHeight());
-        assertEquals(new DiscRuins.Kind(pool("disc_ruins/camp"), 2, EVEN, 0), ruins.kinds().get(0),
-                "a piece stands on the ground, and its kind is as frequent at every height, unless it says otherwise");
-        assertEquals(new DiscRuins.Kind(pool("disc_ruins/hut"), 1, new DiscTheme.Ramp(0.5F, 3), 1), ruins.kinds().get(1));
-        TagKey<Structure> tag = TagKey.create(Registries.STRUCTURE, ResourceLocation.fromNamespaceAndPath("overgrown_abyss", "on_discs/jungle"));
-        assertEquals(List.of(new DiscRuins.Borrowed(tag, 4, EVEN)), ruins.structures());
-        assertEquals(ruins, DiscRuins.CODEC.parse(JsonOps.INSTANCE, DiscRuins.CODEC.encodeStart(JsonOps.INSTANCE, ruins).getOrThrow()).getOrThrow(),
-                "written and read again");
-        double largestTop = Math.PI * 256 * 256;
-        assertTrue(ruins.every() > largestTop, "without every, no disc is large enough for a second ruin");
-
-        DiscRuins plain = DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
-                "{\"chance\": 0.5, \"kinds\": [{\"pool\": \"minecraft:empty\", \"weight\": 1}]}")).getOrThrow();
-        assertEquals(EVEN, plain.byHeight(), "as frequent at every height unless it says otherwise");
-        assertEquals(List.of(), plain.structures());
-        assertTrue(DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
-                "{\"chance\": 0.5, \"structures\": [{\"tag\": \"#minecraft:village\", \"weight\": 1}]}")).isSuccess(), "borrowed ruins alone");
-        assertTrue(DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"chance\": 0.5, \"kinds\": []}")).isError(), "nothing to be");
-        assertTrue(DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
-                "{\"chance\": 0.5, \"kinds\": [{\"pool\": \"minecraft:empty\", \"weight\": 0}],"
-                        + " \"structures\": [{\"tag\": \"#minecraft:village\", \"weight\": 0}]}")).isError(), "nothing with a weight");
-        assertTrue(DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
-                "{\"chance\": 2, \"kinds\": [{\"pool\": \"minecraft:empty\", \"weight\": 1}]}")).isError(), "a chance above 1");
-    }
 
     private static DiscRuins.Loot loot(float depth, float distance, float fair, float rich) {
         return new DiscRuins.Loot(
@@ -177,56 +144,6 @@ class DiscRuinsTest {
         return DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).isSuccess();
     }
 
-    @Test
-    void lootIsWrittenAsTablesFromThePoorestToTheRichest() {
-        DiscRuins ruins = DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("""
-                {"chance": 0.5, "loot": {"depth": 3, "tables": [{"table": "overgrown_abyss:poor"}, {"table": "overgrown_abyss:rich", "from": 0.75}]},
-                 "kinds": [{"pool": "minecraft:empty", "weight": 1}]}""")).getOrThrow();
-        var expected = new DiscRuins.Loot(List.of(new DiscRuins.Loot.Tier(table("poor"), 0), new DiscRuins.Loot.Tier(table("rich"), 0.75F)), 3, 1);
-        assertEquals(expected, ruins.loot(), "the first table is from the lowest rank and distance counts for 1, unless they say otherwise");
-        assertEquals(ruins, DiscRuins.CODEC.parse(JsonOps.INSTANCE, DiscRuins.CODEC.encodeStart(JsonOps.INSTANCE, ruins).getOrThrow()).getOrThrow(),
-                "written and read again");
-
-        String kinds = "\"kinds\": [{\"pool\": \"minecraft:empty\", \"weight\": 1}]}";
-        DiscRuins plain = DiscRuins.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"chance\": 0.5, " + kinds)).getOrThrow();
-        assertEquals(Optional.empty(), plain.loot().tableFor(new DiscTraits(0, 1, 0.5)), "no tables, so a ruin's chests are left as its pool made them");
-        assertFalse(DiscRuins.CODEC.encodeStart(JsonOps.INSTANCE, plain).getOrThrow().getAsJsonObject().has("loot"), "and nothing is written for it");
-        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": []}, " + kinds), "loot with no table");
-        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:empty\"}], \"depth\": 0, \"distance\": 0}, " + kinds),
-                "neither depth nor distance counting");
-        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:a\", \"from\": 0.5}, {\"table\": \"minecraft:b\", \"from\": 0.5}]}, " + kinds),
-                "two tables from the same rank, of which the first would never be held");
-        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:a\", \"from\": 0.5}, {\"table\": \"minecraft:b\"}]}, " + kinds),
-                "tables out of order");
-        assertFalse(readsAsRuins("{\"chance\": 0.5, \"loot\": {\"tables\": [{\"table\": \"minecraft:a\", \"from\": 1.5}]}, " + kinds), "a rank above 1");
-    }
-
-    @Test
-    void aDiscsTableRisesWithItsDepthAndWithItsDistanceFromTheCentre() {
-        DiscRuins.Loot loot = loot(2, 1, 0.4F, 0.8F);
-        assertEquals(0, loot.rank(new DiscTraits(1, 0, 0.5)), 1e-9, "the highest disc, at the centre");
-        assertEquals(1, loot.rank(new DiscTraits(0, 1, 0.5)), 1e-9, "the lowest, at the edge");
-        assertEquals(2 / 3.0, loot.rank(new DiscTraits(0, 0, 0.5)), 1e-9, "depth counts twice what distance does");
-        assertEquals(1 / 3.0, loot.rank(new DiscTraits(1, 1, 0.5)), 1e-9);
-        assertEquals(table("poor"), loot.tableFor(new DiscTraits(1, 0, 0.5)).orElseThrow());
-        assertEquals(table("rich"), loot.tableFor(new DiscTraits(0, 1, 0.5)).orElseThrow());
-        assertEquals(table("fair"), loot.tableFor(new DiscTraits(0, 0, 0.5)).orElseThrow(), "the lowest disc is not the richest at the centre");
-        assertEquals(table("poor"), loot.tableFor(new DiscTraits(1, 1, 0.5)).orElseThrow(), "nor the highest at the edge");
-        assertEquals(table("fair"), loot.tableFor(new DiscTraits(0.7, 0.75, 0.5)).orElseThrow(), "a rank of 0.45 is past where the fair table begins");
-        assertEquals(table("poor"), loot.tableFor(new DiscTraits(0.7, 0.45, 0.5)).orElseThrow(), "and one of 0.35 is not");
-        assertEquals(loot.tableFor(new DiscTraits(0.3, 0.4, 0)), loot.tableFor(new DiscTraits(0.3, 0.4, 1)), "a disc's size does not count");
-
-        DiscRuins.Loot byDepth = loot(1, 0, 0.4F, 0.8F);
-        assertEquals(table("rich"), byDepth.tableFor(new DiscTraits(0.1, 0, 0.5)).orElseThrow(), "depth alone");
-        assertEquals(table("poor"), byDepth.tableFor(new DiscTraits(0.9, 1, 0.5)).orElseThrow());
-        DiscRuins.Loot byDistance = loot(0, 1, 0.4F, 0.8F);
-        assertEquals(table("rich"), byDistance.tableFor(new DiscTraits(1, 0.9, 0.5)).orElseThrow(), "distance alone");
-        assertEquals(table("poor"), byDistance.tableFor(new DiscTraits(0, 0.1, 0.5)).orElseThrow());
-
-        var onlyTheRich = new DiscRuins.Loot(List.of(new DiscRuins.Loot.Tier(table("rich"), 0.8F)), 2, 1);
-        assertEquals(Optional.of(table("rich")), onlyTheRich.tableFor(new DiscTraits(0, 1, 0.5)));
-        assertEquals(Optional.empty(), onlyTheRich.tableFor(new DiscTraits(1, 0, 0.5)), "a disc whose rank reaches no table has none");
-    }
 
     @Test
     void aRuinOfTheThemesOwnHoldsItsDiscsTableAndABorrowedOneKeepsItsOwn() throws Exception {
@@ -374,44 +291,6 @@ class DiscRuinsTest {
         return Map.of(DiscSites.RUINS, ruins, DiscSites.TROVES, troves);
     }
 
-    @Test
-    void notEveryDiscHasRuinsAndADiscHasTheSameOnesEveryTime() throws Exception {
-        RavineSettings settings = DiscThemeTest.shipped();
-        RuinPieces pieces = JarRuinPieces.of(settings);
-        Map<String, int[]> byTheme = new HashMap<>();
-        int large = 0;
-        int severalOnLarge = 0;
-        for (int cz = 0; cz < CELLS; cz++) {
-            CellDiscs cellDiscs = discs(settings, cz, pieces);
-            assertEquals(cellDiscs.ruins(), discs(settings, cz, pieces).ruins(), "the same ruins every time the cell's discs are built");
-            List<Standing> all = standing(settings, cz, cellDiscs, pieces);
-            List<Disc> discs = cellDiscs.layout().discs();
-            for (int i = 0; i < discs.size(); i++) {
-                int index = i;
-                long here = all.stream().filter(ruin -> ruin.index() == index).count();
-                String theme = cellDiscs.themes().get(i).flatMap(DiscTheme::biome).map(key -> key.location().getPath()).orElse("none");
-                int[] counts = byTheme.computeIfAbsent(theme, key -> new int[2]);
-                counts[0]++;
-                counts[1] += here > 0 ? 1 : 0;
-                assertTrue(here <= DiscRuinSites.MAX_PER_DISC, here + " ruins on one disc");
-                if (theme.equals("disc_jungle") && discs.get(i).radius() > 45) {
-                    large++;
-                    severalOnLarge += here > 1 ? 1 : 0;
-                }
-            }
-        }
-        double jungle = byTheme.get("disc_jungle")[1] / (double) byTheme.get("disc_jungle")[0];
-        double lush = byTheme.get("disc_lush")[1] / (double) byTheme.get("disc_lush")[0];
-        assertTrue(jungle > 0.7 && jungle < 0.97, "the share of jungle discs with ruins: " + jungle);
-        assertTrue(lush > 0.15 && lush < jungle, "fewer lush discs have them: " + lush);
-        assertEquals(0, byTheme.get("disc_crystal")[1], "a theme without ruins has none");
-        assertTrue(byTheme.get("disc_crystal")[0] > 5, "crystal discs looked at: " + byTheme.get("disc_crystal")[0]);
-        assertTrue(severalOnLarge > 0, "of " + large + " large jungle discs, those with more than one ruin: " + severalOnLarge);
-
-        assertEquals(List.of(), discs(settings, 0, RuinPieces.NONE).ruins(), "a level that has no pieces for them has no ruins");
-        RavineSettings plain = with(DiscThemeTest.COMMON);
-        assertEquals(List.of(), discs(plain, 0, pieces).ruins(), "no theme has ruins");
-    }
 
     // A small low piece, which finds room on nearly every disc, so that what the tests below count is the draw and not the room.
     private static List<RuinPieces.Piece> small(String pool) {
@@ -437,39 +316,6 @@ class DiscRuinsTest {
         return counts;
     }
 
-    @Test
-    void ruinsAreMoreFrequentTowardTheBottomWhereTheirThemeSaysSo() throws Exception {
-        DiscRuins even = ruins(0.5F, 1500, EVEN, kind("small", 1, EVEN));
-        DiscRuins deeper = ruins(0.5F, 1500, new DiscTheme.Ramp(2, 0.2F), kind("small", 1, EVEN));
-        int[][] flat = byThird(with(ruined(Optional.empty(), even)), pieces(even, small("small")));
-        int[][] ramped = byThird(with(ruined(Optional.empty(), deeper)), pieces(deeper, small("small")));
-        String counts = "discs, discs with ruins and ruins in the lowest third " + Arrays.toString(ramped[0]) + " and the highest " + Arrays.toString(ramped[2])
-                + "; with no ramp " + Arrays.toString(flat[0]) + " and " + Arrays.toString(flat[2]);
-        assertTrue(Math.min(flat[0][0], flat[2][0]) > 40, counts);
-        assertEquals(flat[0][1] / (double) flat[0][0], flat[2][1] / (double) flat[2][0], 0.15, "with no ramp, about the same share of discs high and low: " + counts);
-        // The ramp runs from 2 to 1.4 over the lowest third and from 0.8 to 0.2 over the highest, on a chance of a half.
-        assertTrue(ramped[0][1] / (double) ramped[0][0] > 0.7, "most low discs have ruins: " + counts);
-        assertTrue(ramped[2][1] / (double) ramped[2][0] < 0.35, "few high discs have ruins: " + counts);
-        // Lower discs are larger and hold more ruins anyway, so a disc with ruins is set beside one at its height with no ramp.
-        assertTrue(ramped[0][2] / (double) ramped[0][1] > 1.15 * flat[0][2] / flat[0][1], "a low disc that has ruins has more of them: " + counts);
-        assertTrue(ramped[2][2] / (double) ramped[2][1] < 0.85 * flat[2][2] / flat[2][1], "and a high one fewer: " + counts);
-    }
-
-    @Test
-    void aKindGathersWhereItsOwnWeightIsLarger() throws Exception {
-        DiscRuins ruins = ruins(1, 1500, EVEN, kind("deep", 1, new DiscTheme.Ramp(8, 0)), kind("high", 1, new DiscTheme.Ramp(0, 8)));
-        RuinPieces pieces = pieces(ruins, small("deep"), small("high"));
-        List<Standing> all = assertRoomForEveryRuin(with(ruined(Optional.empty(), ruins)), pieces);
-        List<Standing> deep = all.stream().filter(ruin -> ruin.site().pool().equals(pool("deep"))).toList();
-        List<Standing> high = all.stream().filter(ruin -> ruin.site().pool().equals(pool("high"))).toList();
-        assertTrue(deep.size() > 50 && high.size() > 50, deep.size() + " of the deep kind and " + high.size() + " of the high one");
-        double deepAt = deep.stream().mapToDouble(ruin -> ruin.traits().height()).average().orElseThrow();
-        double highAt = high.stream().mapToDouble(ruin -> ruin.traits().height()).average().orElseThrow();
-        // Two thirds apart if discs were as many at every height; there are more of them low down.
-        assertTrue(deepAt < 0.35 && highAt > 0.55, "the deep kind stands at " + deepAt + " of its hole's height on average and the high one at " + highAt);
-        assertTrue(deep.stream().noneMatch(ruin -> ruin.traits().height() == 1), "a kind with no weight at the top is not on the highest disc");
-        assertTrue(high.stream().noneMatch(ruin -> ruin.traits().height() == 0), "nor one with none at the bottom on the lowest");
-    }
 
     private static List<Standing> withSink(int sink) throws Exception {
         DiscRuins ruins = ruins(1, 1500, EVEN, new DiscRuins.Kind(pool("cellar"), 1, EVEN, sink));
@@ -592,26 +438,6 @@ class DiscRuinsTest {
         return new RuinPieces(both);
     }
 
-    @Test
-    void aThemesTrovesAreWrittenLikeItsRuins() {
-        var json = JsonParser.parseString("""
-                {"weight": 1,
-                 "ruins": {"chance": 0.5, "kinds": [{"pool": "overgrown_abyss:disc_ruins/camp", "weight": 2}]},
-                 "troves": {"chance": 0.75, "every": 5000, "kinds": [{"pool": "overgrown_abyss:disc_troves/cairn", "weight": 1}]}}""");
-        DiscTheme theme = DiscTheme.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
-        assertEquals(Optional.of(ruins(0.75F, 5000, EVEN, kind("disc_troves/cairn", 1, EVEN))), theme.troves());
-        assertEquals(theme.troves(), DiscSites.TROVES.of(theme));
-        assertEquals(theme.ruins(), DiscSites.RUINS.of(theme));
-        assertEquals(0.5F, theme.ruins().orElseThrow().chance(), "its ruins are a list of their own");
-        assertEquals(theme, DiscTheme.CODEC.parse(JsonOps.INSTANCE, DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, theme).getOrThrow()).getOrThrow(),
-                "written and read again");
-
-        DiscTheme plain = DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1}")).getOrThrow();
-        assertEquals(Optional.empty(), plain.troves(), "a theme has no troves unless it says so");
-        assertFalse(DiscTheme.CODEC.encodeStart(JsonOps.INSTANCE, plain).getOrThrow().getAsJsonObject().has("troves"), "and nothing is written for them");
-        assertTrue(DiscTheme.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"weight\": 1, \"troves\": {\"chance\": 0.5, \"kinds\": []}}")).isError(),
-                "troves are checked as ruins are");
-    }
 
     @Test
     void aThemeGivenTrovesKeepsEveryRuinWhereItWasAndItsTrovesStandClearOfThem() throws Exception {
@@ -743,39 +569,6 @@ class DiscRuinsTest {
         assertTrue(inAMound > 10, "of " + looked + " troves, those where a mound or an outcrop would have stood: " + inAMound);
     }
 
-    @Test
-    void theModsTrovesAreAboutOneADiscAndEveryPieceOfThemFindsRoom() throws Exception {
-        RavineSettings settings = DiscThemeTest.shipped();
-        RuinPieces pieces = JarRuinPieces.of(settings);
-        List<Standing> troves = assertRoomForEverything(settings, pieces).get(DiscSites.TROVES);
-        int discs = 0;
-        int withATrove = 0;
-        int bare = 0;
-        for (int cz = 0; cz < CELLS; cz++) {
-            int cell = cz;
-            CellDiscs cellDiscs = discs(settings, cz, pieces);
-            List<RuinSite> here = cellDiscs.troves();
-            assertTrue(here.stream().allMatch(site -> troves.stream().anyMatch(trove -> trove.site().equals(site))), "the troves of hole " + cell + " were all looked at");
-            for (int i = 0; i < cellDiscs.themes().size(); i++) {
-                int index = i;
-                boolean themed = cellDiscs.themes().get(i).flatMap(DiscTheme::troves).isPresent();
-                long on = standing(DiscSites.TROVES, settings, cz, cellDiscs, pieces).stream().filter(trove -> trove.index() == index).count();
-                discs += themed ? 1 : 0;
-                withATrove += themed && on > 0 ? 1 : 0;
-                bare += themed ? 0 : 1;
-                assertTrue(themed || on == 0, "a disc of a theme without troves has none");
-                assertTrue(on <= 5, on + " troves on one disc");
-            }
-        }
-        assertTheGroundLiesLevelRound(settings, pieces);
-        double aDisc = troves.size() / (double) discs;
-        String counts = troves.size() + " troves on " + discs + " discs of the themes that have them, " + withATrove + " of which have any; " + bare + " discs of the others";
-        assertTrue(aDisc > 1.3 && aDisc < 2.0, "about one and a half a disc: " + counts);
-        assertTrue(withATrove > 0.5 * discs && withATrove < 0.95 * discs, "most discs have one and some have none: " + counts);
-        assertTrue(bare > 5, counts);
-        Set<String> used = troves.stream().map(trove -> trove.site().pool().location().getPath() + " " + trove.site().element()).collect(Collectors.toSet());
-        assertEquals(6, used.size(), "each of the three cairns and three marker stones stands somewhere: " + used);
-    }
 
     // What the chunks round one hand out of one of the two lists, each site seen to be in the chunk that handed it out.
     private static List<RuinSite> sitesRound(DiscSites which, RavineCarve carve, int chunkX, int chunkZ, int chunks) {

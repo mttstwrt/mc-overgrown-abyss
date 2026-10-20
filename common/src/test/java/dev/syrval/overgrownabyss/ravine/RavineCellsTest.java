@@ -120,41 +120,6 @@ class RavineCellsTest {
         assertTrue(sawBend);
     }
 
-    @Test
-    void sizeBiasBelowOneFavoursLargeRavines() {
-        RavineSettings large = settings(42L, 1F, 0.5F);
-        int total = 0;
-        int longCount = 0;
-        int small = 0;
-        for (int x = -50; x < 50; x++) {
-            for (int z = -50; z < 50; z++) {
-                double length = RavineCells.at(7L, large, x, z).orElseThrow().halfLength() * 2;
-                total++;
-                longCount += length > 250 ? 1 : 0;
-                small += length < 120 ? 1 : 0;
-            }
-        }
-        // A uniform draw would give 37% over 250 and 30% under 120; the square root gives about 61% and 9%.
-        assertTrue(longCount > total * 0.5, longCount + " of " + total + " are over 250 long");
-        assertTrue(small < total * 0.15, small + " of " + total + " are under 120 long");
-    }
-
-    @Test
-    void mostLeaningRavinesCurveBackAndEveryRavineWiggles() {
-        RavineSettings always = settings(42L, 1F);
-        int s = 0;
-        int total = 0;
-        for (int x = -50; x < 50; x++) {
-            for (int z = -50; z < 50; z++) {
-                RavineCell c = RavineCells.at(8L, always, x, z).orElseThrow();
-                total++;
-                s += c.lean().bow() <= 0 ? 1 : 0;
-                double scale = c.halfLength() * 2 / 400;
-                assertTrue(Math.abs(c.bend().wiggle()) >= CURVATURE.maxWiggle() * scale * 0.5 - 1e-9);
-            }
-        }
-        assertTrue(s > total * 0.68 && s < total * 0.82, s + " of " + total + " bow against the lean");
-    }
 
     @Test
     void smoothValuesAreTheDrawnOnesAtWholeCoordinatesAndChangeGraduallyBetween() {

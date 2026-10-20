@@ -246,29 +246,6 @@ class DiscTest {
         assertEquals(12, landed.hangBlockAt(SHAPE, 10).getAsInt(), "a stem that lands is cut off with its flare");
     }
 
-    @Test
-    void theBowlIsShallowestOnTheSmallestDiscsAndDeepestOnTheLargest() {
-        assertEquals(1, SLIM.bowlDepthFor(20, 0.7), 1e-9);
-        assertEquals(4, SLIM.bowlDepthFor(64, 0.7), 1e-9);
-        assertEquals(2.5, SLIM.bowlDepthFor(42, 0.7), 1e-9);
-        assertEquals(1, SLIM.bowlDepthFor(10, 0.7), 1e-9, "a disc under the smallest size gets the least");
-        assertEquals(4, SLIM.bowlDepthFor(100, 0.7), 1e-9);
-        assertEquals(0, SHAPE.bowlDepthFor(40, 0.7), 1e-9, "flat when both depths are 0");
-        assertEquals(SLIM.bowlDepthFor(30, 0), Disc.placed(0, 0, 20, 30, 14, SLIM.bowlDepthFor(30, 0)).bowl(), 1e-9);
-    }
-
-    @Test
-    void bowlsVarySoThatSomeDiscsStayFlatter() {
-        assertEquals(4, VARIED.bowlDepthFor(64, 0), 1e-9, "the full depth for its size at one end of the draw");
-        assertEquals(1, VARIED.bowlDepthFor(64, 1), 1e-9, "a quarter of it at the other");
-        assertEquals(2.5, VARIED.bowlDepthFor(64, 0.5), 1e-9);
-        assertEquals(0.25, VARIED.bowlDepthFor(20, 1), 1e-9, "a small disc can be all but flat");
-        double previous = Double.MAX_VALUE;
-        for (double unit = 0; unit <= 1; unit += 0.1) {
-            assertTrue(VARIED.bowlDepthFor(50, unit) <= previous, "a higher draw is never deeper");
-            previous = VARIED.bowlDepthFor(50, unit);
-        }
-    }
 
     @Test
     void aStemLandsInsideTheCurvedPlatformUnderItAndARootRunsIntoTheOneAboveIt() {

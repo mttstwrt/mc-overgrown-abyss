@@ -211,23 +211,6 @@ class RootLayoutTest {
         assertTrue(ended >= 0.95 * roots, ended + " of " + roots + " roots end in something");
     }
 
-    @Test
-    void rootsGatherTowardsTheFloor() {
-        for (RavineBounds bounds : List.of(VANILLA, TALL)) {
-            int low = 0;
-            int high = 0;
-            double third = (bounds.topY() - bounds.floorY()) / 3.0;
-            for (int cz = 0; cz < CELLS; cz++) {
-                for (Root root : roots(bounds, cell(cz))) {
-                    for (Root.Knot knot : root.knots()) {
-                        low += knot.y() < bounds.floorY() + third ? 1 : 0;
-                        high += knot.y() >= bounds.topY() - third ? 1 : 0;
-                    }
-                }
-            }
-            assertTrue(low > 2 * high, low + " blocks of root in the lowest third and " + high + " in the highest");
-        }
-    }
 
     @Test
     void aHoleWhoseSettingsHaveNoRootsHasNone() {

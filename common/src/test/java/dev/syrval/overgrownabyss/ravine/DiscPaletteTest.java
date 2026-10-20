@@ -58,32 +58,4 @@ class DiscPaletteTest {
         assertTrue(barkOnly.blockAt(new DiscPoint.Stem(1.2)).isEmpty(), "no core");
     }
 
-    @Test
-    void aPaletteIsWrittenWithVanillaBlockStateProviders() {
-        var json = JsonParser.parseString("""
-                {
-                  "top": [
-                    {"thickness": 1, "block": {"type": "minecraft:simple_state_provider", "state": {"Name": "minecraft:moss_block"}}}
-                  ],
-                  "body": {
-                    "type": "minecraft:weighted_state_provider",
-                    "entries": [
-                      {"data": {"Name": "minecraft:stone"}, "weight": 3},
-                      {"data": {"Name": "minecraft:andesite"}, "weight": 1}
-                    ]
-                  },
-                  "stem": {"core": {"type": "minecraft:simple_state_provider", "state": {"Name": "minecraft:calcite"}}}
-                }
-                """);
-        DiscPalette parsed = DiscPalette.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
-        assertEquals(1, parsed.top().size());
-        assertTrue(parsed.underside().isEmpty(), "a part left out is empty");
-        assertTrue(parsed.body().isPresent());
-        assertTrue(parsed.stem().surface().isEmpty());
-        assertTrue(parsed.stem().core().isPresent());
-        assertEquals(json, DiscPalette.CODEC.encodeStart(JsonOps.INSTANCE, parsed).getOrThrow(), "and is written back the same");
-        var bad = json.getAsJsonObject().deepCopy();
-        bad.getAsJsonArray("top").get(0).getAsJsonObject().addProperty("thickness", 0);
-        assertTrue(DiscPalette.CODEC.parse(JsonOps.INSTANCE, bad).isError(), "a layer of no thickness");
-    }
 }

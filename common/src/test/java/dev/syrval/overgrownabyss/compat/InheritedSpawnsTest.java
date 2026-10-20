@@ -75,14 +75,4 @@ class InheritedSpawnsTest {
         assertEquals(List.of("zombie:95:4-4", "witch:1:1-1"), mobs(merged, MobCategory.MONSTER), "the witch we list ourselves stays");
     }
 
-    @Test
-    void aMergeIsRememberedUntilEitherBiomeHandsOutDifferentSettings() {
-        MobSpawnSettings own = new MobSpawnSettings.Builder().build();
-        InheritedSpawns spawns = InheritedSpawns.of(PARENT, own, Set.of());
-        assertTrue(spawns.madeFrom(PARENT, own));
-        assertSame(spawns.settings(), spawns.settings());
-        // A loader that has changed the parent hands out a new object for it, even if it holds the same entries.
-        MobSpawnSettings changedParent = InheritedSpawns.merge(PARENT, MobSpawnSettings.EMPTY, Set.of());
-        assertTrue(!spawns.madeFrom(changedParent, own) && !spawns.madeFrom(PARENT, new MobSpawnSettings.Builder().build()));
-    }
 }

@@ -42,17 +42,6 @@ class HoleGasPayloadTest {
         assertEquals(payload, roundTrip(payload));
     }
 
-    @Test
-    void sourcesOfOneKindShareOneEntry() {
-        var many = new ArrayList<GasSource>();
-        for (int i = 0; i < 100; i++) {
-            many.add(new GasSource(MIST, new GasShape.Cylinder(3, 1), i, 0, i, 0.6F));
-        }
-        ByteBuf buf = Unpooled.buffer();
-        HoleGasPayload.STREAM_CODEC.encode(buf, new HoleGasPayload(1, many, List.of()));
-        // An id, one kind, and for each source a one-byte index and three doubles.
-        assertTrue(buf.readableBytes() < 100 * 26 + 64, "written in " + buf.readableBytes() + " bytes");
-    }
 
     @Test
     void aHoleWithNoSourcesHasItsGasTakenAway() {

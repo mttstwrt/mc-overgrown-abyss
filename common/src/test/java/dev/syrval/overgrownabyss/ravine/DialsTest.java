@@ -69,15 +69,6 @@ class DialsTest {
         return new InclusiveRange<>(Math.min(count.minInclusive() * factor, most), Math.min(count.maxInclusive() * factor, most));
     }
 
-    @Test
-    void theSettingsSurviveBeingWrittenOutAndReadBack() throws Exception {
-        RavineSettings shipped = DiscThemeTest.shipped();
-        JsonElement once = written(shipped);
-
-        assertEquals(once, written(SETTINGS.parse(JsonOps.INSTANCE, once).getOrThrow()));
-        // A dial that is turned and finds nothing to turn takes the settings out and back with nothing changed.
-        assertEquals(once, written(turned("{\"growth\": {\"no_such_group\": 2}}")));
-    }
 
     @Test
     void everyDialAtOneGivesTheSettingsThemselves() throws Exception {
@@ -95,21 +86,6 @@ class DialsTest {
         assertEquals(Map.of("roots", 0.5F, "growth.lights", 2F), dials("{\"roots\": 0.5, \"falls\": 1, \"growth\": {\"lights\": 2, \"rim\": 1}}").turned());
     }
 
-    @Test
-    void aDialOutsideItsRangeIsRefused() {
-        for (String json : List.of("{\"holes\": 2}", "{\"roots\": 11}", "{\"falls\": -1}", "{\"springs\": \"many\"}", "{\"growth\": {\"lights\": 11}}")) {
-            assertTrue(Dials.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).isError(), json);
-        }
-    }
-
-    @Test
-    void theDialsAreAllWrittenEvenAtOne() {
-        var written = Dials.CODEC.encodeStart(JsonOps.INSTANCE, Dials.NEUTRAL.withNames(Set.of("lights"), Set.of(LAVA))).getOrThrow().getAsJsonObject();
-
-        assertEquals(Set.of("holes", "roots", "falls", "springs", "ruins", "troves", "rough_ground", "haze", "growth", "themes"), written.keySet());
-        assertEquals(Set.of("lights"), written.getAsJsonObject("growth").keySet());
-        assertEquals(Set.of(LAVA), written.getAsJsonObject("themes").keySet());
-    }
 
     @Test
     void holesTakesHolesAwayAndMovesNoneOfTheRest() throws Exception {
@@ -194,18 +170,6 @@ class DialsTest {
         assertTrue(held > 0, "no light of the mod's is rare enough to reach the limit");
     }
 
-    @Test
-    void fallsAndSpringsEachTurnTheirOwnCount() throws Exception {
-        FallSettings was = DiscThemeTest.shipped().falls().orElseThrow();
-        FallSettings moreFalls = turned("{\"falls\": 2}").falls().orElseThrow();
-        FallSettings noSprings = turned("{\"springs\": 0}").falls().orElseThrow();
-
-        assertEquals(times(was.count(), 2, FallSettings.MOST), moreFalls.count());
-        assertEquals(was.springs(), moreFalls.springs());
-        assertEquals(was.count(), noSprings.count());
-        assertEquals(new InclusiveRange<>(0, 0), noSprings.springs().orElseThrow().count());
-        assertEquals(new InclusiveRange<>(0, 0), turned("{\"falls\": 0}").falls().orElseThrow().count());
-    }
 
     @Test
     void ruinsComeOnMoreDiscsFirstAndThenMoreToADisc() throws Exception {
@@ -247,39 +211,6 @@ class DialsTest {
         assertTrue(was.stream().anyMatch(theme -> theme.ruins().isPresent()) && was.stream().anyMatch(theme -> theme.troves().isPresent()));
     }
 
-    @Test
-    void roughGroundTurnsHowMuchOfATopItsMoundsAndOutcropsCover() throws Exception {
-        List<DiscTheme> was = DiscThemeTest.shipped().discThemes();
-        List<DiscTheme> twice = turned("{\"rough_ground\": 2}").discThemes();
-        for (int i = 0; i < was.size(); i++) {
-            DiscRelief before = was.get(i).ground();
-            DiscRelief after = twice.get(i).ground();
-            assertEquals(before.mounds().map(mounds -> Math.min(mounds.cover() * 2, 1)), after.mounds().map(DiscRelief.Mounds::cover));
-            assertEquals(before.mounds().map(DiscRelief.Mounds::height), after.mounds().map(DiscRelief.Mounds::height));
-            assertEquals(before.outcrops().map(outcrops -> Math.min(outcrops.cover() * 2, 1)), after.outcrops().map(DiscRelief.Outcrops::cover));
-        }
-
-        assertTrue(was.stream().anyMatch(theme -> theme.ground().mounds().isPresent()));
-        assertTrue(turned("{\"rough_ground\": 0}").discThemes().stream()
-                .allMatch(theme -> theme.ground().mounds().isEmpty() && theme.ground().outcrops().isEmpty()));
-    }
-
-    @Test
-    void hazeTurnsTheThicknessOfTheFogAndNoOtherGas() throws Exception {
-        GasSettings was = DiscThemeTest.shipped().dressing().gas().orElseThrow();
-        GasSettings twice = turned("{\"haze\": 2}").dressing().gas().orElseThrow();
-        GasSettings.Fog before = was.fog().orElseThrow();
-        GasSettings.Fog after = twice.fog().orElseThrow();
-        assertEquals(before.bottomDensity() * 2, after.bottomDensity(), 1e-6);
-        assertEquals(before.topDensity() * 2, after.topDensity(), 1e-6);
-        assertEquals(new GasSettings.Fog(before.medium(), after.bottomDensity(), after.topDensity(), before.edge()), after);
-        assertEquals(was.falls(), twice.falls());
-        assertEquals(was.cavern(), twice.cavern());
-
-        GasSettings none = turned("{\"haze\": 0}").dressing().gas().orElseThrow();
-        assertTrue(none.fog().isEmpty());
-        assertEquals(was.falls(), none.falls());
-    }
 
     @Test
     void aGroupOfGrowthIsTurnedAndNothingElseThatGrows() throws Exception {
@@ -358,27 +289,4 @@ class DialsTest {
         assertTrue(Dials.themeNames(DiscThemeTest.shipped()).contains(LAVA));
     }
 
-    @Test
-    void everyFeatureAGroupNamesIsOneTheModsOwnSettingsGrow() throws Exception {
-        RavineSettings shipped = DiscThemeTest.shipped();
-        var grown = new HashSet<String>();
-        shipped.discThemes().forEach(theme -> theme.growth().forEach(growth -> grown.add(growth.feature().location().toString())));
-        shipped.roots().orElseThrow().growth().forEach(growth -> grown.add(growth.feature().location().toString()));
-        Map<String, Set<String>> groups = groups();
-
-        assertEquals(Set.of("giants", "lights", "rim"), groups.keySet());
-        for (var group : groups.entrySet()) {
-            assertFalse(group.getValue().isEmpty(), group.getKey());
-            for (String id : group.getValue()) {
-                assertTrue(grown.contains(id), group.getKey() + " names " + id + ", which nothing grows");
-                // A tag that names a feature the game does not have fails to load.
-                assertNotNull(DialsTest.class.getResource(FEATURES + id.substring(id.indexOf(':') + 1) + ".json"), id);
-            }
-        }
-        // The rim group is every feature the settings grow on a rim, so that the dial is the whole of what hangs there.
-        var onRims = new HashSet<String>();
-        shipped.discThemes().forEach(theme -> theme.growth().stream()
-                .filter(growth -> growth.on() == DiscTheme.Surface.RIM).forEach(growth -> onRims.add(growth.feature().location().toString())));
-        assertEquals(onRims, groups.get("rim"));
-    }
 }

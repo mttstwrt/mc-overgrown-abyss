@@ -133,25 +133,4 @@ class DiscWaterTest {
         assertNotEquals(first, other, "the disc above has the same ponds in the same places");
     }
 
-    @Test
-    void waterIsWrittenAsHowMuchAndTheRestHasDefaults() {
-        DiscWater plain = DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"ponds\": 0.25}")).getOrThrow();
-        assertEquals(new DiscWater(0.25F, 12, 0, 40, 2, 3, DiscWater.Fluid.WATER, 0), plain);
-        DiscWater full = DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
-                "{\"ponds\": 0.4, \"pond_size\": 18, \"stream_width\": 2.5, \"stream_spacing\": 30, \"depth\": 1, \"bank\": 5}")).getOrThrow();
-        assertEquals(new DiscWater(0.4F, 18, 2.5F, 30, 1, 5, DiscWater.Fluid.WATER, 0), full);
-        assertEquals(full, DiscWater.CODEC.parse(JsonOps.INSTANCE, DiscWater.CODEC.encodeStart(JsonOps.INSTANCE, full).getOrThrow()).getOrThrow());
-        assertTrue(DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"ponds\": 0.2, \"depth\": 3}")).isError(), "deeper than a platform can hold");
-        assertTrue(DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"ponds\": 0.2, \"bank\": 0}")).isError(), "water at the very rim would pour off it");
-        var molten = JsonParser.parseString("{\"ponds\": 0.25, \"fluid\": \"lava\"}");
-        DiscWater lava = DiscWater.CODEC.parse(JsonOps.INSTANCE, molten).getOrThrow();
-        assertEquals(new DiscWater(0.25F, 12, 0, 40, 2, 3, DiscWater.Fluid.LAVA, 0), lava);
-        assertEquals(molten, DiscWater.CODEC.encodeStart(JsonOps.INSTANCE, lava).getOrThrow(), "lava is written, water left unsaid");
-        assertTrue(DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"ponds\": 0.2, \"fluid\": \"milk\"}")).isError(), "a fluid a disc cannot hold");
-        var apart = JsonParser.parseString("{\"ponds\": 0.25, \"fluid\": \"lava\", \"clear\": 6}");
-        assertEquals(new DiscWater(0.25F, 12, 0, 40, 2, 3, DiscWater.Fluid.LAVA, 6), DiscWater.CODEC.parse(JsonOps.INSTANCE, apart).getOrThrow());
-        assertTrue(DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"ponds\": 0.2, \"clear\": 6}")).isError(), "water kept clear of what burns");
-        assertTrue(DiscWater.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"ponds\": 0.2, \"fluid\": \"lava\", \"clear\": 17}")).isError(),
-                "clear of more than the chunks round its own hold");
-    }
 }

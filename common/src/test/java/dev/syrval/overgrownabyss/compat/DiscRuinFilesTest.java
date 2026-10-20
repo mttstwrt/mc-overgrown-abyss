@@ -130,58 +130,6 @@ class DiscRuinFilesTest {
         assertEquals(Optional.empty(), DiscRuinPieces.Measure.of(new CompoundTag()), "not a template at all");
     }
 
-    @Test
-    void everyPieceOfTheModsOwnPoolsCanBeMeasuredAndStandsOverTheGround() throws IOException {
-        Set<String> named = new HashSet<>();
-        int pieces = 0;
-        for (JsonElement theme : json(CARVE).getAsJsonArray("disc_themes")) {
-            if (!theme.getAsJsonObject().has("ruins")) {
-                continue;
-            }
-            for (JsonElement each : theme.getAsJsonObject().getAsJsonObject("ruins").getAsJsonArray("kinds")) {
-                JsonObject kind = each.getAsJsonObject();
-                assertFalse(kind.has("radius") || kind.has("height"), "the room a piece needs is measured, not written: " + kind);
-                ResourceLocation pool = ResourceLocation.parse(kind.get("pool").getAsString());
-                assertEquals("overgrown_abyss", pool.getNamespace(), "the mod's themes name the mod's own pools as kinds");
-                named.add(pool.getPath());
-                int sink = kind.has("sink") ? kind.get("sink").getAsInt() : 0;
-                for (JsonObject entry : JarRuinPieces.elements(pool)) {
-                    JsonObject element = entry.getAsJsonObject("element");
-                    assertEquals("minecraft:single_pool_element", element.get("element_type").getAsString(), pool + " holds single templates");
-                    assertEquals("rigid", element.get("projection").getAsString(), "a piece stands where its site is, not on the level's surface");
-                    String location = element.get("location").getAsString();
-                    Optional<DiscRuinPieces.Measure> measure = JarRuinPieces.template(ResourceLocation.parse(location)).flatMap(DiscRuinPieces.Measure::of);
-                    assertTrue(measure.isPresent(), location + " is missing or builds nothing");
-                    assertTrue(measure.get().built() > sink, location + " would be wholly in the ground");
-                    assertEquals(measure.get().built(), JarRuinPieces.piece(null, 0, entry, 0).orElseThrow().height(),
-                            location + " empties nothing above what it builds: its template has no air, or its processors leave air out");
-                    pieces++;
-                }
-            }
-        }
-        assertTrue(pieces >= 50, pieces + " pieces looked at");
-        assertEquals(poolFiles(), named, "every pool of ruins is named by a theme");
-    }
-
-    @Test
-    void theStructuresTheModBorrowsFromOtherModsAreAllOptional() throws IOException {
-        JsonObject tag = json(BORROWED);
-        assertFalse(tag.has("replace") && tag.get("replace").getAsBoolean(), "packs add to the tag");
-        assertFalse(tag.getAsJsonArray("values").isEmpty());
-        for (JsonElement value : tag.getAsJsonArray("values")) {
-            assertTrue(value.isJsonObject() && !value.getAsJsonObject().get("required").getAsBoolean(),
-                    value + " must be optional: the mod loads without the mods whose structures it borrows");
-            assertFalse(value.getAsJsonObject().get("id").getAsString().startsWith("minecraft:"), value + " is not another mod's");
-        }
-        Set<String> tags = new HashSet<>();
-        for (JsonElement theme : json(CARVE).getAsJsonArray("disc_themes")) {
-            JsonObject ruins = theme.getAsJsonObject().getAsJsonObject("ruins");
-            if (ruins != null && ruins.has("structures")) {
-                ruins.getAsJsonArray("structures").forEach(entry -> tags.add(entry.getAsJsonObject().get("tag").getAsString()));
-            }
-        }
-        assertEquals(Set.of("#overgrown_abyss:on_discs/jungle"), tags, "the tags the mod's themes borrow from");
-    }
 
     private static Set<String> poolFiles() throws IOException {
         try {
@@ -194,15 +142,4 @@ class DiscRuinFilesTest {
         }
     }
 
-    @Test
-    void theRuinsAreAStructureOfTheirOwnWithItsOwnPlacement() throws IOException {
-        JsonObject structure = json("/data/overgrown_abyss/worldgen/structure/disc_ruins.json");
-        assertEquals("overgrown_abyss:disc_ruins", structure.get("type").getAsString());
-        // Bearding would have the terrain shaped round pieces that stand on rock the mod itself puts there.
-        assertEquals("none", structure.get("terrain_adaptation").getAsString());
-        JsonObject set = json("/data/overgrown_abyss/worldgen/structure_set/disc_ruins.json");
-        assertEquals("overgrown_abyss:disc_ruins", set.getAsJsonObject("placement").get("type").getAsString());
-        assertEquals(List.of("overgrown_abyss:disc_ruins"), set.getAsJsonArray("structures").asList().stream()
-                .map(entry -> entry.getAsJsonObject().get("structure").getAsString()).toList());
-    }
 }

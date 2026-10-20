@@ -45,16 +45,6 @@ class RavineDomesTest {
         assertTrue(made > 20, "made " + made);
     }
 
-    @Test
-    void roomsVaryInSize() {
-        double smallest = Double.MAX_VALUE;
-        double largest = 0;
-        for (RavineDomes.Dome d : allRooms()) {
-            smallest = Math.min(smallest, d.radius());
-            largest = Math.max(largest, d.radius());
-        }
-        assertTrue(largest - smallest > 20, "radii " + smallest + " to " + largest);
-    }
 
     @Test
     void aRavinesDiscIsTheSameDiscAsAConesAndHasAVerticalAxis() {

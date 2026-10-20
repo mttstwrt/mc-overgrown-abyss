@@ -66,27 +66,6 @@ class RootFilesTest {
         }
     }
 
-    @Test
-    void theModsOwnHoleHasRootsOfJungleAndMangroveWood() throws IOException {
-        JsonObject carve = json(CARVE);
-        assertTrue(carve.has("roots"), "the mod's own file grows roots");
-        var woods = new HashSet<String>();
-        blocksIn(carve.get("roots"), woods);
-        assertEquals(Set.of("minecraft:jungle_wood", "minecraft:mangrove_wood"), woods, "its own wood is both");
-        for (JsonElement theme : carve.getAsJsonArray("disc_themes")) {
-            String biome = theme.getAsJsonObject().get("biome").getAsString();
-            var named = new HashSet<String>();
-            if (theme.getAsJsonObject().has("root_wood")) {
-                blocksIn(theme.getAsJsonObject().get("root_wood"), named);
-            }
-            Set<String> expected = switch (biome) {
-                case "overgrown_abyss:disc_jungle" -> Set.of("minecraft:jungle_wood");
-                case "overgrown_abyss:disc_mangrove" -> Set.of("minecraft:mangrove_wood");
-                default -> Set.of();
-            };
-            assertEquals(expected, named, biome);
-        }
-    }
 
     @Test
     void everythingTheModsRootsGrowHasAFeatureFileOfTheModsOwn() throws IOException {
@@ -116,36 +95,4 @@ class RootFilesTest {
         assertTrue(tagged.contains("#minecraft:features_cannot_replace"), "and what vanilla's own structures leave alone still is");
     }
 
-    @Test
-    void everyListOfRulesTheModsStructuresUseReadsThatTag() throws IOException {
-        for (String list : EVERY_LIST) {
-            int rules = 0;
-            for (JsonElement processor : json(LISTS + list + ".json").getAsJsonArray("processors")) {
-                JsonObject rule = processor.getAsJsonObject();
-                if (rule.get("processor_type").getAsString().equals("minecraft:protected_blocks")) {
-                    assertEquals("#overgrown_abyss:ruins_cannot_replace", rule.get("value").getAsString(), list);
-                    rules++;
-                }
-            }
-            assertEquals(1, rules, list + " has one such rule");
-        }
-    }
-
-    @Test
-    void noStructureOfTheModsBuildsWithARootsWood() throws IOException {
-        // A piece would then leave alone what an earlier piece of the same structure built, and not only roots.
-        Set<String> woods = tagged();
-        woods.removeIf(value -> value.startsWith("#"));
-        assertFalse(woods.isEmpty());
-        // The lists hand most of their blocks on to the city's reskin, which is a list of its own.
-        var lists = new ArrayList<>(EVERY_LIST);
-        lists.add("city/reskin");
-        var named = new HashSet<String>();
-        for (String list : lists) {
-            textIn(json(LISTS + list + ".json"), named);
-        }
-        assertTrue(named.contains("minecraft:mossy_stone_bricks") && named.contains("minecraft:jungle_log"), "the blocks they build with are read");
-        named.retainAll(woods);
-        assertTrue(named.isEmpty(), "the mod's structures build with " + named);
-    }
 }

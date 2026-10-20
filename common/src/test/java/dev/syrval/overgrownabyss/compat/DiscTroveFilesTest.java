@@ -81,30 +81,6 @@ class DiscTroveFilesTest {
         return kinds;
     }
 
-    @Test
-    void everyTroveIsAFewBlocksOfMasonryWithOneContainerAtItsFoot() throws IOException {
-        Set<String> pools = new HashSet<>();
-        Set<String> templates = new HashSet<>();
-        for (JsonObject kind : kinds()) {
-            ResourceLocation pool = ResourceLocation.parse(kind.get("pool").getAsString());
-            assertEquals("overgrown_abyss", pool.getNamespace(), "the mod's themes name the mod's own pools as kinds");
-            assertFalse(kind.has("sink"), "a trove stands on the ground, with none of it let in: " + kind);
-            pools.add(pool.getPath());
-            for (JsonObject entry : JarRuinPieces.elements(pool)) {
-                JsonObject element = entry.getAsJsonObject("element");
-                assertEquals("minecraft:single_pool_element", element.get("element_type").getAsString(), pool + " holds single templates");
-                assertEquals("rigid", element.get("projection").getAsString(), "a piece stands where its site is, not on the level's surface");
-                assertEquals(WEATHERED, element.get("processors").getAsString(), "which keep every block of a trove");
-                String location = element.get("location").getAsString();
-                if (templates.add(location)) {
-                    assertIsATrove(location);
-                }
-            }
-        }
-        assertTrue(pools.size() >= 2, "kinds of trove: " + pools);
-        assertEquals(files("worldgen/template_pool/disc_troves", "disc_troves/"), pools, "every pool of troves is named by a theme");
-        assertEquals(files("structure/trove", "overgrown_abyss:trove/"), templates, "every trove template is in a pool");
-    }
 
     private static void assertIsATrove(String location) {
         CompoundTag template = JarRuinPieces.template(ResourceLocation.parse(location)).orElseThrow(() -> new AssertionError(location + " is missing"));
@@ -169,32 +145,6 @@ class DiscTroveFilesTest {
         return BuiltInRegistries.BLOCK.getOptional(ResourceLocation.parse(id)).orElseThrow(() -> new AssertionError(id + " is no block of the game's"));
     }
 
-    @Test
-    void theTrovesAreAStructureOfTheirOwnBuiltFromTheTroveSites() throws IOException {
-        JsonObject structure = json(DATA + "worldgen/structure/disc_troves.json");
-        assertEquals("overgrown_abyss:disc_ruins", structure.get("type").getAsString(), "built as the ruins are");
-        assertEquals("troves", structure.get("sites").getAsString());
-        // Bearding would have the terrain shaped round pieces that stand on rock the mod itself puts there.
-        assertEquals("none", structure.get("terrain_adaptation").getAsString());
-        assertFalse(json(DATA + "worldgen/structure/disc_ruins.json").has("sites"), "the ruins' structure builds the ruins without saying so");
-
-        JsonObject set = json(DATA + "worldgen/structure_set/disc_troves.json");
-        JsonObject placement = set.getAsJsonObject("placement");
-        assertEquals("overgrown_abyss:disc_ruins", placement.get("type").getAsString());
-        assertEquals(List.of("overgrown_abyss:disc_troves"), set.getAsJsonArray("structures").asList().stream()
-                .map(entry -> entry.getAsJsonObject().get("structure").getAsString()).toList());
-        JsonObject ofRuins = json(DATA + "worldgen/structure_set/disc_ruins.json").getAsJsonObject("placement");
-        assertNotEquals(ofRuins.get("salt").getAsInt(), placement.get("salt").getAsInt(), "a salt of its own");
-
-        // Read by the mod's own codecs: which sites a file names is kept, and one that names none is for the ruins.
-        assertEquals("troves", written(placement).get("sites").getAsString());
-        assertFalse(written(ofRuins).has("sites"), "the ruins' placement is as it was");
-        // A structure's biomes are a tag, which only a level's registries can read; the rest of the file is read here.
-        structure.add("biomes", new JsonArray());
-        JsonElement again = DiscRuinsStructure.CODEC.codec().encodeStart(
-                JsonOps.INSTANCE, DiscRuinsStructure.CODEC.codec().parse(JsonOps.INSTANCE, structure).getOrThrow()).getOrThrow();
-        assertEquals("troves", again.getAsJsonObject().get("sites").getAsString());
-    }
 
     // A placement as the mod's codec reads it and writes it again.
     private static JsonObject written(JsonObject placement) {

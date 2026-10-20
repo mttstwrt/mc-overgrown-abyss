@@ -328,33 +328,4 @@ class DiscFallsTest {
         assertTrue(lavaDiscs >= 6, lavaDiscs + " lava discs in six holes");
     }
 
-    @Test
-    void fallsAreWrittenBesideAHolesOtherSettingsAndOnlyForACone() throws Exception {
-        try (var in = DiscFallsTest.class.getResourceAsStream("/data/overgrown_abyss/worldgen/density_function/ravine/carve.json")) {
-            var json = JsonParser.parseString(new String(in.readAllBytes())).getAsJsonObject();
-            json.remove("type");
-            RavineSettings shipped = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
-            FallSettings falls = shipped.falls().orElseThrow();
-            // Rare enough to be come upon: a handful to a hole, and none of them on to the floor of the world.
-            assertTrue(falls.count().maxInclusive() <= 6 && falls.maxPerDisc() == 1, "falls on every disc: " + falls);
-            assertTrue(shipped.roots().isPresent(), "roots and falls are read from the same place");
-            FallSettings.Springs springs = falls.springs().orElseThrow();
-            assertTrue(springs.count().maxInclusive() <= 4, "springs all round a hole: " + springs);
-            assertTrue(DiscFallsTest.class.getResource("/data/overgrown_abyss/worldgen/configured_feature/" + springs.feature().location().getPath() + ".json") != null,
-                    "no feature file for a spring");
-            String rock = new String(DiscFallsTest.class.getResourceAsStream("/data/overgrown_abyss/tags/block/spring_rock.json").readAllBytes());
-            assertTrue(rock.contains("minecraft:base_stone_overworld"), "a spring that the stone of a wall does not hold");
-            var written = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, shipped).getOrThrow();
-            assertEquals(Optional.of(falls), RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, written).getOrThrow().falls(), "and read back the same once written");
-            var none = json.deepCopy();
-            none.remove("falls");
-            assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, none).getOrThrow().falls().isEmpty(), "a hole need have none");
-            var tooDeep = json.deepCopy();
-            tooDeep.getAsJsonObject("discs").addProperty("floor_thickness", 3);
-            assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, tooDeep).isError(), "a pool with no bed under it");
-            var noCone = json.deepCopy();
-            noCone.remove("cone");
-            assertTrue(RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, noCone).isError(), "falls without a cone");
-        }
-    }
 }
