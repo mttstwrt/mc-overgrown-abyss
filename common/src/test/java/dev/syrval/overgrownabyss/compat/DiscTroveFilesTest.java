@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonArray;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.minecraft.SharedConstants;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -29,7 +31,10 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.junit.jupiter.api.Test;
 
@@ -82,39 +87,111 @@ class DiscTroveFilesTest {
     }
 
 
+    private static final Set<String> LIT = Set.of("minecraft:magma_block");
+    private static final List<String> STYLES = List.of("crystal_", "lava_");
+
+    private static String spawnerMob(String file) {
+        return file.startsWith("crystal_") ? "minecraft:skeleton" : file.startsWith("lava_") ? "minecraft:blaze" : "minecraft:cave_spider";
+    }
+
+    /** The kind of a trove from its file, as {@code trove/<style>_<kind>_<n>}; a marker is as small as a cairn. */
+    private static TroveTemplates.Kind kindOf(String file) {
+        String kind = file.replaceFirst("_\\d+$", "");
+        for (String style : STYLES) {
+            kind = kind.startsWith(style) ? kind.substring(style.length()) : kind;
+        }
+        return kind.equals("marker") ? TroveTemplates.Kind.CAIRN : TroveTemplates.Kind.valueOf(kind.toUpperCase());
+    }
+
     private static void assertIsATrove(String location) {
+        String file = location.substring(location.indexOf('/') + 1);
+        TroveTemplates.Kind kind = kindOf(file);
+        boolean nest = TroveTemplates.hasSpawner(kind);
+        int floor = nest ? TroveTemplates.NEST_FLOOR : 0;
         CompoundTag template = JarRuinPieces.template(ResourceLocation.parse(location)).orElseThrow(() -> new AssertionError(location + " is missing"));
         DiscRuinPieces.Measure measure = DiscRuinPieces.Measure.of(template).orElseThrow(() -> new AssertionError(location + " builds nothing"));
         assertEquals(0, measure.emptied(), location + " holds no air, which would empty whatever stood where it is put");
-        assertTrue(measure.sizeX() <= 2 && measure.sizeZ() <= 2 && measure.built() <= 4, location + " is small: " + measure);
+        int footprint = switch (kind) {
+            case CAIRN -> 2;
+            case NEST -> 3;
+            case HOARD, HOARD_NEST -> STYLES.stream().anyMatch(file::startsWith) ? 3 : 4;
+        };
+        assertTrue(measure.sizeX() <= footprint && measure.sizeZ() <= footprint && measure.built() - floor <= 4, location + " is small: " + measure);
         ListTag palette = template.getList("palette", Tag.TAG_COMPOUND);
-        int masonry = 0;
-        int containers = 0;
+        var states = new java.util.HashMap<List<Integer>, BlockState>();
+        var names = new java.util.HashMap<List<Integer>, String>();
+        var datas = new java.util.HashMap<List<Integer>, CompoundTag>();
         for (Tag each : template.getList("blocks", Tag.TAG_COMPOUND)) {
             CompoundTag block = (CompoundTag) each;
             CompoundTag saved = palette.getCompound(block.getInt("state"));
             String name = saved.getString("Name");
+            ListTag at = block.getList("pos", Tag.TAG_INT);
+            List<Integer> pos = List.of(at.getInt(0), at.getInt(1), at.getInt(2));
             BlockState state = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), saved);
             // A name the game does not know is read as air.
             assertFalse(state.isAir(), location + " names a block the game has not: " + name);
             assertEquals(saved.getCompound("Properties").size(), state.getProperties().size(), location + " writes every property of " + name);
-            assertEquals(0, state.getLightEmission(), location + " gives off no light, but has " + name);
-            if (!CONTAINERS.contains(name)) {
-                assertFalse(block.contains("nbt"), name + " in " + location + " carries no data");
-                masonry++;
-                continue;
+            assertTrue(state.getLightEmission() == 0 || LIT.contains(name), location + " gives off no light, but has " + name);
+            states.put(pos, state);
+            names.put(pos, name);
+            if (block.contains("nbt")) {
+                datas.put(pos, block.getCompound("nbt"));
             }
-            containers++;
-            assertEquals(0, block.getList("pos", Tag.TAG_INT).getInt(1), "the container of " + location + " is at its foot");
-            CompoundTag data = block.getCompound("nbt");
-            assertEquals(name, data.getString("id"), "the container of " + location + " is saved as what it is");
-            // The table it holds wherever a theme gives its troves no loot; with none it would be left empty, table and all.
-            ResourceLocation table = ResourceLocation.parse(data.getString("LootTable"));
-            assertNotNull(DiscTroveFilesTest.class.getResource("/data/" + table.getNamespace() + "/loot_table/" + table.getPath() + ".json"),
-                    location + " names the loot table " + table + ", which is no file of the mod's");
         }
-        assertEquals(1, containers, "containers in " + location);
-        assertTrue(masonry >= 2 && masonry <= 4, masonry + " blocks of masonry in " + location);
+        int masonry = 0;
+        int containers = 0;
+        int spawners = 0;
+        for (var entry : names.entrySet()) {
+            String name = entry.getValue();
+            List<Integer> pos = entry.getKey();
+            CompoundTag data = datas.get(pos);
+            if (name.equals(BuiltInRegistries.BLOCK.getKey(Blocks.SPAWNER).toString())) {
+                spawners++;
+                assertEquals(floor - 2, pos.get(1), "the spawner of " + location + " is 2 blocks under the floor");
+                assertEquals(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(BlockEntityType.MOB_SPAWNER).toString(), data.getString("id"), location);
+                assertEquals(spawnerMob(file), data.getCompound("SpawnData").getCompound("entity").getString("id"), "the mob of " + location);
+                assertEquals(16, data.getShort("RequiredPlayerRange"), location);
+                int[][] around = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+                for (int[] step : around) {
+                    List<Integer> next = List.of(pos.get(0) + step[0], pos.get(1) + step[1], pos.get(2) + step[2]);
+                    BlockState beside = states.get(next);
+                    assertNotNull(beside, "the spawner of " + location + " is walled in, not open at " + next);
+                    assertTrue(beside.isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO) && !datas.containsKey(next),
+                            "the spawner of " + location + " has solid stone at " + next);
+                }
+            } else if (CONTAINERS.contains(name)) {
+                containers++;
+                assertEquals(floor, pos.get(1), "the container of " + location + " is on the floor");
+                assertEquals(name, data.getString("id"), "the container of " + location + " is saved as what it is");
+                // The table it holds wherever a theme gives its troves no loot; with none it would be left empty, table and all.
+                ResourceLocation table = ResourceLocation.parse(data.getString("LootTable"));
+                assertNotNull(DiscTroveFilesTest.class.getResource("/data/" + table.getNamespace() + "/loot_table/" + table.getPath() + ".json"),
+                        location + " names the loot table " + table + ", which is no file of the mod's");
+            } else {
+                assertNull(data, name + " in " + location + " carries no data");
+                if (pos.get(1) >= floor) {
+                    masonry++;
+                }
+            }
+        }
+        assertEquals(nest ? 1 : 0, spawners, "spawners in " + location);
+        switch (kind) {
+            case CAIRN, NEST -> {
+                assertEquals(1, containers, "containers in " + location);
+                assertTrue(masonry >= 2 && masonry <= 4, masonry + " blocks of masonry in " + location);
+            }
+            case HOARD, HOARD_NEST -> {
+                assertTrue(containers >= 2 && containers <= 3, containers + " containers in " + location);
+                assertTrue(masonry >= 2 && masonry <= 8, masonry + " blocks of masonry in " + location);
+            }
+        }
+    }
+
+    @Test
+    void allTroveTemplatesObeyTheirInvariants() throws IOException {
+        Set<String> troves = files("structure/trove", "overgrown_abyss:trove/");
+        assertTrue(troves.size() >= 6, "the troves are found: " + troves);
+        troves.stream().sorted().forEach(DiscTroveFilesTest::assertIsATrove);
     }
 
     @Test
