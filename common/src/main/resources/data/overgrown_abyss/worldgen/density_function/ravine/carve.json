@@ -1642,29 +1642,7 @@
             ]
           }
         }
-      },
-      "gas": [
-        {
-          "medium": "overgrown_abyss:ember",
-          "on": "lava",
-          "every": 40,
-          "shape": {
-            "type": "cylinder",
-            "radius": 2,
-            "height": 2
-          },
-          "rate": 1.2
-        },
-        {
-          "medium": "overgrown_abyss:ember",
-          "every": 600,
-          "shape": {
-            "type": "sphere",
-            "radius": 1.5
-          },
-          "rate": 0.8
-        }
-      ]
+      }
     }
   ],
   "environment": {

@@ -112,40 +112,6 @@ class HoleGasTest {
     }
 
     @Test
-    void emberRisesOnlyOverTheLavaOfTheModsOwnLavaDiscs() throws Exception {
-        RavineSettings settings = DiscThemeTest.shipped();
-        int checked = 0;
-        for (int cz = 0; cz < 6; cz++) {
-            RavineCell cell = RavineCells.at(11L, settings, 0, cz).orElseThrow();
-            CellDiscs discs = CellDiscs.of(settings, DiscThemeTest.LEVEL, cell);
-            Set<Column> lava = new HashSet<>();
-            Set<Column> chunks = new HashSet<>();
-            for (Disc disc : discs.layout().discs()) {
-                for (int x = Math.floorDiv((int) Math.floor(disc.x() - disc.radius()), 16); x <= Math.floorDiv((int) Math.floor(disc.x() + disc.radius()), 16); x++) {
-                    for (int z = Math.floorDiv((int) Math.floor(disc.z() - disc.radius()), 16); z <= Math.floorDiv((int) Math.floor(disc.z() + disc.radius()), 16); z++) {
-                        chunks.add(new Column(x, 0, z));
-                    }
-                }
-            }
-            for (Column chunk : chunks) {
-                DiscBlocks.forEachWater(cell, discs, chunk.x() * 16, chunk.z() * 16, (x, surface, z, depth, fluid) -> {
-                    if (fluid == DiscWater.Fluid.LAVA) {
-                        lava.add(new Column(x, surface, z));
-                    }
-                });
-            }
-            for (GasSource source : HoleGas.of(settings, DiscThemeTest.LEVEL, cell, discs).sources()) {
-                if (source.medium().equals(EMBER) && source.shape() instanceof GasShape.Cylinder) {
-                    var under = new Column((int) Math.floor(source.x()), (int) source.y() - 1, (int) Math.floor(source.z()));
-                    assertTrue(lava.contains(under), () -> "ember at " + source + " with no lava under it");
-                    checked++;
-                }
-            }
-        }
-        assertTrue(checked > 0, "no lava disc gave off ember");
-    }
-
-    @Test
     void theModsOwnFallsSprayWhereTheirWaterLandsAndAlongTheirDrop() throws Exception {
         RavineSettings settings = DiscThemeTest.shipped();
         int falls = 0;

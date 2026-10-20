@@ -400,7 +400,7 @@ hole's gas out once.
 | `spray` | where each fall lands, and up its drop | white, light (`gravity` 0.2), spreading fast (`dispersion` 2) and short-lived (`decay` 0.12); glows towards the sun (`forward_scatter` 0.9) |
 | `cavern_mist` | the cavern floor | a heavier mist (`gravity` 1, `max_density` 0.4) that lies over the city |
 | `bog` | mangrove top, ponds and underside | green and heavy (`gravity` 2): it lies on mud and drips off. `opacity` 0.55 |
-| `ember` | over the lava disc's lava, a few on its top | rises (`gravity` -1.5) and fades fast (`decay` 0.12): a plume about as tall as one over `decay`'s reach. Lit by the lava (`block_light` 1) |
+| `ember` | nothing: the lava disc gives off no smoke (removed 2026-10-19), the medium is kept | rises (`gravity` -1.5) and fades fast (`decay` 0.12) |
 | `shimmer` | crystal top and underside | faint violet, glowing of itself (`emissive` 0.35), short-lived (`decay` 0.15) |
 
 - How much of a kind there is: a source's `rate`, and how many there are, `every`. Halving `every` doubles the sources.
