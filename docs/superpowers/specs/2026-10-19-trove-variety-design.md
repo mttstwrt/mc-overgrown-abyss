@@ -108,6 +108,12 @@ chance scale (both defaulting to 1.0 times the built-in curve), so the owner can
   spawner and multi-chest counts rising with depth on a generated chasm. If the 1.21.1 harness can be published, also
   boot once on NeoForge and once on Fabric; if not, say so as unverified.
 
+### Revised by the plan (docs/superpowers/plans/2026-10-19-trove-variety.md)
+
+- The spawner and its stone pocket are part of new trove templates (placed with the kind's `sink`), not a post-pass;
+  the "skip if no pocket" rule becomes "the template always brings its own solid pocket".
+- Depth ramps are linear in `height` (zero at the top disc), not a hard cutoff at 0.4.
+
 ## Constraints
 
 - Both loaders must compile; boot `@fabric` since loader-specific code is likely touched.
