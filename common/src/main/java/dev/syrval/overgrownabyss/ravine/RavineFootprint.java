@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.function.Function;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
@@ -142,6 +143,14 @@ public interface RavineFootprint {
     /** The gas of each hole whose middle is within {@code reach} blocks of the column {@code (x, z)}; see {@link HoleGas}. */
     List<GasNear> gasNear(double x, double z, double reach);
 
+    /**
+     * What the hole of the cell containing {@code (x, z)} holds, with what each piece holds given by {@code held}; empty where
+     * the cell has no hole.
+     */
+    default Optional<ChasmStats> statsAt(int x, int z, Function<RuinSite, ChasmStats.Containers> held) {
+        return Optional.empty();
+    }
+
     /** The gas of one hole, the id a client knows the hole by, and the column of the hole's middle. */
     record GasNear(long hole, double x, double z, HoleGas gas) {}
 
@@ -159,6 +168,17 @@ public interface RavineFootprint {
         }
         // These run for every open block or biome cell during generation, so avoid streams.
         return new RavineFootprint() {
+            @Override
+            public Optional<ChasmStats> statsAt(int x, int z, Function<RuinSite, ChasmStats.Containers> held) {
+                for (Region region : copy) {
+                    Optional<ChasmStats> stats = region.carve().statsAt(x, z, held);
+                    if (stats.isPresent()) {
+                        return stats;
+                    }
+                }
+                return Optional.empty();
+            }
+
             @Override
             public boolean contains(int x, int z) {
                 for (Region region : copy) {

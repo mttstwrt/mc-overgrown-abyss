@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+import java.util.function.Function;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.biome.Biome;
@@ -154,6 +155,14 @@ public final class RavineCarve implements DensityFunction.SimpleFunction {
     /** Whether the cell holds a ravine in this level. */
     public boolean isActive(RavineCell cell) {
         return boundsOf(cell).isPresent();
+    }
+
+    /**
+     * What the hole of the cell containing {@code (x, z)} holds, with what each piece holds given by {@code held}; empty if the
+     * cell has no hole in this level. Reads the discs the carve has already built for the cell.
+     */
+    public Optional<ChasmStats> statsAt(int x, int z, Function<RuinSite, ChasmStats.Containers> held) {
+        return holeAt(x, z).map(hole -> ChasmStats.of(settings, discsOf(hole), held));
     }
 
     private Optional<Hole> holeAt(int x, int z) {
