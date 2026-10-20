@@ -110,13 +110,15 @@ public record DiscRuins(float chance, int every, DiscTheme.Ramp byHeight, Loot l
      * @param byHeight how that weight changes from the hole's lowest disc to its highest
      * @param sink     how many of a piece's lowest layers lie in the ground: 0 for a piece whose lowest layer is a floor laid on
      *                 the ground, 1 for one whose lowest layer is the ground itself, more for one with a cellar
+     * @param groups   the groups of kinds this is in, whose dials turn its weight: {@code hoard} and {@code nest}
      */
-    public record Kind(ResourceKey<StructureTemplatePool> pool, float weight, DiscTheme.Ramp byHeight, int sink) {
+    public record Kind(ResourceKey<StructureTemplatePool> pool, float weight, DiscTheme.Ramp byHeight, int sink, List<String> groups) {
         static final Codec<Kind> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ResourceKey.codec(Registries.TEMPLATE_POOL).fieldOf("pool").forGetter(Kind::pool),
                 Codec.floatRange(0, 1000).fieldOf("weight").forGetter(Kind::weight),
                 DiscTheme.Ramp.BY_HEIGHT.optionalFieldOf("by_height", DiscTheme.Ramp.EVEN).forGetter(Kind::byHeight),
-                Codec.intRange(0, 64).optionalFieldOf("sink", 0).forGetter(Kind::sink)
+                Codec.intRange(0, 64).optionalFieldOf("sink", 0).forGetter(Kind::sink),
+                Codec.STRING.listOf().optionalFieldOf("groups", List.of()).forGetter(Kind::groups)
         ).apply(i, Kind::new));
     }
 

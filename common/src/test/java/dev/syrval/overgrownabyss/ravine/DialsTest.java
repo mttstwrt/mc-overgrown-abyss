@@ -197,6 +197,51 @@ class DialsTest {
     }
 
     @Test
+    void hoardAndNestDialsScaleOnlyTheirOwnKinds() throws Exception {
+        assertEquals(Map.of("cairn", 1F, "nest", 2F), kindWeights("{\"hoards\": 0, \"nests\": 1}"));
+        assertEquals(Map.of("cairn", 1F, "hoard", 4F, "nest", 6F, "hoard_nest", 24F, "heavy", 1000F), kindWeights("{\"hoards\": 2, \"nests\": 3}"));
+        assertEquals(Map.of("cairn", 1F, "hoard", 20F, "nest", 20F, "hoard_nest", 400F, "heavy", 1000F), kindWeights("{\"hoards\": 10, \"nests\": 10}"));
+    }
+
+    // The weights of the kinds in the first theme's troves, as a made-up set of kinds comes out of the dials.
+    private static Map<String, Float> kindWeights(String json) throws Exception {
+        JsonElement settings = written(DiscThemeTest.shipped());
+        var kinds = new com.google.gson.JsonArray();
+        kinds.add(kind("cairn", 1, List.of()));
+        kinds.add(kind("hoard", 2, List.of("hoard")));
+        kinds.add(kind("nest", 2, List.of("nest")));
+        kinds.add(kind("hoard_nest", 4, List.of("hoard", "nest")));
+        kinds.add(kind("heavy", 500, List.of("hoard")));
+        for (JsonElement theme : settings.getAsJsonObject().getAsJsonArray("disc_themes")) {
+            if (theme.getAsJsonObject().has("troves")) {
+                theme.getAsJsonObject().getAsJsonObject("troves").add("kinds", kinds);
+                break;
+            }
+        }
+        RavineSettings made = SETTINGS.parse(JsonOps.INSTANCE, settings).getOrThrow();
+        var weights = new java.util.TreeMap<String, Float>();
+        for (DiscTheme theme : dials(json).applyTo(made, groups()).getOrThrow().discThemes()) {
+            if (theme.troves().isPresent() && theme.troves().get().kinds().stream().anyMatch(kind -> kind.pool().location().getPath().equals("cairn"))) {
+                theme.troves().get().kinds().forEach(kind -> weights.put(kind.pool().location().getPath(), kind.weight()));
+                break;
+            }
+        }
+        return weights;
+    }
+
+    private static com.google.gson.JsonObject kind(String name, float weight, List<String> groups) {
+        var kind = new com.google.gson.JsonObject();
+        kind.addProperty("pool", "overgrown_abyss:" + name);
+        kind.addProperty("weight", weight);
+        var array = new com.google.gson.JsonArray();
+        groups.forEach(array::add);
+        if (!groups.isEmpty()) {
+            kind.add("groups", array);
+        }
+        return kind;
+    }
+
+    @Test
     void ruinsAndTrovesAtNoneAreTakenAwayEachByItsOwnDial() throws Exception {
         List<DiscTheme> was = DiscThemeTest.shipped().discThemes();
         List<DiscTheme> noRuins = turned("{\"ruins\": 0}").discThemes();

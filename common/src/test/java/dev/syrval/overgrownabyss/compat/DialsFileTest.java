@@ -30,7 +30,7 @@ class DialsFileTest {
 
         assertTrue(read.isNeutral());
         assertEquals(
-                List.of("about", "holes", "roots", "falls", "springs", "ruins", "troves", "rough_ground", "haze", "growth", "themes"),
+                List.of("about", "holes", "roots", "falls", "springs", "ruins", "troves", "hoards", "nests", "rough_ground", "haze", "growth", "themes"),
                 List.copyOf(file.keySet()));
         assertEquals(GROWTH, file.getAsJsonObject("growth").keySet());
         assertEquals(THEMES, file.getAsJsonObject("themes").keySet());

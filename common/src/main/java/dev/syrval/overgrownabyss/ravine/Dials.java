@@ -36,6 +36,8 @@ import net.minecraft.util.InclusiveRange;
  * @param springs     how many springs
  * @param ruins       how many ruins stand on discs: on more of the discs first and, once every disc has them, more to a disc
  * @param troves      the same of troves
+ * @param hoards      how often a trove is of a kind in the group {@code hoard}, against the kinds in none
+ * @param nests       the same for the group {@code nest}; a kind in both is turned by both
  * @param roughGround how much of a disc's top its mounds and outcrops cover
  * @param haze        how thick the fog through a hole's air is, by its densities
  * @param growth      how much grows of each group of features, by the group's name. A group is a tag of configured features
@@ -43,12 +45,12 @@ import net.minecraft.util.InclusiveRange;
  * @param themes      how often a disc gets each theme, by the id of the theme's biome
  */
 public record Dials(
-        float holes, float roots, float falls, float springs, float ruins, float troves, float roughGround, float haze,
+        float holes, float roots, float falls, float springs, float ruins, float troves, float hoards, float nests, float roughGround, float haze,
         Map<String, Float> growth, Map<String, Float> themes) {
 
     // The most of anything a dial may ask for, in times what the settings have.
     private static final float MOST = 10;
-    public static final Dials NEUTRAL = new Dials(1, 1, 1, 1, 1, 1, 1, 1, Map.of(), Map.of());
+    public static final Dials NEUTRAL = new Dials(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, Map.of(), Map.of());
 
     public static final Codec<Dials> CODEC = RecordCodecBuilder.create(i -> i.group(
             dial("holes", 1).forGetter(Dials::holes),
@@ -57,6 +59,8 @@ public record Dials(
             dial("springs", MOST).forGetter(Dials::springs),
             dial("ruins", MOST).forGetter(Dials::ruins),
             dial("troves", MOST).forGetter(Dials::troves),
+            dial("hoards", MOST).forGetter(Dials::hoards),
+            dial("nests", MOST).forGetter(Dials::nests),
             dial("rough_ground", MOST).forGetter(Dials::roughGround),
             dial("haze", MOST).forGetter(Dials::haze),
             named("growth").forGetter(Dials::growth),
@@ -88,7 +92,7 @@ public record Dials(
 
     /** These dials with one at 1 for every name given that they lack, which is how the file is filled in. */
     public Dials withNames(Set<String> growthNames, Set<String> themeNames) {
-        return new Dials(holes, roots, falls, springs, ruins, troves, roughGround, haze, filled(growth, growthNames), filled(themes, themeNames));
+        return new Dials(holes, roots, falls, springs, ruins, troves, hoards, nests, roughGround, haze, filled(growth, growthNames), filled(themes, themeNames));
     }
 
     private static Map<String, Float> filled(Map<String, Float> given, Set<String> names) {
@@ -106,6 +110,8 @@ public record Dials(
         all.put("springs", springs);
         all.put("ruins", ruins);
         all.put("troves", troves);
+        all.put("hoards", hoards);
+        all.put("nests", nests);
         all.put("rough_ground", roughGround);
         all.put("haze", haze);
         growth.forEach((name, dial) -> all.put("growth." + name, dial));
@@ -151,6 +157,7 @@ public record Dials(
             }
             turnSites(theme, "ruins", ruins);
             turnSites(theme, "troves", troves);
+            turnKinds(theme, "troves");
             turnGround(theme);
             turnGrowth(theme, growthGroups);
         }
@@ -194,6 +201,37 @@ public record Dials(
             if (asked > 1) {
                 every(sites, asked, DiscRuins.LEAST_EVERY, Integer.MAX_VALUE);
             }
+        });
+    }
+
+    // The kinds of a theme's troves that are in a group, by that group's dial. A kind in both groups gets both, and the kinds
+    // in none are left as they are. One scaled to nothing is taken out.
+    private void turnKinds(JsonObject theme, String name) {
+        at(theme, name).ifPresent(sites -> {
+            if (!sites.has("kinds")) {
+                return;
+            }
+            var kept = new JsonArray();
+            for (JsonElement element : sites.getAsJsonArray("kinds")) {
+                JsonObject kind = element.getAsJsonObject();
+                double factor = 1;
+                if (kind.has("groups")) {
+                    for (JsonElement group : kind.getAsJsonArray("groups")) {
+                        factor *= switch (group.getAsString()) {
+                            case "hoard" -> hoards;
+                            case "nest" -> nests;
+                            default -> 1;
+                        };
+                    }
+                }
+                if (factor != 1) {
+                    times(kind, "weight", factor, 0, DiscTheme.MOST_WEIGHT);
+                }
+                if (factor == 1 || kind.get("weight").getAsFloat() > 0) {
+                    kept.add(kind);
+                }
+            }
+            sites.add("kinds", kept);
         });
     }
 

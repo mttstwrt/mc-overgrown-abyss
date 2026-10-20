@@ -29,7 +29,7 @@ final class DialsFile {
     private static final String ABOUT = "0 is none, 1 is as the mod ships, 2 is twice as much (holes: 0 to 1). "
             + "Read when a world loads; only chunks made after that change.";
     // The codec writes its fields in an order of its own. The file has the dials in the order they are described in.
-    private static final List<String> ORDER = List.of("holes", "roots", "falls", "springs", "ruins", "troves", "rough_ground", "haze", "growth", "themes");
+    private static final List<String> ORDER = List.of("holes", "roots", "falls", "springs", "ruins", "troves", "hoards", "nests", "rough_ground", "haze", "growth", "themes");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private DialsFile() {}

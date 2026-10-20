@@ -45,7 +45,7 @@ class DiscRuinsTest {
     }
 
     private static DiscRuins.Kind kind(String pool, float weight, DiscTheme.Ramp byHeight) {
-        return new DiscRuins.Kind(pool(pool), weight, byHeight, 0);
+        return new DiscRuins.Kind(pool(pool), weight, byHeight, 0, List.of());
     }
 
     private static DiscRuins ruins(float chance, int every, DiscTheme.Ramp byHeight, DiscRuins.Kind... kinds) {
@@ -318,7 +318,7 @@ class DiscRuinsTest {
 
 
     private static List<Standing> withSink(int sink) throws Exception {
-        DiscRuins ruins = ruins(1, 1500, EVEN, new DiscRuins.Kind(pool("cellar"), 1, EVEN, sink));
+        DiscRuins ruins = ruins(1, 1500, EVEN, new DiscRuins.Kind(pool("cellar"), 1, EVEN, sink, List.of()));
         return assertRoomForEveryRuin(with(ruined(Optional.empty(), ruins)), pieces(ruins, List.of(piece("cellar", 0, 1, 6, 5, sink))));
     }
 

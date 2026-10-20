@@ -24,6 +24,7 @@ explored, new ground meets old at a seam.
 | `falls` | both ends of `falls.count` |
 | `springs` | both ends of `falls.springs.count` |
 | `ruins`, `troves` | each theme's `ruins` or `troves`: `chance` first, up to 1, and what the dial asks beyond that comes off `every`, so more discs have them before a disc has more. 0 takes the block out |
+| `hoards`, `nests` | the `weight` of each kind in a theme's `troves` whose `groups` has `"hoard"` or `"nest"` (both, if it has both), up to 1000. A kind turned to 0 is taken out; a kind in neither group is left as it is |
 | `rough_ground` | each theme's `ground`: the `cover` of its mounds and of its outcrops, not their height. 0 takes `ground` out |
 | `growth.<name>` | the `every` of each growth, on a disc or under the roots, whose feature is in the tag `#overgrown_abyss:dial/<name>` (`tags/worldgen/configured_feature/dial/`). The mod has `lights`, `giants` and `rim`; a feature in two of them, as the glowing bulbs are, is turned by both. 0 takes those growths out of their lists |
 | `themes.<biome id>` | that theme's `weight` |
