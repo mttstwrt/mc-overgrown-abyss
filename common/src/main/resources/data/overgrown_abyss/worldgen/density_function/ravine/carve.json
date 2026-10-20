@@ -1789,6 +1789,66 @@
             ]
           }
         }
+      },
+      "troves": {
+        "chance": 1,
+        "every": 2500,
+        "by_height": {
+          "bottom": 1.3,
+          "top": 1
+        },
+        "loot": {
+          "depth": 2,
+          "distance": 1,
+          "tables": [
+            {
+              "table": "minecraft:chests/jungle_temple",
+              "from": 0
+            }
+          ]
+        },
+        "kinds": [
+          {
+            "pool": "overgrown_abyss:disc_troves/lava_cairn",
+            "weight": 1
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/lava_hoard",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.5,
+              "top": 0
+            },
+            "groups": [
+              "hoard"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/lava_nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.8,
+              "top": 0.1
+            },
+            "sink": 3,
+            "groups": [
+              "nest"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/lava_hoard_nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.4,
+              "top": 0
+            },
+            "sink": 3,
+            "groups": [
+              "hoard",
+              "nest"
+            ]
+          }
+        ]
       }
     }
   ],
