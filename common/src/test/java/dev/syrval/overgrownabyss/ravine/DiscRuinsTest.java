@@ -323,15 +323,15 @@ class DiscRuinsTest {
     }
 
     @Test
-    void troveKindsRampWithDepthInEveryOvergrownTheme() throws Exception {
-        List<DiscRuins> overgrown = DiscThemeTest.shipped().discThemes().stream().flatMap(theme -> theme.troves().stream())
-                .filter(troves -> troves.kinds().stream().anyMatch(kind -> kind.pool().location().getPath().equals("disc_troves/hoard"))).toList();
-        assertEquals(3, overgrown.size(), "lush, jungle and mangrove");
-        for (DiscRuins troves : overgrown) {
+    void troveKindsRampWithDepthInEveryThemeThatHasThem() throws Exception {
+        List<DiscRuins> withTroves = DiscThemeTest.shipped().discThemes().stream().flatMap(theme -> theme.troves().stream())
+                .filter(troves -> troves.kinds().stream().anyMatch(kind -> kind.pool().location().getPath().matches("disc_troves/(crystal_|lava_)?hoard"))).toList();
+        assertEquals(5, withTroves.size(), "lush, jungle, mangrove, crystal and lava");
+        for (DiscRuins troves : withTroves) {
             for (double height : new double[] {0, 1}) {
                 double total = troves.kinds().stream().mapToDouble(kind -> kind.weight() * kind.byHeight().at(height)).sum();
                 for (DiscRuins.Kind kind : troves.kinds()) {
-                    String name = kind.pool().location().getPath().substring("disc_troves/".length());
+                    String name = kind.pool().location().getPath().substring("disc_troves/".length()).replaceFirst("^(crystal|lava)_", "");
                     double share = kind.weight() * kind.byHeight().at(height) / total;
                     boolean top = height == 1;
                     switch (name) {
