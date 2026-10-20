@@ -2,6 +2,7 @@ package dev.syrval.overgrownabyss;
 
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
+import dev.architectury.event.events.common.CommandRegistrationEvent;
 import dev.architectury.event.events.common.LifecycleEvent;
 import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.event.events.common.TickEvent;
@@ -9,6 +10,7 @@ import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import dev.architectury.registry.registries.DeferredRegister;
+import dev.syrval.overgrownabyss.compat.AbyssStatsCommand;
 import dev.syrval.overgrownabyss.compat.CurseTicker;
 import dev.syrval.overgrownabyss.compat.DiscRuinsPlacement;
 import dev.syrval.overgrownabyss.compat.DiscRuinsStructure;
@@ -61,6 +63,7 @@ public final class OvergrownAbyss {
         processorTypes.register("processor_list", () -> NestedProcessorListProcessor.TYPE);
         processorTypes.register();
 
+        CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> AbyssStatsCommand.register(dispatcher));
         registerCurse();
         registerGas();
 
