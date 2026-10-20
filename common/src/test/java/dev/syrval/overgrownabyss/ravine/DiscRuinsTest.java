@@ -323,6 +323,28 @@ class DiscRuinsTest {
     }
 
     @Test
+    void troveKindsRampWithDepthInEveryOvergrownTheme() throws Exception {
+        List<DiscRuins> overgrown = DiscThemeTest.shipped().discThemes().stream().flatMap(theme -> theme.troves().stream())
+                .filter(troves -> troves.kinds().stream().anyMatch(kind -> kind.pool().location().getPath().equals("disc_troves/hoard"))).toList();
+        assertEquals(3, overgrown.size(), "lush, jungle and mangrove");
+        for (DiscRuins troves : overgrown) {
+            for (double height : new double[] {0, 1}) {
+                double total = troves.kinds().stream().mapToDouble(kind -> kind.weight() * kind.byHeight().at(height)).sum();
+                for (DiscRuins.Kind kind : troves.kinds()) {
+                    String name = kind.pool().location().getPath().substring("disc_troves/".length());
+                    double share = kind.weight() * kind.byHeight().at(height) / total;
+                    boolean top = height == 1;
+                    switch (name) {
+                        case "hoard", "hoard_nest" -> assertTrue(top ? share == 0 : share > 0.1, name + " at height " + height + ": " + share);
+                        case "nest" -> assertTrue(top ? share < 0.1 : share > 0.1, name + " at height " + height + ": " + share);
+                        default -> { }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     void aPieceWithLayersInTheGroundStandsOnlyWhereTheRockIsThatDeep() throws Exception {
         List<Standing> onTheGround = withSink(0);
         List<Standing> oneLayerIn = withSink(1);
