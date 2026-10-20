@@ -253,6 +253,42 @@
           {
             "pool": "overgrown_abyss:disc_troves/marker",
             "weight": 1
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/hoard",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.5,
+              "top": 0
+            },
+            "groups": [
+              "hoard"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.8,
+              "top": 0.1
+            },
+            "sink": 3,
+            "groups": [
+              "nest"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/hoard_nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.4,
+              "top": 0
+            },
+            "sink": 3,
+            "groups": [
+              "hoard",
+              "nest"
+            ]
           }
         ]
       }
@@ -856,6 +892,42 @@
           {
             "pool": "overgrown_abyss:disc_troves/marker",
             "weight": 1
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/hoard",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.5,
+              "top": 0
+            },
+            "groups": [
+              "hoard"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.8,
+              "top": 0.1
+            },
+            "sink": 3,
+            "groups": [
+              "nest"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/hoard_nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.4,
+              "top": 0
+            },
+            "sink": 3,
+            "groups": [
+              "hoard",
+              "nest"
+            ]
           }
         ]
       },
@@ -1268,6 +1340,42 @@
           {
             "pool": "overgrown_abyss:disc_troves/marker",
             "weight": 1
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/hoard",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.5,
+              "top": 0
+            },
+            "groups": [
+              "hoard"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.8,
+              "top": 0.1
+            },
+            "sink": 3,
+            "groups": [
+              "nest"
+            ]
+          },
+          {
+            "pool": "overgrown_abyss:disc_troves/hoard_nest",
+            "weight": 1,
+            "by_height": {
+              "bottom": 0.4,
+              "top": 0
+            },
+            "sink": 3,
+            "groups": [
+              "hoard",
+              "nest"
+            ]
           }
         ]
       },
