@@ -401,7 +401,7 @@ hole's gas out once.
 | `cavern_mist` | the cavern floor | a heavier mist (`gravity` 1, `max_density` 0.4) that lies over the city |
 | `bog` | mangrove top, ponds and underside | green and heavy (`gravity` 2): it lies on mud and drips off. `opacity` 0.55 |
 | `ember` | nothing: the lava disc gives off no smoke (removed 2026-10-19), the medium is kept | rises (`gravity` -1.5) and fades fast (`decay` 0.12) |
-| `shimmer` | crystal top and underside | faint violet, glowing of itself (`emissive` 0.35), short-lived (`decay` 0.15) |
+| `shimmer` | nothing: the crystal discs give off no gas (removed 2026-10-19), the medium is kept | faint violet, glowing of itself (`emissive` 0.35), short-lived (`decay` 0.15) |
 
 - How much of a kind there is: a source's `rate`, and how many there are, `every`. Halving `every` doubles the sources.
 - Gas is dark where the discs are dark, as blocks are. `emissive` is the lever for gas that should show in the dark. Mist

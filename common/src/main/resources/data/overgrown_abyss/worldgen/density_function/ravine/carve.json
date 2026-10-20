@@ -1366,27 +1366,6 @@
           "on": "underside"
         }
       ],
-      "gas": [
-        {
-          "medium": "overgrown_abyss:shimmer",
-          "every": 50,
-          "shape": {
-            "type": "sphere",
-            "radius": 1.5
-          },
-          "rate": 0.8
-        },
-        {
-          "medium": "overgrown_abyss:shimmer",
-          "on": "underside",
-          "every": 90,
-          "shape": {
-            "type": "sphere",
-            "radius": 1.5
-          },
-          "rate": 0.6
-        }
-      ],
       "ground": {
         "outcrops": {
           "height": 6,
