@@ -24,7 +24,6 @@ the chasm dangerous enough to justify the reward. Three changes:
 
 - No telegraphing of the spawner (no cracked block, no particles, no sound).
 - Anti-goal: multi-chest troves that are barely more than one chest, or spawners in shallow troves often enough to feel unfair.
-  only slightly better than today's, or if spawners appear in shallow troves often enough to feel unfair.
 - No new dependencies. No changes to the volumetrics library.
 - Do not alter existing ruin (non-trove) generation.
 
