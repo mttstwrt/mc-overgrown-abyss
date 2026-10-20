@@ -284,12 +284,16 @@ each theme's `growth` (larger is thinner) and, for the mangrove's groves, their 
 grass, carpet and flowers do not block and can stay thick, while an azalea and a stalk of bamboo do. Neither theme has been
 measured for blocked ground since the jungle's trees were thinned and the ground cover added.
 - `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and kept to small discs
-  in the outer half, which the layout puts behind larger discs.
+  in the outer half, which the layout puts behind larger discs. It has troves of its own (amethyst, calcite, smooth basalt):
+  a plain cairn, and `crystal_hoard`, `crystal_nest` and `crystal_hoard_nest` kinds, small enough (3x3) for these discs.
+  A hoard has several chests; a nest has a skeleton spawner buried under it in stone, with no sign of it on the surface.
+  The kinds rise with depth (`by_height`): none of the hoards at the highest disc, most at the lowest. `hoards` and `nests` scale them.
 - `disc_lava` inherits nothing and is made by hand: basalt and obsidian with ponds of lava. It is rare and is
   kept low in a hole (the owner, 2026-10-11): about one disc in twenty-six, none of them higher than three tenths of the
   way from the hole's lowest disc to its highest (`weight` 2, `only.height.max` 0.3). On vanilla terrain that is the
   bottom row of discs and what stands on it, and in a deep hole the bottom two rows; a hole has one or two, and one hole
-  in three has none.
+  in three has none. It has troves of blackstone, gilded blackstone, magma and obsidian (`lava_cairn`, `lava_hoard`,
+  `lava_nest` with a blaze spawner, `lava_hoard_nest`). A site may be up to a fifth wet, so a pond can reach a trove's edge.
   - `weight` is how many: 1.5 gives a quarter fewer, 3 nearly half as many again. `only.height.max` is how high: 0.4 lets in
     the second row of a hole of four. It had `by_height` 3 to 0.1 and no limit before, which was one disc in nine at
     any height.
