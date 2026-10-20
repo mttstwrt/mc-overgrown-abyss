@@ -147,7 +147,7 @@ class DiscTroveFilesTest {
             CompoundTag data = datas.get(pos);
             if (name.equals(BuiltInRegistries.BLOCK.getKey(Blocks.SPAWNER).toString())) {
                 spawners++;
-                assertEquals(floor - 2, pos.get(1), "the spawner of " + location + " is 2 blocks under the floor");
+                assertEquals(floor - 1, pos.get(1), "the spawner of " + location + " is 1 block under the floor, so it spawns on it");
                 assertEquals(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(BlockEntityType.MOB_SPAWNER).toString(), data.getString("id"), location);
                 assertEquals(spawnerMob(file), data.getCompound("SpawnData").getCompound("entity").getString("id"), "the mob of " + location);
                 assertEquals(16, data.getShort("RequiredPlayerRange"), location);
@@ -157,7 +157,7 @@ class DiscTroveFilesTest {
                     BlockState beside = states.get(next);
                     assertNotNull(beside, "the spawner of " + location + " is walled in, not open at " + next);
                     assertTrue(beside.isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO) && !datas.containsKey(next),
-                            "the spawner of " + location + " has solid stone at " + next);
+                            "the spawner of " + location + " has a solid block, the cap above it a full non-container one, at " + next);
                 }
             } else if (CONTAINERS.contains(name)) {
                 containers++;

@@ -25,8 +25,9 @@ import org.junit.jupiter.api.Test;
  *
  * <p>Layer convention: a template's layer {@code sink} is the trove's floor (its containers' layer), the first layer above
  * the ground, and the pools' {@code sink} in the theme's settings must be that number. A kind without a spawner has its floor
- * at layer 0. One with a spawner has it at layer 3: a 3 by 3 by 3 cube of the style's stone fills layers 0 to 2 with the
- * spawner in its middle, 2 layers under the floor, and the floor stands on the cube.
+ * at layer 0. One with a spawner has it at layer 3: layers 0 and 1 are 3 by 3 of the style's stone, layer 2 is a ring of it
+ * around the spawner (in the middle, 1 layer under the floor, where mobs can spawn at the floor), and a masonry cap
+ * stands on the spawner at layer 3.
  */
 class TroveTemplates {
     enum Style { OVERGROWN, CRYSTAL, LAVA }
@@ -116,7 +117,6 @@ class TroveTemplates {
                     layout.chest(1, floor, 2, "south");
                     layout.block(1, floor, 0, stone[1]);
                     layout.block(0, floor, 1, stone[0]);
-                    layout.block(2, floor, 1, stone[0]);
                     layout.block(1, floor + 1, 0, stone[2]);
                 }
             }
@@ -144,11 +144,15 @@ class TroveTemplates {
             for (int x = 0; x < 3; x++) {
                 for (int y = 0; y < NEST_FLOOR; y++) {
                     for (int z = 0; z < 3; z++) {
-                        layout.block(x, y, z, shell(style));
+                        if (y < NEST_FLOOR - 1 || x != 1 || z != 1) {
+                            layout.block(x, y, z, shell(style));
+                        }
                     }
                 }
             }
-            layout.spawner(1, 1, 1, mob(style));
+            layout.spawner(1, NEST_FLOOR - 1, 1, mob(style));
+            // The cap over the spawner is masonry like the rest, so that it is not seen as a marker.
+            layout.block(1, floor, 1, stone[1]);
         }
         return layout.save();
     }
