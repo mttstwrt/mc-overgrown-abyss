@@ -10,6 +10,8 @@ import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import dev.architectury.registry.registries.DeferredRegister;
+import dev.syrval.overgrownabyss.basilisk.BasiliskEntities;
+import dev.syrval.overgrownabyss.basilisk.client.BasiliskClient;
 import dev.syrval.overgrownabyss.compat.AbyssStatsCommand;
 import dev.syrval.overgrownabyss.compat.CurseTicker;
 import dev.syrval.overgrownabyss.compat.DiscRuinsPlacement;
@@ -62,6 +64,11 @@ public final class OvergrownAbyss {
         processorTypes.register("swap_blocks", () -> SwapBlocksProcessor.TYPE);
         processorTypes.register("processor_list", () -> NestedProcessorListProcessor.TYPE);
         processorTypes.register();
+
+        BasiliskEntities.register();
+        if (Platform.getEnvironment() == Env.CLIENT) {
+            BasiliskClient.register();
+        }
 
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> AbyssStatsCommand.register(dispatcher));
         registerCurse();
