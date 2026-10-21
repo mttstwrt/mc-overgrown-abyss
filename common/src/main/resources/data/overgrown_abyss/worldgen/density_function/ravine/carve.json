@@ -236,12 +236,21 @@
           "top": 1
         },
         "loot": {
-          "depth": 2,
-          "distance": 1,
-          "tables": [
+          "mix": [
+            {
+              "table": "minecraft:chests/abandoned_mineshaft",
+              "weight": 1,
+              "by_height": { "bottom": 0, "top": 2 }
+            },
+            {
+              "table": "minecraft:chests/end_city_treasure",
+              "weight": 1,
+              "by_height": { "bottom": 2, "top": 0 }
+            },
             {
               "table": "minecraft:chests/jungle_temple",
-              "from": 0
+              "weight": 6,
+              "by_height": { "bottom": 1, "top": 1 }
             }
           ]
         },
@@ -875,12 +884,21 @@
           "top": 1
         },
         "loot": {
-          "depth": 2,
-          "distance": 1,
-          "tables": [
+          "mix": [
+            {
+              "table": "minecraft:chests/abandoned_mineshaft",
+              "weight": 1,
+              "by_height": { "bottom": 0, "top": 2 }
+            },
+            {
+              "table": "minecraft:chests/end_city_treasure",
+              "weight": 1,
+              "by_height": { "bottom": 2, "top": 0 }
+            },
             {
               "table": "minecraft:chests/jungle_temple",
-              "from": 0
+              "weight": 6,
+              "by_height": { "bottom": 1, "top": 1 }
             }
           ]
         },
@@ -1323,12 +1341,26 @@
           "top": 1
         },
         "loot": {
-          "depth": 2,
-          "distance": 1,
-          "tables": [
+          "mix": [
             {
-              "table": "minecraft:chests/jungle_temple",
-              "from": 0
+              "table": "minecraft:chests/abandoned_mineshaft",
+              "weight": 1,
+              "by_height": { "bottom": 0, "top": 2 }
+            },
+            {
+              "table": "minecraft:chests/end_city_treasure",
+              "weight": 1,
+              "by_height": { "bottom": 2, "top": 0 }
+            },
+            {
+              "table": "minecraft:chests/buried_treasure",
+              "weight": 2,
+              "by_height": { "bottom": 1, "top": 1 }
+            },
+            {
+              "table": "minecraft:chests/trial_chambers/reward",
+              "weight": 2,
+              "by_height": { "bottom": 1, "top": 1 }
             }
           ]
         },
@@ -1512,12 +1544,31 @@
           "top": 1
         },
         "loot": {
-          "depth": 2,
-          "distance": 1,
-          "tables": [
+          "mix": [
             {
-              "table": "minecraft:chests/jungle_temple",
-              "from": 0
+              "table": "minecraft:chests/abandoned_mineshaft",
+              "weight": 1,
+              "by_height": { "bottom": 0, "top": 2 }
+            },
+            {
+              "table": "minecraft:chests/end_city_treasure",
+              "weight": 1,
+              "by_height": { "bottom": 2, "top": 0 }
+            },
+            {
+              "table": "minecraft:chests/ancient_city",
+              "weight": 2,
+              "by_height": { "bottom": 1, "top": 1 }
+            },
+            {
+              "table": "minecraft:chests/stronghold_library",
+              "weight": 2,
+              "by_height": { "bottom": 1, "top": 1 }
+            },
+            {
+              "table": "minecraft:chests/trial_chambers/reward",
+              "weight": 2,
+              "by_height": { "bottom": 1, "top": 1 }
             }
           ]
         },
@@ -1798,12 +1849,26 @@
           "top": 1
         },
         "loot": {
-          "depth": 2,
-          "distance": 1,
-          "tables": [
+          "mix": [
             {
-              "table": "minecraft:chests/jungle_temple",
-              "from": 0
+              "table": "minecraft:chests/abandoned_mineshaft",
+              "weight": 1,
+              "by_height": { "bottom": 0, "top": 2 }
+            },
+            {
+              "table": "minecraft:chests/end_city_treasure",
+              "weight": 1,
+              "by_height": { "bottom": 2, "top": 0 }
+            },
+            {
+              "table": "minecraft:chests/nether_bridge",
+              "weight": 3,
+              "by_height": { "bottom": 1, "top": 1 }
+            },
+            {
+              "table": "minecraft:chests/ruined_portal",
+              "weight": 3,
+              "by_height": { "bottom": 1, "top": 1 }
             }
           ]
         },
