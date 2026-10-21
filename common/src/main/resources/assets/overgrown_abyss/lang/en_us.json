@@ -1,0 +1,10 @@
+{
+  "entity.overgrown_abyss.basilisk": "Basilisk",
+  "entity.overgrown_abyss.basilisk_segment": "Basilisk Segment",
+  "subtitles.entity.basilisk.ambient": "Basilisk hisses",
+  "subtitles.entity.basilisk.hurt": "Basilisk shrieks",
+  "subtitles.entity.basilisk.death": "Basilisk dies",
+  "subtitles.entity.basilisk.rear": "Basilisk rears up",
+  "subtitles.entity.basilisk.strike": "Basilisk strikes",
+  "subtitles.entity.basilisk.slither": "Basilisk slithers"
+}
