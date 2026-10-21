@@ -101,6 +101,11 @@ public class Basilisk extends Monster {
     private int groggyTicks;  // not saved
     private int idleTicks = -1; // not saved; counts down while awake without a target, -1 = roll a new duration
 
+    @Override
+    public int getMaxSpawnClusterSize() {
+        return 1;
+    }
+
     public Basilisk(EntityType<? extends Basilisk> type, Level level) {
         super(type, level);
         this.xpReward = 30;

@@ -3,6 +3,7 @@ package dev.syrval.overgrownabyss.basilisk;
 import java.util.function.Supplier;
 
 import dev.architectury.registry.level.entity.EntityAttributeRegistry;
+import dev.architectury.registry.level.entity.SpawnPlacementsRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
 import dev.syrval.overgrownabyss.OvergrownAbyss;
@@ -13,6 +14,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 /** Entity types and sounds of the basilisk. Call {@link #register()} once from {@code OvergrownAbyss.init()}. */
 public final class BasiliskEntities {
@@ -56,5 +59,6 @@ public final class BasiliskEntities {
         ENTITIES.register();
         SOUNDS.register();
         EntityAttributeRegistry.register(BASILISK, Basilisk::createAttributes);
+        SpawnPlacementsRegistry.register(BASILISK, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, BasiliskSpawning::canSpawn);
     }
 }
