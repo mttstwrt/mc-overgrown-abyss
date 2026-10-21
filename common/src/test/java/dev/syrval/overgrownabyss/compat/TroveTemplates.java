@@ -61,7 +61,7 @@ class TroveTemplates {
         return switch (style) {
             case OVERGROWN -> "minecraft:cave_spider";
             case CRYSTAL -> "minecraft:skeleton";
-            case LAVA -> "minecraft:blaze";
+            case LAVA -> "minecraft:wither_skeleton";
         };
     }
 

@@ -91,7 +91,7 @@ class DiscTroveFilesTest {
     private static final List<String> STYLES = List.of("crystal_", "lava_");
 
     private static String spawnerMob(String file) {
-        return file.startsWith("crystal_") ? "minecraft:skeleton" : file.startsWith("lava_") ? "minecraft:blaze" : "minecraft:cave_spider";
+        return file.startsWith("crystal_") ? "minecraft:skeleton" : file.startsWith("lava_") ? "minecraft:wither_skeleton" : "minecraft:cave_spider";
     }
 
     /** The kind of a trove from its file, as {@code trove/<style>_<kind>_<n>}; a marker is as small as a cairn. */

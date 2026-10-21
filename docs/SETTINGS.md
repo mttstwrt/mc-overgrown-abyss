@@ -293,7 +293,7 @@ measured for blocked ground since the jungle's trees were thinned and the ground
   way from the hole's lowest disc to its highest (`weight` 2, `only.height.max` 0.3). On vanilla terrain that is the
   bottom row of discs and what stands on it, and in a deep hole the bottom two rows; a hole has one or two, and one hole
   in three has none. It has troves of blackstone, gilded blackstone, magma and obsidian (`lava_cairn`, `lava_hoard`,
-  `lava_nest` with a blaze spawner, `lava_hoard_nest`). A site may be up to a fifth wet, so a pond can reach a trove's edge.
+  `lava_nest` with a wither skeleton spawner, `lava_hoard_nest`). A site may be up to a fifth wet, so a pond can reach a trove's edge.
   - `weight` is how many: 1.5 gives a quarter fewer, 3 nearly half as many again. `only.height.max` is how high: 0.4 lets in
     the second row of a hole of four. It had `by_height` 3 to 0.1 and no limit before, which was one disc in nine at
     any height.
