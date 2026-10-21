@@ -83,7 +83,7 @@ public class BasiliskAttackGoal extends Goal {
     @Override
     public boolean canUse() {
         LivingEntity t = basilisk.getTarget();
-        if (t == null || !t.isAlive() || basilisk.getPhase() != BasiliskPhase.IDLE) return false;
+        if (t == null || !t.isAlive() || basilisk.isGroggy() || basilisk.getPhase() != BasiliskPhase.IDLE) return false;
         double d = basilisk.distanceTo(t);
         if (d <= BITE_RANGE) {
             return basilisk.tickCount >= biteCooldownUntil && Math.abs(t.getY() - basilisk.getY()) <= 2.5D

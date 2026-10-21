@@ -10,6 +10,7 @@ import dev.syrval.overgrownabyss.basilisk.entity.ai.TerrainProbe;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -21,6 +22,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.resources.ResourceLocation;
@@ -65,8 +67,20 @@ public class Basilisk extends Monster {
     private static final ResourceLocation ENGAGED_SPEED_ID =
         ResourceLocation.fromNamespaceAndPath(OvergrownAbyss.MOD_ID, "basilisk_engaged_speed");
 
+    // --- sleep / patrol (first-guess numbers)
+    private static final int WAKE_CHECK_TICKS = 5;
+    private static final double WAKE_RADIUS = 10.0D;
+    private static final double WAKE_RADIUS_SNEAK = 4.0D;
+    private static final double WAKE_RADIUS_SPRINT = 16.0D;
+    private static final int WAKE_GROGGY_TICKS = 15;
+    private static final int IDLE_SLEEP_MIN = 600;
+    private static final int IDLE_SLEEP_MAX = 1200;
+    private static final double PATROL_SPEED = 0.6D;
+
     private static final EntityDataAccessor<Integer> DATA_PHASE =
         SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_SLEEPING =
+        SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.BOOLEAN);
 
     private final BasiliskSegment[] hitParts = new BasiliskSegment[SEGMENT_COUNT + 1]; // slot 0 = raised-head hitbox
     private final BasiliskSegmentChain chain = new BasiliskSegmentChain(SEGMENT_COUNT);
@@ -74,6 +88,9 @@ public class Basilisk extends Monster {
 
     private float rearAnim, rearAnimO;
     private float jawAnim, jawAnimO;
+
+    private int groggyTicks;  // not saved
+    private int idleTicks = -1; // not saved; counts down while awake without a target, -1 = roll a new duration
 
     public Basilisk(EntityType<? extends Basilisk> type, Level level) {
         super(type, level);
@@ -104,6 +121,7 @@ public class Basilisk extends Monster {
     protected void defineSynchedData(SynchedEntityData.Builder builder) { // VERSION-SENSITIVE (builder form is 1.21+)
         super.defineSynchedData(builder);
         builder.define(DATA_PHASE, BasiliskPhase.IDLE.ordinal());
+        builder.define(DATA_SLEEPING, false);
     }
 
     @Override
@@ -111,7 +129,7 @@ public class Basilisk extends Monster {
         this.goalSelector.addGoal(1, new FloatGoal(this));
         this.goalSelector.addGoal(2, new BasiliskAttackGoal(this));
         this.goalSelector.addGoal(3, new BasiliskStalkGoal(this));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, PATROL_SPEED));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 12.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
@@ -126,6 +144,7 @@ public class Basilisk extends Monster {
     /** Engaged = has a target: a transient speed bonus (never saved) makes it about 1.5x faster than on patrol. */
     @Override
     public void setTarget(@Nullable LivingEntity target) {
+        if (target != null && isAsleep()) return; // a sleeper acquires nothing; wake() sets the target itself
         super.setTarget(target);
         if (this.level().isClientSide) return;
         AttributeInstance speed = getAttribute(Attributes.MOVEMENT_SPEED);
@@ -136,6 +155,94 @@ public class Basilisk extends Monster {
         } else if (target == null && boosted) {
             speed.removeModifier(ENGAGED_SPEED_ID);
         }
+    }
+
+    // ---------------------------------------------------------------- sleep
+
+    /** Named isAsleep because LivingEntity.isSleeping() is the bed pose. */
+    public boolean isAsleep() {
+        return this.entityData.get(DATA_SLEEPING);
+    }
+
+    public void setAsleep(boolean asleep) {
+        this.entityData.set(DATA_SLEEPING, asleep);
+    }
+
+    /** True for a moment after waking: the attack goal waits. */
+    public boolean isGroggy() {
+        return groggyTicks > 0;
+    }
+
+    /** A sleeper skips all AI and movement input (LivingEntity.aiStep checks this before serverAiStep). */
+    @Override
+    protected boolean isImmobile() {
+        return super.isImmobile() || isAsleep();
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putBoolean("Sleeping", isAsleep());
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        setAsleep(tag.getBoolean("Sleeping"));
+    }
+
+    private void fallAsleep() {
+        setAsleep(true);
+        idleTicks = -1;
+        this.getNavigation().stop();
+        this.goalSelector.getAvailableGoals().forEach(net.minecraft.world.entity.ai.goal.WrappedGoal::stop);
+        this.setZza(0.0F);
+        this.setXxa(0.0F);
+    }
+
+    /** @param cause the player who triggered it (proximity) or the attacker; becomes the target */
+    private void wake(@Nullable LivingEntity cause) {
+        setAsleep(false);
+        groggyTicks = WAKE_GROGGY_TICKS;
+        idleTicks = -1;
+        this.playSound(BasiliskEntities.SND_REAR.get(), 1.4F, 0.9F + this.random.nextFloat() * 0.2F);
+        if (cause != null) setTarget(cause);
+    }
+
+    private void tickSleep() {
+        if (groggyTicks > 0) groggyTicks--;
+        if (isAsleep()) {
+            Vec3 v = getDeltaMovement();
+            setDeltaMovement(0.0D, v.y, 0.0D);
+            if (this.tickCount % WAKE_CHECK_TICKS == 0) {
+                Player p = this.level().getNearestPlayer(getX(), getY(), getZ(), WAKE_RADIUS_SPRINT, EntitySelector.NO_CREATIVE_OR_SPECTATOR);
+                if (p != null && distanceTo(p) <= wakeRadius(p)) wake(p);
+            }
+            return;
+        }
+        if (getTarget() != null || getPhase() != BasiliskPhase.IDLE) {
+            idleTicks = -1;
+        } else if (onGround() && !isInWaterOrBubble() && !isInLava()) {
+            if (idleTicks < 0) idleTicks = IDLE_SLEEP_MIN + this.random.nextInt(IDLE_SLEEP_MAX - IDLE_SLEEP_MIN + 1);
+            if (--idleTicks == 0) fallAsleep();
+        }
+    }
+
+    private double wakeRadius(Player p) {
+        double radius = p.isCrouching() ? WAKE_RADIUS_SNEAK : WAKE_RADIUS;
+        if (p.isSprinting()) radius = WAKE_RADIUS_SPRINT;
+        if (!hasLineOfSight(p)) radius *= 0.5D;
+        return radius;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) { // VERSION-SENSITIVE (1.21.5+: hurtServer)
+        boolean wasAsleep = isAsleep();
+        boolean hurt = super.hurt(source, amount);
+        if (hurt && wasAsleep && !this.level().isClientSide) {
+            wake(source.getEntity() instanceof LivingEntity attacker ? attacker : null);
+        }
+        return hurt;
     }
 
     // ---------------------------------------------------------------- phase + animation state
@@ -171,6 +278,7 @@ public class Basilisk extends Monster {
     @Override
     public void tick() {
         super.tick();
+        if (!this.level().isClientSide) tickSleep();
         tickAnimations();
         updateChain();
         if (!this.level().isClientSide) ensureHitParts();
@@ -335,6 +443,7 @@ public class Basilisk extends Monster {
 
     @Override
     protected SoundEvent getAmbientSound() {
+        if (isAsleep()) return null;
         return BasiliskEntities.SND_AMBIENT.get();
     }
 
