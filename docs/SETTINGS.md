@@ -168,6 +168,13 @@ in its middle. Its numbers:
     chest the mod puts where a template has a data marker named `chest`, as vanilla's ocean ruins have theirs. Without
     `loot`, or on a disc whose rank reaches no table, chests keep what their pool's processors gave them and no chest is
     put at a marker. A borrowed structure's piece always keeps its own loot.
+    Instead of `tables`, `loot` may have a `mix` (exactly one of the two): a list of `{"table": ..., "weight": ...,
+    "by_height": {"bottom": ..., "top": ...}}` with no boundaries between the tables. A disc's weight for an entry is its
+    `weight` times the `by_height` ramp at the disc's height (`by_height` left out is flat; `bottom` is the hole's lowest
+    disc, `top` its highest), and each site (a trove, or a ruin) rolls its one table from those weights once, fixed by the
+    world seed. `depth` and `distance` do nothing with a mix. Every entry needs a weight, and the weights must add up to
+    more than 0 at the bottom and at the top. The troves of the five themes use a mix: vanilla mineshaft loot rises with
+    height and end city loot falls, with the theme's own tables flat beside them.
   - `kinds`: template pools.
     - `pool`: a template pool; one of its elements is stood on the disc, turned any of four ways about its middle. Only an
       element that is one template is offered (`single_pool_element`, `legacy_single_pool_element`). Nothing is joined on
