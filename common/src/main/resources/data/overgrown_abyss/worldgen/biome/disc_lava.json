@@ -86,6 +86,12 @@
         "maxCount": 5,
         "minCount": 2,
         "weight": 100
+      },
+      {
+        "type": "overgrown_abyss:basilisk",
+        "maxCount": 1,
+        "minCount": 1,
+        "weight": 6
       }
     ],
     "underground_water_creature": [],
