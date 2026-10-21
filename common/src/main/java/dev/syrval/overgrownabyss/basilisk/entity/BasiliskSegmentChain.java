@@ -15,6 +15,11 @@ package dev.syrval.overgrownabyss.basilisk.entity;
 public final class BasiliskSegmentChain {
     public static final double SPACING = 0.95D;
     public static final int NECK_SEGMENTS = 3;
+    /** Sleeping coil: Archimedean spiral r = COIL_START_RADIUS + COIL_RADIUS_PER_RAD * theta around the head. */
+    public static final double COIL_START_RADIUS = 0.9D;
+    public static final double COIL_RADIUS_PER_RAD = 0.17D; // 1.07 blocks between turns
+    /** Ticks to blend into / out of the coil. */
+    public static final int COIL_BLEND_TICKS = 10;
 
     /** Returns the standing height of the ground under (x, y, z), or NaN if none is close. */
     public interface GroundSampler {
@@ -24,6 +29,8 @@ public final class BasiliskSegmentChain {
     public final int count;
     public final double[] x, y, z, px, py, pz;
     public final float[] yaw, pitch, pyaw, ppitch;
+    /** 0 = follow chain, 1 = fully coiled. */
+    public float coil, pcoil;
 
     public BasiliskSegmentChain(int count) {
         this.count = count;
@@ -52,6 +59,11 @@ public final class BasiliskSegmentChain {
      * @param rear 0..1 raw rear progress (eased internally)
      */
     public void update(double hx, double hy, double hz, float headYaw, float rear, GroundSampler ground) {
+        update(hx, hy, hz, headYaw, rear, false, ground);
+    }
+
+    /** @param coiled whether the body should lie in the sleeping coil (blended in over COIL_BLEND_TICKS) */
+    public void update(double hx, double hy, double hz, float headYaw, float rear, boolean coiled, GroundSampler ground) {
         for (int i = 0; i < count; i++) {
             px[i] = x[i]; py[i] = y[i]; pz[i] = z[i];
             pyaw[i] = yaw[i]; ppitch[i] = pitch[i];
@@ -113,6 +125,67 @@ public final class BasiliskSegmentChain {
             yaw[i] = horiz > 1.0E-3D ? (float) (Math.toDegrees(Math.atan2(mz, mx)) + 90.0D) : headYaw;
             pitch[i] = (float) Math.toDegrees(Math.atan2(my, horiz));
         }
+
+        pcoil = coil;
+        double step = 1.0D / COIL_BLEND_TICKS;
+        coil = (float) Math.max(0.0D, Math.min(1.0D, coil + (coiled ? step : -step)));
+        if (coil > 0.0F) applyCoil(hx, hy, hz, headYaw, ground);
+    }
+
+    private void applyCoil(double hx, double hy, double hz, float headYaw, GroundSampler ground) {
+        double e = coil * coil * (3.0D - 2.0D * coil);
+        double[][] layout = coilLayout(count, headYaw);
+        double lastX = 0.0D, lastZ = 0.0D;
+        for (int i = 0; i < count; i++) {
+            double ox = layout[i][0], oz = layout[i][1];
+            double tx = hx + ox, tz = hz + oz;
+            double ty = hy;
+            double g = ground.groundY(tx, hy + 0.5D, tz);
+            if (!Double.isNaN(g) && Math.abs(g - hy) < 1.5D) ty = g;
+            x[i] = lerp(e, x[i], tx);
+            y[i] = lerp(e, y[i], ty);
+            z[i] = lerp(e, z[i], tz);
+            float coilYaw = (float) (Math.toDegrees(Math.atan2(oz - lastZ, ox - lastX)) + 90.0D);
+            yaw[i] = yaw[i] + wrapDegrees(coilYaw - yaw[i]) * (float) e;
+            pitch[i] = pitch[i] * (float) (1.0D - e);
+            lastX = ox; lastZ = oz;
+        }
+    }
+
+    /**
+     * Horizontal offsets from the head of each body segment on the sleeping spiral. Segment 0 starts straight
+     * behind the head at COIL_START_RADIUS; each next segment is exactly SPACING from the previous one.
+     * Depends only on yaw, so client and server agree.
+     */
+    public static double[][] coilLayout(int count, float headYaw) {
+        double rad = Math.toRadians(headYaw);
+        double theta0 = Math.atan2(-Math.cos(rad), Math.sin(rad)); // direction behind the head
+        double[][] out = new double[count][2];
+        double theta = 0.0D;
+        for (int i = 0; i < count; i++) {
+            if (i > 0) {
+                double r1 = COIL_START_RADIUS + COIL_RADIUS_PER_RAD * theta;
+                double lo = 0.0D, hi = Math.PI;
+                for (int k = 0; k < 40; k++) {
+                    double mid = 0.5D * (lo + hi);
+                    double r2 = COIL_START_RADIUS + COIL_RADIUS_PER_RAD * (theta + mid);
+                    double chord2 = r1 * r1 + r2 * r2 - 2.0D * r1 * r2 * Math.cos(mid);
+                    if (chord2 < SPACING * SPACING) lo = mid; else hi = mid;
+                }
+                theta += 0.5D * (lo + hi);
+            }
+            double r = COIL_START_RADIUS + COIL_RADIUS_PER_RAD * theta;
+            out[i][0] = Math.cos(theta0 + theta) * r;
+            out[i][1] = Math.sin(theta0 + theta) * r;
+        }
+        return out;
+    }
+
+    private static float wrapDegrees(float d) {
+        d %= 360.0F;
+        if (d >= 180.0F) d -= 360.0F;
+        if (d < -180.0F) d += 360.0F;
+        return d;
     }
 
     private static double lerp(double t, double a, double b) {

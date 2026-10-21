@@ -59,6 +59,8 @@ public class Basilisk extends Monster {
     public static final int SEGMENT_COUNT = 10;
     /** How high the head is carried when fully reared, in blocks. Shared by renderer and head hitbox. */
     public static final float HEAD_RAISE = 1.55F;
+    /** How high the resting head sits at the middle of the sleeping coil, in blocks. */
+    public static final float COIL_HEAD_RAISE = 0.4F;
 
     /** Patrol/idle movement_speed is 0.30 (see createAttributes). While it has a target this much is added: 0.45 total. */
     /** Poison I duration applied by a landed bite or lunge (5 s). */
@@ -269,6 +271,11 @@ public class Basilisk extends Monster {
         return t * t * (3.0F - 2.0F * t);
     }
 
+    /** Extra head height from the sleeping coil, interpolated for rendering. */
+    public float coilRaise(float partialTick) {
+        return COIL_HEAD_RAISE * ease(Mth.lerp(partialTick, chain.pcoil, chain.coil));
+    }
+
     public BasiliskSegmentChain getChain() {
         return chain;
     }
@@ -298,7 +305,7 @@ public class Basilisk extends Monster {
             chain.reset(getX(), getY(), getZ(), getYRot());
             chainReady = true;
         }
-        chain.update(getX(), getY(), getZ(), getYRot(), rearAnim,
+        chain.update(getX(), getY(), getZ(), getYRot(), rearAnim, isAsleep(),
             (x, y, z) -> TerrainProbe.groundY(this.level(), x, y, z, 3));
     }
 
@@ -308,7 +315,7 @@ public class Basilisk extends Monster {
     void placePart(BasiliskSegment part) {
         int index = part.getIndex();
         if (index < 0) {
-            part.setPos(getX(), getY() + HEAD_RAISE * ease(rearAnim), getZ());
+            part.setPos(getX(), getY() + HEAD_RAISE * ease(rearAnim) + coilRaise(1.0F), getZ());
         } else if (index < SEGMENT_COUNT) {
             part.setPos(chain.x[index], chain.y[index], chain.z[index]);
         }

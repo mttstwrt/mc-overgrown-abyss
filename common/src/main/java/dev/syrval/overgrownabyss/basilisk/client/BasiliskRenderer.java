@@ -48,7 +48,7 @@ public class BasiliskRenderer extends MobRenderer<Basilisk, BasiliskModel> {
     protected void scale(Basilisk entity, PoseStack stack, float partialTick) {
         super.scale(entity, stack, partialTick);
         // This runs in the flipped model space (y points down), so a negative translate lifts the head.
-        float raise = Basilisk.HEAD_RAISE * Basilisk.ease(entity.getRearAnim(partialTick));
+        float raise = Basilisk.HEAD_RAISE * Basilisk.ease(entity.getRearAnim(partialTick)) + entity.coilRaise(partialTick);
         stack.translate(0.0F, -raise, 0.0F);
     }
 
