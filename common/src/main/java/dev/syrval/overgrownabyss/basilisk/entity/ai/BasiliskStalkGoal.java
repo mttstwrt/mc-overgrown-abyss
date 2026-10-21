@@ -17,8 +17,13 @@ import net.minecraft.world.phys.Vec3;
  * strike goal, which preempts this goal (lower priority number) whenever it is ready.
  */
 public class BasiliskStalkGoal extends Goal {
-    private static final double RING_RADIUS = 6.5D;
+    private static final double RING_RADIUS = 5.5D;
     private static final double RING_ROTATION = 0.9D; // radians advanced per repath, like the naga's 1.0
+    private static final double CHASE_DISTANCE = 12.0D;   // beyond this, run straight at the target
+    private static final double CLOSE_IN_CHANCE = 0.4D;   // per repath inside CHASE_DISTANCE: dart in to bite range instead of circling
+    private static final double MOVE_SPEED = 1.0D;        // multiplier on movement_speed, which already carries the engaged bonus
+    private static final int REPATH_MIN = 6;              // ticks between repaths; short, so it re-positions quickly
+    private static final int REPATH_RANGE = 6;
 
     private final Basilisk basilisk;
     private boolean clockwise;
@@ -73,22 +78,22 @@ public class BasiliskStalkGoal extends Goal {
         }
 
         if (--repathIn > 0) return;
-        repathIn = 10 + basilisk.getRandom().nextInt(10);
+        repathIn = REPATH_MIN + basilisk.getRandom().nextInt(REPATH_RANGE);
         if (basilisk.getRandom().nextInt(4) == 0) clockwise = !clockwise;
 
         double distance = basilisk.distanceTo(target);
-        if (distance > 12.0D) {
-            basilisk.getNavigation().moveTo(target, 1.0D);
+        if (distance > CHASE_DISTANCE || basilisk.getRandom().nextDouble() < CLOSE_IN_CHANCE) {
+            basilisk.getNavigation().moveTo(target, MOVE_SPEED);
         } else {
-            Vec3 p = ringPoint(target, RING_RADIUS, RING_ROTATION);
-            if (!basilisk.getNavigation().moveTo(p.x, p.y, p.z, 1.0D)) {
-                basilisk.getNavigation().moveTo(target, 1.0D); // ring point unreachable (trees, cliff): just close in
+            Vec3 p = ringPoint(basilisk, target, RING_RADIUS, RING_ROTATION, clockwise);
+            if (!basilisk.getNavigation().moveTo(p.x, p.y, p.z, MOVE_SPEED)) {
+                basilisk.getNavigation().moveTo(target, MOVE_SPEED); // ring point unreachable (trees, cliff): just close in
             }
         }
     }
 
     /** NAGA: findCirclePoint. A point on a ring around the target, rotated a little ahead of where we are. */
-    private Vec3 ringPoint(LivingEntity target, double radius, double rotation) {
+    static Vec3 ringPoint(Basilisk basilisk, LivingEntity target, double radius, double rotation, boolean clockwise) {
         double vx = basilisk.getX() - target.getX();
         double vz = basilisk.getZ() - target.getZ();
         double angle = Math.atan2(vz, vx) + (clockwise ? rotation : -rotation);

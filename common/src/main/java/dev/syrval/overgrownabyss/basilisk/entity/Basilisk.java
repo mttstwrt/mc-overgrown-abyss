@@ -1,5 +1,6 @@
 package dev.syrval.overgrownabyss.basilisk.entity;
 
+import dev.syrval.overgrownabyss.OvergrownAbyss;
 import dev.syrval.overgrownabyss.basilisk.BasiliskEntities;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskMoveControl;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskNavigation;
@@ -22,6 +23,9 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -39,6 +43,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Jungle ambush predator: chain-of-blocks body like the Twilight Forest naga, but with its own pathing
@@ -54,6 +59,11 @@ public class Basilisk extends Monster {
     public static final float HEAD_RAISE = 1.55F;
     /** Damage multiplier while the head is down after a lunge. */
     private static final float RECOVER_DAMAGE_MULTIPLIER = 1.25F;
+
+    /** Patrol/idle movement_speed is 0.30 (see createAttributes). While it has a target this much is added: 0.45 total. */
+    private static final double ENGAGED_SPEED_BONUS = 0.15D;
+    private static final ResourceLocation ENGAGED_SPEED_ID =
+        ResourceLocation.fromNamespaceAndPath(OvergrownAbyss.MOD_ID, "basilisk_engaged_speed");
 
     private static final EntityDataAccessor<Integer> DATA_PHASE =
         SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.INT);
@@ -112,6 +122,21 @@ public class Basilisk extends Monster {
     @Override
     protected PathNavigation createNavigation(Level level) {
         return new BasiliskNavigation(this, level);
+    }
+
+    /** Engaged = has a target: a transient speed bonus (never saved) makes it about 1.5x faster than on patrol. */
+    @Override
+    public void setTarget(@Nullable LivingEntity target) {
+        super.setTarget(target);
+        if (this.level().isClientSide) return;
+        AttributeInstance speed = getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed == null) return;
+        boolean boosted = speed.getModifier(ENGAGED_SPEED_ID) != null;
+        if (target != null && !boosted) {
+            speed.addTransientModifier(new AttributeModifier(ENGAGED_SPEED_ID, ENGAGED_SPEED_BONUS, AttributeModifier.Operation.ADD_VALUE));
+        } else if (target == null && boosted) {
+            speed.removeModifier(ENGAGED_SPEED_ID);
+        }
     }
 
     // ---------------------------------------------------------------- phase + animation state
