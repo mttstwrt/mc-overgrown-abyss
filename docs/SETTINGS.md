@@ -286,7 +286,7 @@ measured for blocked ground since the jungle's trees were thinned and the ground
 - `disc_crystal` inherits nothing and is made by hand (amethyst over calcite, with clusters); it is rare and kept to small discs
   in the outer half, which the layout puts behind larger discs. It has troves of its own (amethyst, calcite, smooth basalt):
   a plain cairn, and `crystal_hoard`, `crystal_nest` and `crystal_hoard_nest` kinds, small enough (3x3) for these discs.
-  A hoard has several chests; a nest has a skeleton spawner buried under it in stone, with no sign of it on the surface.
+  A hoard has several chests; a nest has a vex spawner buried under it in stone, with no sign of it on the surface.
   The kinds rise with depth (`by_height`): none of the hoards at the highest disc, most at the lowest. `hoards` and `nests` scale them.
 - `disc_lava` inherits nothing and is made by hand: basalt and obsidian with ponds of lava. It is rare and is
   kept low in a hole (the owner, 2026-10-11): about one disc in twenty-six, none of them higher than three tenths of the

@@ -60,7 +60,7 @@ class TroveTemplates {
     static String mob(Style style) {
         return switch (style) {
             case OVERGROWN -> "minecraft:cave_spider";
-            case CRYSTAL -> "minecraft:skeleton";
+            case CRYSTAL -> "minecraft:vex";
             case LAVA -> "minecraft:wither_skeleton";
         };
     }
