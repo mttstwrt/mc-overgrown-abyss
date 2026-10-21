@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -25,6 +26,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -41,6 +44,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.AABB;
@@ -78,6 +82,9 @@ public class Basilisk extends Monster {
     private static final int IDLE_SLEEP_MIN = 600;
     private static final int IDLE_SLEEP_MAX = 1200;
     private static final double PATROL_SPEED = 0.6D;
+    private static final double SPAWN_SLEEP_CHANCE = 0.6D;
+    /** Sleeping or engaged basilisks only despawn beyond this distance (blocks). */
+    private static final double KEEP_LOADED_DISTANCE = 128.0D;
 
     private static final EntityDataAccessor<Integer> DATA_PHASE =
         SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.INT);
@@ -191,6 +198,24 @@ public class Basilisk extends Monster {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         setAsleep(tag.getBoolean("Sleeping"));
+    }
+
+    /** Natural spawns (worldgen, spawner, structures) may start asleep; commands, eggs and the like stay awake. */
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType,
+                                        @Nullable SpawnGroupData spawnGroupData) {
+        SpawnGroupData data = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+        boolean natural = spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION
+            || spawnType == MobSpawnType.SPAWNER || spawnType == MobSpawnType.STRUCTURE;
+        if (natural && this.random.nextDouble() < SPAWN_SLEEP_CHANCE) setAsleep(true);
+        return data;
+    }
+
+    /** Patrolling (awake, no target) basilisks despawn normally; sleeping or engaged ones are kept until far away. */
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        if (!isAsleep() && getTarget() == null) return true;
+        return distanceToClosestPlayer > KEEP_LOADED_DISTANCE * KEEP_LOADED_DISTANCE;
     }
 
     private void fallAsleep() {
