@@ -345,6 +345,58 @@ class DiscRuinsTest {
     }
 
     @Test
+    void troveLootMixesShiftWithDepthInTheDirectionIntended() throws Exception {
+        var themes = DiscThemeTest.shipped().discThemes();
+        assertEquals(5, themes.stream().filter(theme -> theme.troves().isPresent()).count());
+        for (DiscTheme theme : themes) {
+            if (theme.troves().isEmpty()) {
+                continue;
+            }
+            String name = theme.biome().orElseThrow().location().getPath();
+            List<DiscRuins.Loot.Weighted> mix = theme.troves().get().loot().mix();
+            assertFalse(mix.isEmpty(), name + " has a mix");
+            Map<String, double[]> shares = new HashMap<>();
+            for (int end = 0; end < 2; end++) {
+                double height = end;
+                double total = mix.stream().mapToDouble(entry -> entry.weight() * entry.byHeight().at(height)).sum();
+                for (DiscRuins.Loot.Weighted entry : mix) {
+                    shares.computeIfAbsent(entry.table().location().getPath().substring("chests/".length()), key -> new double[2])[end] =
+                            entry.weight() * entry.byHeight().at(height) / total;
+                }
+            }
+            double[] mineshaft = shares.get("abandoned_mineshaft");
+            double[] endCity = shares.get("end_city_treasure");
+            assertEquals(0, mineshaft[0], 1e-9, name + ": no mineshaft at the bottom");
+            assertEquals(0, endCity[1], 1e-9, name + ": no end city at the top");
+            assertTrue(endCity[0] > mineshaft[0] && mineshaft[1] > endCity[1], name + ": end city below, mineshaft above");
+            if (name.equals("disc_lush") || name.equals("disc_jungle")) {
+                double[] temple = shares.get("jungle_temple");
+                assertTrue(temple[0] >= 0.75 - 1e-9 && temple[1] >= 0.75 - 1e-9, name + ": jungle temple holds three quarters: " + Arrays.toString(temple));
+            }
+        }
+    }
+
+    @Test
+    void aSiteRollsTheSameTableAndTheMixIsHeldToItsWeights() {
+        var mix = List.of(
+                new DiscRuins.Loot.Weighted(table("a"), 1, new DiscTheme.Ramp(0, 2)),
+                new DiscRuins.Loot.Weighted(table("b"), 3, DiscTheme.Ramp.EVEN));
+        var loot = new DiscRuins.Loot(List.of(), 1, 1, mix);
+        var top = new DiscTraits(1, 0, 0);
+        var bottom = new DiscTraits(0, 0, 0);
+        Map<ResourceKey<LootTable>, Integer> atTop = new HashMap<>();
+        int draws = 20000;
+        for (int site = 0; site < draws; site++) {
+            double roll = RavineCells.unit(RavineCells.bits(12345L, site), 1 << 20);
+            assertEquals(loot.tableFor(top, roll), loot.tableFor(top, RavineCells.unit(RavineCells.bits(12345L, site), 1 << 20)));
+            atTop.merge(loot.tableFor(top, roll).orElseThrow(), 1, Integer::sum);
+            assertEquals(table("b"), loot.tableFor(bottom, roll).orElseThrow(), "a has no weight at the bottom");
+        }
+        // At the top a weighs 2 and b 3.
+        assertEquals(0.4, atTop.get(table("a")) / (double) draws, 0.02);
+    }
+
+    @Test
     void aPieceWithLayersInTheGroundStandsOnlyWhereTheRockIsThatDeep() throws Exception {
         List<Standing> onTheGround = withSink(0);
         List<Standing> oneLayerIn = withSink(1);

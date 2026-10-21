@@ -48,6 +48,8 @@ final class DiscRuinSites {
     // that order a kind's pieces are made from one more each, kept apart below zero.
     private static final int SEED_DRAW = 2 * TRIES;
     private static final int FIRST_KIND_DRAW = SEED_DRAW + 1;
+    // The draw that rolls a site's loot table from a mix, far from the kinds' draws so that none of the others is moved.
+    private static final int LOOT_DRAW = 1 << 20;
     // Air is only counted on where it is this far from any rock, so that a piece touches neither the roof nor a wall beside it.
     private static final double CLEAR = 1;
     // The air and the ground are tested at the middle of a round and at this many points round its edge and round half way out.
@@ -105,16 +107,16 @@ final class DiscRuinSites {
     }
 
     /**
-     * A disc that holds ruins: which of its theme's two lists they are of, its place in the layout, its theme, and the loot
-     * table of the theme's own ruins on it, if that list names any.
+     * A disc that holds ruins: which of its theme's two lists they are of, its place in the layout, its theme, the loot
+     * of the theme's own ruins in that list, and the traits of the disc, which the table of each site is chosen by.
      */
-    private record Host(DiscSites which, int index, Disc disc, DiscTheme theme, Optional<ResourceKey<LootTable>> loot) {}
+    private record Host(DiscSites which, int index, Disc disc, DiscTheme theme, DiscRuins.Loot loot, DiscTraits traits) {}
 
     /**
      * A kind as one disc has it: its place among the level's kinds, its weight at the disc's height, its pieces the disc is wide
      * enough for, and the loot table a ruin of it is given there, which a borrowed kind has none of.
      */
-    private record Offered(int index, double weight, List<RuinPieces.Piece> pieces, Optional<ResourceKey<LootTable>> loot) {}
+    private record Offered(int index, double weight, List<RuinPieces.Piece> pieces, boolean ownLoot) {}
 
     /** The room a piece needs. Pieces of one size have the same room, so a size that found none is not tried again for a ruin. */
     private record Size(double radius, int height, int sink) {
@@ -168,7 +170,7 @@ final class DiscRuinSites {
                 double height = traits.get(i).height();
                 List<RuinPieces.Kind> kinds = pieces.of(ruins.get());
                 if (!kinds.isEmpty() && RavineCells.unit(cell.hash(), base(which, i)) < ruins.get().chance() * ruins.get().byHeight().at(height)) {
-                    var host = new Host(which, i, layout.discs().get(i), theme.get(), ruins.get().loot().tableFor(traits.get(i)));
+                    var host = new Host(which, i, layout.discs().get(i), theme.get(), ruins.get().loot(), traits.get(i));
                     ruinsOn(host, ruins.get(), kinds, height, standing, sites);
                 }
             }
@@ -183,7 +185,7 @@ final class DiscRuinSites {
                 double weight = kind.weight() * kind.byHeight().at(height);
                 List<RuinPieces.Piece> fitting = kind.pieces().stream().filter(piece -> piece.radius() + MARGIN <= disc.radius()).toList();
                 if (weight > 0 && !fitting.isEmpty()) {
-                    offered.add(new Offered(i, weight, fitting, kind.borrowed() ? Optional.empty() : host.loot()));
+                    offered.add(new Offered(i, weight, fitting, !kind.borrowed()));
                 }
             }
             if (offered.isEmpty()) {
@@ -208,7 +210,7 @@ final class DiscRuinSites {
                     if (full.contains(Size.of(piece))) {
                         continue;
                     }
-                    Optional<Placed> site = place(host, piece, kind.loot(), draws, standing);
+                    Optional<Placed> site = place(host, piece, kind.ownLoot(), draws, standing);
                     if (site.isPresent()) {
                         return site;
                     }
@@ -220,13 +222,15 @@ final class DiscRuinSites {
 
         // A piece at the first of the places drawn for its ruin where it has room.
         private Optional<Placed> place(
-                Host host, RuinPieces.Piece piece, Optional<ResourceKey<LootTable>> loot, long draws, List<Standing> standing) {
+                Host host, RuinPieces.Piece piece, boolean ownLoot, long draws, List<Standing> standing) {
             for (int attempt = 0; attempt < TRIES; attempt++) {
                 Round round = roundAt(host.disc(), piece, draws, attempt);
                 OptionalInt ground = groundFor(host, piece, round, standing);
                 if (ground.isPresent()) {
                     standing.add(new Standing(host.index(), round, ground.getAsInt() - piece.sink(), topOver(ground.getAsInt(), piece)));
                     long seed = RavineCells.bits(draws, SEED_DRAW);
+                    Optional<ResourceKey<LootTable>> loot = ownLoot
+                            ? host.loot().tableFor(host.traits(), RavineCells.unit(draws, LOOT_DRAW)) : Optional.empty();
                     var site = new RuinSite(round.x(), ground.getAsInt() + 1 - piece.sink(), round.z(), piece.pool(), piece.element(), seed, loot);
                     return Optional.of(new Placed(host.index(), site, round.radius()));
                 }
