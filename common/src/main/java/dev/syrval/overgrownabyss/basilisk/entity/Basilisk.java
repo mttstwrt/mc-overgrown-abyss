@@ -5,7 +5,7 @@ import dev.syrval.overgrownabyss.basilisk.BasiliskEntities;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskMoveControl;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskNavigation;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskStalkGoal;
-import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskVenomStrikeGoal;
+import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskAttackGoal;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.TerrainProbe;
 
 import net.minecraft.core.BlockPos;
@@ -47,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Jungle ambush predator: chain-of-blocks body like the Twilight Forest naga, but with its own pathing
- * (leaf-chewing, lava-averse, drops and climbs) and a telegraphed venom strike.
+ * (leaf-chewing, lava-averse, drops and climbs) and a fast lunge-and-bite attack (see BasiliskAttackGoal).
  *
  * Loader-neutral: nothing here imports NeoForge or Fabric.
  * Lines tagged VERSION-SENSITIVE are the ones that changed between 1.21.1 and 1.21.5+ in the Twilight Forest
@@ -57,10 +57,10 @@ public class Basilisk extends Monster {
     public static final int SEGMENT_COUNT = 10;
     /** How high the head is carried when fully reared, in blocks. Shared by renderer and head hitbox. */
     public static final float HEAD_RAISE = 1.55F;
-    /** Damage multiplier while the head is down after a lunge. */
-    private static final float RECOVER_DAMAGE_MULTIPLIER = 1.25F;
 
     /** Patrol/idle movement_speed is 0.30 (see createAttributes). While it has a target this much is added: 0.45 total. */
+    /** Poison I duration applied by a landed bite or lunge (5 s). */
+    private static final int VENOM_TICKS = 100;
     private static final double ENGAGED_SPEED_BONUS = 0.15D;
     private static final ResourceLocation ENGAGED_SPEED_ID =
         ResourceLocation.fromNamespaceAndPath(OvergrownAbyss.MOD_ID, "basilisk_engaged_speed");
@@ -74,7 +74,6 @@ public class Basilisk extends Monster {
 
     private float rearAnim, rearAnimO;
     private float jawAnim, jawAnimO;
-    private float damageWhileTelegraphing;
 
     public Basilisk(EntityType<? extends Basilisk> type, Level level) {
         super(type, level);
@@ -110,7 +109,7 @@ public class Basilisk extends Monster {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new BasiliskVenomStrikeGoal(this));
+        this.goalSelector.addGoal(2, new BasiliskAttackGoal(this));
         this.goalSelector.addGoal(3, new BasiliskStalkGoal(this));
         this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 12.0F));
@@ -146,7 +145,6 @@ public class Basilisk extends Monster {
     }
 
     public void setPhase(BasiliskPhase phase) {
-        if (phase.isTelegraph() && !getPhase().isTelegraph()) damageWhileTelegraphing = 0.0F;
         this.entityData.set(DATA_PHASE, phase.ordinal());
     }
 
@@ -166,15 +164,6 @@ public class Basilisk extends Monster {
 
     public BasiliskSegmentChain getChain() {
         return chain;
-    }
-
-    /** True once accumulated damage during the wind-up exceeds the threshold; resets the counter. */
-    public boolean consumeInterrupt(float threshold) {
-        if (damageWhileTelegraphing >= threshold) {
-            damageWhileTelegraphing = 0.0F;
-            return true;
-        }
-        return false;
     }
 
     // ---------------------------------------------------------------- tick
@@ -304,34 +293,20 @@ public class Basilisk extends Monster {
 
     // ---------------------------------------------------------------- combat
 
-    @Override
-    public boolean hurt(DamageSource source, float amount) { // VERSION-SENSITIVE (1.21.5+: hurtServer(ServerLevel, ...))
-        if (getPhase() == BasiliskPhase.RECOVER) amount *= RECOVER_DAMAGE_MULTIPLIER;
-        boolean hurt = super.hurt(source, amount);
-        if (hurt && !this.level().isClientSide && getPhase().isTelegraph()) damageWhileTelegraphing += amount;
-        return hurt;
+    /** The lunge's hit: a multiple of attack_damage plus horizontal knockback along the dash. False if blocked. */
+    public boolean lungeHit(LivingEntity target, float damageMultiplier, double knockback, Vec3 direction) {
+        float damage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * damageMultiplier;
+        if (!target.hurt(this.damageSources().mobAttack(this), damage)) return false;
+        target.knockback(knockback, -direction.x, -direction.z);
+        applyVenom(target);
+        return true;
     }
 
-    @Override
-    public boolean doHurtTarget(Entity target) { // VERSION-SENSITIVE (1.21.5+: doHurtTarget(ServerLevel, Entity))
-        boolean hit = super.doHurtTarget(target);
-        // A shield-blocked bite returns false here, so blocking also blocks the venom.
-        if (hit && getPhase() == BasiliskPhase.STRIKE && target instanceof LivingEntity living) applyVenom(living);
-        return hit;
-    }
-
-    private void applyVenom(LivingEntity victim) {
-        int seconds = switch (this.level().getDifficulty()) {
-            case EASY -> 5;
-            case NORMAL -> 10;
-            case HARD -> 20;
-            default -> 0;
-        };
-        if (seconds <= 0) return;
-        // Bites stack: a second bite while still poisoned bumps the level (max III).
+    /** Poison I for VENOM_TICKS as a secondary effect; never replaces a stronger or longer poison. */
+    public void applyVenom(LivingEntity victim) {
         MobEffectInstance current = victim.getEffect(MobEffects.POISON);
-        int amplifier = current == null ? 0 : Math.min(2, current.getAmplifier() + 1);
-        victim.addEffect(new MobEffectInstance(MobEffects.POISON, seconds * 20, amplifier), this);
+        if (current != null && (current.getAmplifier() > 0 || current.getDuration() >= VENOM_TICKS)) return;
+        victim.addEffect(new MobEffectInstance(MobEffects.POISON, VENOM_TICKS, 0), this);
 
         if (this.level() instanceof ServerLevel server) {
             Vec3 mouth = mouthPosition();

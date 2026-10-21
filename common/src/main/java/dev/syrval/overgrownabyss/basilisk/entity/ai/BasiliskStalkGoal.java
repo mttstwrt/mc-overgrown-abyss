@@ -4,17 +4,16 @@ import java.util.EnumSet;
 
 import dev.syrval.overgrownabyss.basilisk.entity.Basilisk;
 
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Approach, then circle the target at striking range while the venom strike comes off cooldown.
+ * Approach, then circle or dart in on the target while the attacks in BasiliskAttackGoal come off cooldown.
  *
  * NAGA: NagaMovementPattern's CIRCLE state does this with findCirclePoint(); the point-on-a-ring maths below
- * is the same idea. We drop its CHARGE/INTIMIDATE/DAZE/CRUMBLE states: the basilisk's single set-piece is the
- * strike goal, which preempts this goal (lower priority number) whenever it is ready.
+ * is the same idea. We drop its CHARGE/INTIMIDATE/DAZE/CRUMBLE states: the basilisk's attacks live in the
+ * attack goal, which preempts this goal (lower priority number) whenever it is ready.
  */
 public class BasiliskStalkGoal extends Goal {
     private static final double RING_RADIUS = 5.5D;
@@ -28,7 +27,6 @@ public class BasiliskStalkGoal extends Goal {
     private final Basilisk basilisk;
     private boolean clockwise;
     private int repathIn;
-    private int snapCooldown;
 
     public BasiliskStalkGoal(Basilisk basilisk) {
         this.basilisk = basilisk;
@@ -67,15 +65,6 @@ public class BasiliskStalkGoal extends Goal {
         LivingEntity target = basilisk.getTarget();
         if (target == null) return;
         basilisk.getLookControl().setLookAt(target, 30.0F, 30.0F);
-        if (snapCooldown > 0) snapCooldown--;
-
-        // Quick non-venomous snap if something is right on top of us and the strike is not ready.
-        double reach = basilisk.getBbWidth() * 2.0D + target.getBbWidth();
-        if (snapCooldown <= 0 && basilisk.distanceToSqr(target) <= reach * reach && basilisk.hasLineOfSight(target)) {
-            basilisk.swing(InteractionHand.MAIN_HAND);
-            basilisk.doHurtTarget(target);
-            snapCooldown = 20;
-        }
 
         if (--repathIn > 0) return;
         repathIn = REPATH_MIN + basilisk.getRandom().nextInt(REPATH_RANGE);
