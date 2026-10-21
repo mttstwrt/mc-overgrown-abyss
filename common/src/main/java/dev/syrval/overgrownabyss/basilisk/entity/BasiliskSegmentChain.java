@@ -55,6 +55,19 @@ public final class BasiliskSegmentChain {
         }
     }
 
+    /** Like {@link #reset} but already lying in the sleeping coil, so a sleeper never has a tail outside its chunk. */
+    public void resetCoiled(double hx, double hy, double hz, float headYaw) {
+        reset(hx, hy, hz, headYaw);
+        double[][] layout = coilLayout(count, headYaw);
+        for (int i = 0; i < count; i++) {
+            x[i] = hx + layout[i][0];
+            z[i] = hz + layout[i][1];
+            px[i] = x[i]; pz[i] = z[i];
+        }
+        coil = 1.0F;
+        pcoil = 1.0F;
+    }
+
     /**
      * @param rear 0..1 raw rear progress (eased internally)
      */

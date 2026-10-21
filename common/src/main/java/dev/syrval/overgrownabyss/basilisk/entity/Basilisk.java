@@ -332,7 +332,8 @@ public class Basilisk extends Monster {
 
     private void updateChain() {
         if (!chainReady) {
-            chain.reset(getX(), getY(), getZ(), getYRot());
+            if (isAsleep()) chain.resetCoiled(getX(), getY(), getZ(), getYRot());
+            else chain.reset(getX(), getY(), getZ(), getYRot());
             chainReady = true;
         }
         chain.update(getX(), getY(), getZ(), getYRot(), rearAnim, isAsleep(),
