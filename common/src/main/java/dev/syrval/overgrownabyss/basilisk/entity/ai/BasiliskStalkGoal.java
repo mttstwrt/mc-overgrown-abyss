@@ -3,6 +3,7 @@ package dev.syrval.overgrownabyss.basilisk.entity.ai;
 import java.util.EnumSet;
 
 import dev.syrval.overgrownabyss.basilisk.entity.Basilisk;
+import dev.syrval.overgrownabyss.basilisk.entity.BasiliskSize;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -16,10 +17,10 @@ import net.minecraft.world.phys.Vec3;
  * attack goal, which preempts this goal (lower priority number) whenever it is ready.
  */
 public class BasiliskStalkGoal extends Goal {
-    private static final double RING_RADIUS = 5.5D;
+    private static final double RING_RADIUS = 7.0D;           // x BasiliskSize.reachMultiplier: inside lunge range, outside bite range
     private static final double RING_ROTATION = 0.9D; // radians advanced per repath, like the naga's 1.0
     private static final double CHASE_DISTANCE = 12.0D;   // beyond this, run straight at the target
-    private static final double CLOSE_IN_CHANCE = 0.4D;   // per repath inside CHASE_DISTANCE: dart in to bite range instead of circling
+    private static final double CLOSE_IN_CHANCE = 0.1D;   // per repath inside CHASE_DISTANCE: dart in to bite range instead of circling (hit and run: rare)
     private static final double MOVE_SPEED = 1.0D;        // multiplier on movement_speed, which already carries the engaged bonus
     private static final int REPATH_MIN = 6;              // ticks between repaths; short, so it re-positions quickly
     private static final int REPATH_RANGE = 6;
@@ -74,7 +75,7 @@ public class BasiliskStalkGoal extends Goal {
         if (distance > CHASE_DISTANCE || basilisk.getRandom().nextDouble() < CLOSE_IN_CHANCE) {
             basilisk.getNavigation().moveTo(target, MOVE_SPEED);
         } else {
-            Vec3 p = ringPoint(basilisk, target, RING_RADIUS, RING_ROTATION, clockwise);
+            Vec3 p = ringPoint(basilisk, target, RING_RADIUS * BasiliskSize.reachMultiplier(basilisk.getScale()), RING_ROTATION, clockwise);
             if (!basilisk.getNavigation().moveTo(p.x, p.y, p.z, MOVE_SPEED)) {
                 basilisk.getNavigation().moveTo(target, MOVE_SPEED); // ring point unreachable (trees, cliff): just close in
             }

@@ -20,8 +20,8 @@ import net.minecraft.world.phys.Vec3;
  *   LUNGE  target LUNGE_MIN_RANGE..LUNGE_MAX_RANGE away on a clear straight line: telegraph (REAR or COIL),
  *          a ~7 block dash (STRIKE) that hits once for 1.5x attack_damage plus knockback, then a RECOVERY
  *          (RECOVER) where it is slowed and exposed: the punish window.
- *   After either attack it backs off and strafes (REPOSITION) at a short ring around the target, so
- *   trading hits at its face is not free. Between attacks BasiliskStalkGoal keeps the pressure on.
+ *   After either attack it runs (RETREAT) 7-10 blocks from the target for 30-50 ticks, then swings round to a
+ *   bearing 60-120 degrees off the last one (FLANK) and opens with a lunge; it bites only when the target closes in. Between attacks BasiliskStalkGoal keeps the pressure on.
  *
  * Counterplay: the aim locks a few ticks before the dash, so changing direction makes it miss; a shield blocks
  * the hit and the poison; a lunge that would land in lava, an abyss or a wall is not started.
@@ -52,28 +52,32 @@ public class BasiliskAttackGoal extends Goal {
     private static final double LUNGE_RECOVER_SPEED_SCALE = 0.25D; // residual momentum kept each tick while recovering
     private static final int LUNGE_COOLDOWN_TICKS = 60;
     private static final int LUNGE_COOLDOWN_RANDOM = 20;    // plus 0..20
-    // --- after any attack
-    private static final int REPOSITION_MIN_TICKS = 20;
-    private static final int REPOSITION_RANDOM_TICKS = 10;  // plus 0..10, so 20..30
-    private static final double STRAFE_MIN_RADIUS = 3.5D;
-    private static final double STRAFE_MAX_RADIUS = 5.0D;
-    private static final double STRAFE_ROTATION = 0.7D;     // radians per repath
-    private static final int STRAFE_REPATH_TICKS = 6;
-    private static final double STRAFE_SPEED = 1.0D;
+    // --- hit and run: after any attack, retreat out of reach, then come back from another side
+    private static final double RETREAT_MIN_DISTANCE = 7.0D;   // blocks from the target; x BasiliskSize.reachMultiplier
+    private static final double RETREAT_MAX_DISTANCE = 10.0D;
+    private static final int RETREAT_MIN_TICKS = 30;
+    private static final int RETREAT_RANDOM_TICKS = 20;        // plus 0..20, so 30..50
+    private static final double RETREAT_SPEED = 1.0D;
+    private static final double FLANK_MIN_DEGREES = 60.0D;     // new bearing around the target, off the last one
+    private static final double FLANK_MAX_DEGREES = 120.0D;
+    private static final int FLANK_MAX_TICKS = 40;             // give up flanking and let the stalk goal take over
+    private static final double FLANK_ARRIVE_DISTANCE = 2.5D;
+    private static final int REPATH_TICKS = 6;
 
-    private enum Step { BITE_WINDUP, LUNGE_WINDUP, LUNGE, RECOVER, REPOSITION, DONE }
+    private enum Step { BITE_WINDUP, LUNGE_WINDUP, LUNGE, RECOVER, RETREAT, FLANK, DONE }
 
     private final Basilisk basilisk;
     private Step step = Step.DONE;
     private int ticks;
     private int windup;
     private int lungeTicks;
-    private int repositionTicks;
+    private int retreatTicks;
+    private double retreatDistance;
+    private double lastBearing;   // radians, from the target to us when the attack ended
+    private double flankBearing;
     private int biteCooldownUntil;
     private int lungeCooldownUntil;
     private boolean hitLanded;
-    private boolean clockwise;
-    private double strafeRadius;
     private Vec3 aim;
     private Vec3 lungeDir = Vec3.ZERO;
 
@@ -113,7 +117,6 @@ public class BasiliskAttackGoal extends Goal {
         ticks = 0;
         aim = null;
         hitLanded = false;
-        clockwise = basilisk.getRandom().nextBoolean();
         if (t != null && basilisk.distanceTo(t) <= biteRange()) {
             step = Step.BITE_WINDUP;
             windup = BITE_WINDUP_TICKS;
@@ -146,7 +149,8 @@ public class BasiliskAttackGoal extends Goal {
             case LUNGE_WINDUP -> tickLungeWindup(t);
             case LUNGE -> tickLunge(t);
             case RECOVER -> tickRecover();
-            case REPOSITION -> tickReposition(t);
+            case RETREAT -> tickRetreat(t);
+            case FLANK -> tickFlank(t);
             default -> { }
         }
     }
@@ -165,7 +169,8 @@ public class BasiliskAttackGoal extends Goal {
             basilisk.applyVenom(t);
         }
         biteCooldownUntil = basilisk.tickCount + BITE_COOLDOWN_TICKS;
-        beginReposition();
+        lungeCooldownUntil = Math.min(lungeCooldownUntil, basilisk.tickCount); // the lunge opens the next round
+        beginRetreat(t);
     }
 
     // ---------------------------------------------------------------- lunge
@@ -252,26 +257,61 @@ public class BasiliskAttackGoal extends Goal {
     private void tickRecover() {
         Vec3 mv = basilisk.getDeltaMovement();
         basilisk.setDeltaMovement(mv.x * LUNGE_RECOVER_SPEED_SCALE, mv.y, mv.z * LUNGE_RECOVER_SPEED_SCALE);
-        if (ticks >= LUNGE_RECOVER_TICKS) beginReposition();
+        if (ticks >= LUNGE_RECOVER_TICKS) beginRetreat(basilisk.getTarget());
     }
 
-    // ---------------------------------------------------------------- reposition
+    // ---------------------------------------------------------------- retreat + flank
 
-    private void beginReposition() {
-        step = Step.REPOSITION;
+    private void beginRetreat(LivingEntity t) {
+        step = Step.RETREAT;
         ticks = 0;
-        repositionTicks = REPOSITION_MIN_TICKS + basilisk.getRandom().nextInt(REPOSITION_RANDOM_TICKS + 1);
-        strafeRadius = STRAFE_MIN_RADIUS + basilisk.getRandom().nextDouble() * (STRAFE_MAX_RADIUS - STRAFE_MIN_RADIUS);
+        retreatTicks = RETREAT_MIN_TICKS + basilisk.getRandom().nextInt(RETREAT_RANDOM_TICKS + 1);
+        double size = BasiliskSize.reachMultiplier(basilisk.getScale());
+        retreatDistance = (RETREAT_MIN_DISTANCE + basilisk.getRandom().nextDouble() * (RETREAT_MAX_DISTANCE - RETREAT_MIN_DISTANCE)) * size;
+        lastBearing = t != null ? bearing(t) : 0.0D;
         if (basilisk.getPhase() != BasiliskPhase.STRIKE) basilisk.setPhase(BasiliskPhase.IDLE);
     }
 
-    private void tickReposition(LivingEntity t) {
+    private void tickRetreat(LivingEntity t) {
         if (ticks == BITE_HOLD_TICKS && basilisk.getPhase() == BasiliskPhase.STRIKE) basilisk.setPhase(BasiliskPhase.IDLE);
-        if (ticks >= repositionTicks) { step = Step.DONE; return; }
+        if (ticks >= retreatTicks) { beginFlank(t); return; }
         basilisk.getLookControl().setLookAt(t, 40.0F, 40.0F);
-        if (ticks % STRAFE_REPATH_TICKS != 1) return;
-        Vec3 p = BasiliskStalkGoal.ringPoint(basilisk, t, strafeRadius, STRAFE_ROTATION, clockwise);
-        if (!basilisk.getNavigation().moveTo(p.x, p.y, p.z, STRAFE_SPEED)) clockwise = !clockwise;
+        if (ticks % REPATH_TICKS != 1) return;
+        // Straight away from the target along the way we came, or a little to either side if that is blocked.
+        double b = bearing(t);
+        for (double off : new double[] {0.0D, 0.6D, -0.6D}) {
+            Vec3 p = pointAround(t, b + off, retreatDistance);
+            if (basilisk.getNavigation().moveTo(p.x, p.y, p.z, RETREAT_SPEED)) return;
+        }
+    }
+
+    private void beginFlank(LivingEntity t) {
+        step = Step.FLANK;
+        ticks = 0;
+        double off = Math.toRadians(FLANK_MIN_DEGREES + basilisk.getRandom().nextDouble() * (FLANK_MAX_DEGREES - FLANK_MIN_DEGREES));
+        flankBearing = lastBearing + (basilisk.getRandom().nextBoolean() ? off : -off);
+        basilisk.getNavigation().stop();
+    }
+
+    /** Circle to a point on the new bearing at lunge range; the lunge itself starts from canUse once the line is clear. */
+    private void tickFlank(LivingEntity t) {
+        double radius = 0.5D * (lungeMinRange() + lungeMaxRange());
+        Vec3 p = pointAround(t, flankBearing, radius);
+        if (ticks >= FLANK_MAX_TICKS || basilisk.position().distanceTo(p) <= FLANK_ARRIVE_DISTANCE) { step = Step.DONE; return; }
+        basilisk.getLookControl().setLookAt(t, 40.0F, 40.0F);
+        if (ticks % REPATH_TICKS != 1) return;
+        if (!basilisk.getNavigation().moveTo(p.x, p.y, p.z, RETREAT_SPEED)) {
+            flankBearing += Math.PI; // that side is blocked: try the opposite one
+        }
+    }
+
+    /** Radians, from the target to us. */
+    private double bearing(LivingEntity t) {
+        return Math.atan2(basilisk.getZ() - t.getZ(), basilisk.getX() - t.getX());
+    }
+
+    private Vec3 pointAround(LivingEntity t, double bearing, double radius) {
+        return new Vec3(t.getX() + Math.cos(bearing) * radius, Math.min(basilisk.getY(), t.getY()), t.getZ() + Math.sin(bearing) * radius);
     }
 
     // ---------------------------------------------------------------- helpers
