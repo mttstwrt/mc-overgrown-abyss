@@ -26,18 +26,31 @@ public final class BasiliskSegmentChain {
         double groundY(double x, double y, double z);
     }
 
-    public final int count;
+    /** Active segment count (arrays are allocated for the maximum). Changed only by {@link #configure}. */
+    public int count;
+    /** Body scale of this individual: multiplies spacing, neck heights and coil size. */
+    public double scale = 1.0D;
     public final double[] x, y, z, px, py, pz;
     public final float[] yaw, pitch, pyaw, ppitch;
     /** 0 = follow chain, 1 = fully coiled. */
     public float coil, pcoil;
 
-    public BasiliskSegmentChain(int count) {
-        this.count = count;
-        x = new double[count]; y = new double[count]; z = new double[count];
-        px = new double[count]; py = new double[count]; pz = new double[count];
-        yaw = new float[count]; pitch = new float[count];
-        pyaw = new float[count]; ppitch = new float[count];
+    public BasiliskSegmentChain(int maxCount) {
+        this.count = maxCount;
+        x = new double[maxCount]; y = new double[maxCount]; z = new double[maxCount];
+        px = new double[maxCount]; py = new double[maxCount]; pz = new double[maxCount];
+        yaw = new float[maxCount]; pitch = new float[maxCount];
+        pyaw = new float[maxCount]; ppitch = new float[maxCount];
+    }
+
+    /** Set the body scale and active segment count; the caller must {@link #reset} afterwards. */
+    public void configure(double scale, int count) {
+        this.scale = scale;
+        this.count = Math.min(count, x.length);
+    }
+
+    public double spacing() {
+        return SPACING * scale;
     }
 
     /** Lay the body out straight behind the head. Call once before the first update. */
@@ -45,9 +58,9 @@ public final class BasiliskSegmentChain {
         double rad = Math.toRadians(headYaw);
         double bx = Math.sin(rad), bz = -Math.cos(rad); // unit vector pointing behind the head
         for (int i = 0; i < count; i++) {
-            x[i] = hx + bx * SPACING * (i + 1);
+            x[i] = hx + bx * spacing() * (i + 1);
             y[i] = hy;
-            z[i] = hz + bz * SPACING * (i + 1);
+            z[i] = hz + bz * spacing() * (i + 1);
             yaw[i] = headYaw;
             pitch[i] = 0.0F;
             px[i] = x[i]; py[i] = y[i]; pz[i] = z[i];
@@ -58,7 +71,7 @@ public final class BasiliskSegmentChain {
     /** Like {@link #reset} but already lying in the sleeping coil, so a sleeper never has a tail outside its chunk. */
     public void resetCoiled(double hx, double hy, double hz, float headYaw) {
         reset(hx, hy, hz, headYaw);
-        double[][] layout = coilLayout(count, headYaw);
+        double[][] layout = coilLayout(count, headYaw, scale);
         for (int i = 0; i < count; i++) {
             x[i] = hx + layout[i][0];
             z[i] = hz + layout[i][1];
@@ -114,12 +127,13 @@ public final class BasiliskSegmentChain {
             len = Math.sqrt(dx * dx + dy * dy + dz * dz);
             dx /= len; dy /= len; dz /= len;
 
-            double nx = lx + SPACING * dx, ny = ly + SPACING * dy, nz = lz + SPACING * dz;
+            double sp = spacing();
+            double nx = lx + sp * dx, ny = ly + sp * dy, nz = lz + sp * dz;
 
             boolean neckRaised = i < NECK_SEGMENTS && ease > 0.0D;
             if (neckRaised) {
-                double h = 0.45D + i * 0.62D;
-                double back = 0.30D * Math.sin(Math.PI * (i + 0.5D) / NECK_SEGMENTS); // gentle S-curve
+                double h = (0.45D + i * 0.62D) * scale;
+                double back = 0.30D * scale * Math.sin(Math.PI * (i + 0.5D) / NECK_SEGMENTS); // gentle S-curve
                 nx = lerp(ease, nx, hx + bx * back);
                 ny = lerp(ease, ny, hy + h);
                 nz = lerp(ease, nz, hz + bz * back);
@@ -128,7 +142,7 @@ public final class BasiliskSegmentChain {
                 double g = ground.groundY(nx, ny, nz);
                 if (!Double.isNaN(g)) {
                     if (ny < g) ny = g;                       // never sink into the floor
-                    else if (ny - g < 1.5D) ny += (g - ny) * 0.4D; // settle onto it; beyond 1.5 stay in the air (climbing)
+                    else if (ny - g < 1.5D * scale) ny += (g - ny) * 0.4D; // settle onto it; beyond 1.5 stay in the air (climbing)
                 }
             }
 
@@ -147,14 +161,14 @@ public final class BasiliskSegmentChain {
 
     private void applyCoil(double hx, double hy, double hz, float headYaw, GroundSampler ground) {
         double e = coil * coil * (3.0D - 2.0D * coil);
-        double[][] layout = coilLayout(count, headYaw);
+        double[][] layout = coilLayout(count, headYaw, scale);
         double lastX = 0.0D, lastZ = 0.0D;
         for (int i = 0; i < count; i++) {
             double ox = layout[i][0], oz = layout[i][1];
             double tx = hx + ox, tz = hz + oz;
             double ty = hy;
             double g = ground.groundY(tx, hy + 0.5D, tz);
-            if (!Double.isNaN(g) && Math.abs(g - hy) < 1.5D) ty = g;
+            if (!Double.isNaN(g) && Math.abs(g - hy) < 1.5D * scale) ty = g;
             x[i] = lerp(e, x[i], tx);
             y[i] = lerp(e, y[i], ty);
             z[i] = lerp(e, z[i], tz);
@@ -171,23 +185,29 @@ public final class BasiliskSegmentChain {
      * Depends only on yaw, so client and server agree.
      */
     public static double[][] coilLayout(int count, float headYaw) {
+        return coilLayout(count, headYaw, 1.0D);
+    }
+
+    /** Same spiral scaled uniformly: start radius, turn gap and segment spacing all multiply by {@code scale}. */
+    public static double[][] coilLayout(int count, float headYaw, double scale) {
+        double startRadius = COIL_START_RADIUS * scale, radiusPerRad = COIL_RADIUS_PER_RAD * scale, spacing = SPACING * scale;
         double rad = Math.toRadians(headYaw);
         double theta0 = Math.atan2(-Math.cos(rad), Math.sin(rad)); // direction behind the head
         double[][] out = new double[count][2];
         double theta = 0.0D;
         for (int i = 0; i < count; i++) {
             if (i > 0) {
-                double r1 = COIL_START_RADIUS + COIL_RADIUS_PER_RAD * theta;
+                double r1 = startRadius + radiusPerRad * theta;
                 double lo = 0.0D, hi = Math.PI;
                 for (int k = 0; k < 40; k++) {
                     double mid = 0.5D * (lo + hi);
-                    double r2 = COIL_START_RADIUS + COIL_RADIUS_PER_RAD * (theta + mid);
+                    double r2 = startRadius + radiusPerRad * (theta + mid);
                     double chord2 = r1 * r1 + r2 * r2 - 2.0D * r1 * r2 * Math.cos(mid);
-                    if (chord2 < SPACING * SPACING) lo = mid; else hi = mid;
+                    if (chord2 < spacing * spacing) lo = mid; else hi = mid;
                 }
                 theta += 0.5D * (lo + hi);
             }
-            double r = COIL_START_RADIUS + COIL_RADIUS_PER_RAD * theta;
+            double r = startRadius + radiusPerRad * theta;
             out[i][0] = Math.cos(theta0 + theta) * r;
             out[i][1] = Math.sin(theta0 + theta) * r;
         }

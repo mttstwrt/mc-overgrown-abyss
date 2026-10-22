@@ -73,7 +73,7 @@ public class BasiliskRenderer extends MobRenderer<Basilisk, BasiliskModel> {
             double sz = Mth.lerp(partialTick, c.pz[i], c.z[i]) - hz;
             float yaw = Mth.rotLerp(partialTick, c.pyaw[i], c.yaw[i]);
             float pitch = Mth.lerp(partialTick, c.ppitch[i], c.pitch[i]);
-            float taper = 1.0F - 0.55F * i / c.count;
+            float taper = (1.0F - 0.55F * i / c.count) * entity.getBasiliskScale();
 
             stack.pushPose();
             stack.translate(sx, sy, sz);

@@ -7,6 +7,7 @@ import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskNavigation;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskStalkGoal;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskAttackGoal;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.TerrainProbe;
+import dev.syrval.overgrownabyss.compat.RavineFootprintHolder;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -60,7 +61,10 @@ import org.jetbrains.annotations.Nullable;
  * source (hurt -> hurtServer, doHurtTarget gaining a ServerLevel, and so on).
  */
 public class Basilisk extends Monster {
-    public static final int SEGMENT_COUNT = 10;
+    /** Upper bound of the body length (per-individual count: {@link BasiliskSize#segmentCount}). */
+    public static final int SEGMENT_COUNT = BasiliskSize.MAX_SEGMENTS;
+    /** Depth-share margin used when rolling the size at a natural spawn (same idea as BasiliskSpawning). */
+    private static final double SIZE_DEPTH_MARGIN = 4.0D;
     /** How high the head is carried when fully reared, in blocks. Shared by renderer and head hitbox. */
     public static final float HEAD_RAISE = 1.55F;
     /** How high the resting head sits at the middle of the sleeping coil, in blocks. */
@@ -90,6 +94,8 @@ public class Basilisk extends Monster {
         SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING =
         SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Float> DATA_SCALE =
+        SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.FLOAT);
 
     private final BasiliskSegment[] hitParts = new BasiliskSegment[SEGMENT_COUNT + 1]; // slot 0 = raised-head hitbox
     private final BasiliskSegmentChain chain = new BasiliskSegmentChain(SEGMENT_COUNT);
@@ -108,7 +114,7 @@ public class Basilisk extends Monster {
 
     public Basilisk(EntityType<? extends Basilisk> type, Level level) {
         super(type, level);
-        this.xpReward = 30;
+        this.xpReward = BasiliskSize.MIN_XP;
         this.noCulling = true; // the body extends well beyond the head's own bounding box
         this.moveControl = new BasiliskMoveControl(this);
 
@@ -117,13 +123,15 @@ public class Basilisk extends Monster {
         this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
         this.setPathfindingMalus(PathType.DANGER_FIRE, 24.0F); // vanilla default 8: keep well away from lava edges
         this.refreshLeafMalus();
+        applyScale(BasiliskSize.roll(this.random.nextDouble(), 0.0D), true); // old saves and summons keep this roll
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-            .add(Attributes.MAX_HEALTH, 80.0D)
+            .add(Attributes.MAX_HEALTH, BasiliskSize.MIN_HEALTH)
             .add(Attributes.MOVEMENT_SPEED, 0.30D)
-            .add(Attributes.ATTACK_DAMAGE, 6.0D)
+            .add(Attributes.ATTACK_DAMAGE, BasiliskSize.BASE_DAMAGE)
+            .add(Attributes.SCALE, 1.0D)
             .add(Attributes.FOLLOW_RANGE, 40.0D)
             .add(Attributes.KNOCKBACK_RESISTANCE, 0.6D)
             .add(Attributes.STEP_HEIGHT, 2.0D)               // NAGA: same 2.0 ledge-stepping
@@ -136,6 +144,7 @@ public class Basilisk extends Monster {
         super.defineSynchedData(builder);
         builder.define(DATA_PHASE, BasiliskPhase.IDLE.ordinal());
         builder.define(DATA_SLEEPING, false);
+        builder.define(DATA_SCALE, BasiliskSize.MIN_SCALE);
     }
 
     @Override
@@ -171,6 +180,43 @@ public class Basilisk extends Monster {
         }
     }
 
+    // ---------------------------------------------------------------- size
+
+    /** This individual's size, BasiliskSize.MIN_SCALE..MAX_SCALE. */
+    public float getBasiliskScale() {
+        return this.entityData.get(DATA_SCALE);
+    }
+
+    /**
+     * Set the size and everything derived from it: hitbox (SCALE attribute), health, damage, xp, body length.
+     * Runs on both sides; the client gets the value through the synched float.
+     */
+    private void applyScale(float scale, boolean heal) {
+        this.entityData.set(DATA_SCALE, scale);
+        setBase(Attributes.SCALE, scale);
+        setBase(Attributes.MAX_HEALTH, BasiliskSize.maxHealth(scale));
+        setBase(Attributes.ATTACK_DAMAGE, BasiliskSize.attackDamage(scale));
+        this.xpReward = BasiliskSize.xpReward(scale);
+        int count = BasiliskSize.segmentCount(scale);
+        if (chain.count != count || chain.scale != scale) {
+            chain.configure(scale, count);
+            chainReady = false;
+        }
+        refreshDimensions();
+        if (heal && !this.level().isClientSide) this.setHealth(this.getMaxHealth());
+    }
+
+    private void setBase(net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, double value) {
+        AttributeInstance instance = getAttribute(attribute);
+        if (instance != null && instance.getBaseValue() != value) instance.setBaseValue(value);
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (DATA_SCALE.equals(accessor) && this.level().isClientSide) applyScale(getBasiliskScale(), false);
+    }
+
     // ---------------------------------------------------------------- sleep
 
     /** Named isAsleep because LivingEntity.isSleeping() is the bed pose. */
@@ -197,12 +243,17 @@ public class Basilisk extends Monster {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("Sleeping", isAsleep());
+        tag.putFloat("Scale", getBasiliskScale());
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         setAsleep(tag.getBoolean("Sleeping"));
+        // Saved attribute bases were just restored; re-derive them from the size. A save without "Scale"
+        // keeps the roll made at construction and starts at full health.
+        boolean saved = tag.contains("Scale");
+        applyScale(saved ? Mth.clamp(tag.getFloat("Scale"), BasiliskSize.MIN_SCALE, BasiliskSize.MAX_SCALE) : getBasiliskScale(), !saved);
     }
 
     /** Natural spawns (worldgen, spawner, structures) may start asleep; commands, eggs and the like stay awake. */
@@ -213,6 +264,10 @@ public class Basilisk extends Monster {
         boolean natural = spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION
             || spawnType == MobSpawnType.SPAWNER || spawnType == MobSpawnType.STRUCTURE;
         if (natural && this.random.nextDouble() < SPAWN_SLEEP_CHANCE) setAsleep(true);
+        double depth = natural
+            ? RavineFootprintHolder.of(level.getLevel()).depthShareIn(getBlockX(), getBlockY(), getBlockZ(), SIZE_DEPTH_MARGIN).orElse(0.0D)
+            : 0.0D;
+        applyScale(BasiliskSize.roll(this.random.nextDouble(), depth), true);
         return data;
     }
 
@@ -337,7 +392,7 @@ public class Basilisk extends Monster {
             chainReady = true;
         }
         chain.update(getX(), getY(), getZ(), getYRot(), rearAnim, isAsleep(),
-            (x, y, z) -> TerrainProbe.groundY(this.level(), x, y, z, 3));
+            (x, y, z) -> TerrainProbe.groundY(this.level(), x, y, z, (int) Math.ceil(3.0D * getScale())));
     }
 
     // ---------------------------------------------------------------- hitbox parts (plain entities)
@@ -346,8 +401,8 @@ public class Basilisk extends Monster {
     void placePart(BasiliskSegment part) {
         int index = part.getIndex();
         if (index < 0) {
-            part.setPos(getX(), getY() + HEAD_RAISE * ease(rearAnim) + coilRaise(1.0F), getZ());
-        } else if (index < SEGMENT_COUNT) {
+            part.setPos(getX(), getY() + (HEAD_RAISE * ease(rearAnim) + coilRaise(1.0F)) * getScale(), getZ());
+        } else if (index < chain.count) {
             part.setPos(chain.x[index], chain.y[index], chain.z[index]);
         }
     }
@@ -356,6 +411,11 @@ public class Basilisk extends Monster {
         if (this.tickCount % 20 != 1) return;
         for (int slot = 0; slot < hitParts.length; slot++) {
             BasiliskSegment part = hitParts[slot];
+            if (slot > chain.count) { // shorter body than the slot array: no hitbox here
+                if (part != null && !part.isRemoved()) part.discard();
+                hitParts[slot] = null;
+                continue;
+            }
             if (part != null && !part.isRemoved()) continue;
             BasiliskSegment fresh = BasiliskEntities.SEGMENT.get().create(this.level());
             if (fresh == null) continue;
@@ -463,7 +523,7 @@ public class Basilisk extends Monster {
 
     public Vec3 mouthPosition() {
         Vec3 look = Vec3.directionFromRotation(0.0F, getYRot());
-        return position().add(look.scale(0.7D)).add(0.0D, 0.55D + HEAD_RAISE * ease(rearAnim), 0.0D);
+        return position().add(look.scale(0.7D * getScale())).add(0.0D, (0.55D + HEAD_RAISE * ease(rearAnim)) * getScale(), 0.0D);
     }
 
     private void clientEffects() {

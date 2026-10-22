@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import dev.syrval.overgrownabyss.basilisk.BasiliskEntities;
 import dev.syrval.overgrownabyss.basilisk.entity.Basilisk;
 import dev.syrval.overgrownabyss.basilisk.entity.BasiliskPhase;
+import dev.syrval.overgrownabyss.basilisk.entity.BasiliskSize;
 
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
@@ -30,20 +31,21 @@ import net.minecraft.world.phys.Vec3;
  */
 public class BasiliskAttackGoal extends Goal {
     // --- bite
-    private static final double BITE_RANGE = 3.0D;          // blocks from the basilisk to the target
+    private static final double BITE_RANGE = 3.0D;          // base blocks from the basilisk to the target (at scale 1)
+    private static final double BITE_RANGE_PER_SCALE = 0.8D; // added per scale unit above 1: the hitbox is that much wider
+    private static final double LUNGE_MIN_GAP = 1.0D;       // lunge starts this far beyond bite range
     private static final double BITE_HIT_LENIENCY = 0.8D;   // extra reach at the moment the bite lands
     private static final int BITE_WINDUP_TICKS = 5;
     private static final int BITE_COOLDOWN_TICKS = 14;
     private static final int BITE_HOLD_TICKS = 4;           // how long the open-jaw phase stays up after the bite
     // --- lunge
-    private static final double LUNGE_MIN_RANGE = 4.0D;
-    private static final double LUNGE_MAX_RANGE = 9.0D;
+    private static final double LUNGE_MAX_RANGE = 9.0D;     // x BasiliskSize.reachMultiplier
     private static final double LUNGE_MAX_Y_DIFF = 1.5D;    // the dash is flat
     private static final int LUNGE_WINDUP_REAR_TICKS = 8;
     private static final int LUNGE_WINDUP_COIL_TICKS = 6;   // under a ceiling
     private static final int LUNGE_AIM_LOCK_TICKS = 3;
     private static final double LUNGE_SPEED = 1.0D;         // blocks per tick during the dash
-    private static final double LUNGE_MAX_DISTANCE = 7.0D;  // blocks covered by a full dash
+    private static final double LUNGE_MAX_DISTANCE = 7.0D;  // blocks covered by a full dash, x BasiliskSize.reachMultiplier
     private static final float LUNGE_DAMAGE_MULTIPLIER = 1.5F;
     private static final double LUNGE_KNOCKBACK = 0.8D;
     private static final int LUNGE_RECOVER_TICKS = 20;
@@ -85,11 +87,11 @@ public class BasiliskAttackGoal extends Goal {
         LivingEntity t = basilisk.getTarget();
         if (t == null || !t.isAlive() || basilisk.isGroggy() || basilisk.getPhase() != BasiliskPhase.IDLE) return false;
         double d = basilisk.distanceTo(t);
-        if (d <= BITE_RANGE) {
+        if (d <= biteRange()) {
             return basilisk.tickCount >= biteCooldownUntil && Math.abs(t.getY() - basilisk.getY()) <= 2.5D
                 && basilisk.hasLineOfSight(t);
         }
-        return d >= LUNGE_MIN_RANGE && d <= LUNGE_MAX_RANGE && basilisk.tickCount >= lungeCooldownUntil
+        return d >= lungeMinRange() && d <= lungeMaxRange() && basilisk.tickCount >= lungeCooldownUntil
             && Math.abs(t.getY() - basilisk.getY()) <= LUNGE_MAX_Y_DIFF
             && basilisk.hasLineOfSight(t) && lungeLineIsClear(t);
     }
@@ -112,12 +114,12 @@ public class BasiliskAttackGoal extends Goal {
         aim = null;
         hitLanded = false;
         clockwise = basilisk.getRandom().nextBoolean();
-        if (t != null && basilisk.distanceTo(t) <= BITE_RANGE) {
+        if (t != null && basilisk.distanceTo(t) <= biteRange()) {
             step = Step.BITE_WINDUP;
             windup = BITE_WINDUP_TICKS;
             basilisk.setPhase(BasiliskPhase.COIL);
         } else {
-            boolean room = TerrainProbe.hasHeadroom(basilisk.level(), basilisk, Basilisk.HEAD_RAISE + 1.0D);
+            boolean room = TerrainProbe.hasHeadroom(basilisk.level(), basilisk, Basilisk.HEAD_RAISE * basilisk.getScale() + 1.0D);
             step = Step.LUNGE_WINDUP;
             windup = room ? LUNGE_WINDUP_REAR_TICKS : LUNGE_WINDUP_COIL_TICKS;
             basilisk.setPhase(room ? BasiliskPhase.REAR : BasiliskPhase.COIL);
@@ -158,7 +160,7 @@ public class BasiliskAttackGoal extends Goal {
         basilisk.setPhase(BasiliskPhase.STRIKE);
         basilisk.swing(InteractionHand.MAIN_HAND);
         basilisk.playSound(BasiliskEntities.SND_STRIKE.get(), 1.2F, 1.1F + basilisk.getRandom().nextFloat() * 0.2F);
-        if (basilisk.distanceTo(t) <= BITE_RANGE + BITE_HIT_LENIENCY && basilisk.hasLineOfSight(t)
+        if (basilisk.distanceTo(t) <= biteRange() + BITE_HIT_LENIENCY && basilisk.hasLineOfSight(t)
             && basilisk.doHurtTarget(t)) { // a shield-blocked bite returns false, so blocking also blocks the poison
             basilisk.applyVenom(t);
         }
@@ -172,7 +174,7 @@ public class BasiliskAttackGoal extends Goal {
     private boolean lungeLineIsClear(LivingEntity t) {
         Vec3 dir = flatDirection(basilisk.position(), t.position());
         if (dir == null) return false;
-        double reach = Math.min(basilisk.distanceTo(t) + 0.5D, LUNGE_MAX_DISTANCE);
+        double reach = Math.min(basilisk.distanceTo(t) + 0.5D, lungeMaxDistance());
         int maxDrop = basilisk.getMaxFallDistance();
         for (double k = 1.0D; k <= reach + 0.5D; k += 1.0D) {
             double step = Math.min(k, reach);
@@ -200,7 +202,7 @@ public class BasiliskAttackGoal extends Goal {
         Vec3 dir = flatDirection(from, to);
         if (dir == null) dir = Vec3.directionFromRotation(0.0F, basilisk.getYRot());
         double dist = Math.sqrt((to.x - from.x) * (to.x - from.x) + (to.z - from.z) * (to.z - from.z));
-        lungeTicks = lungeTicksFor(dist);
+        lungeTicks = lungeTicksFor(dist, lungeMaxDistance());
 
         float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
         basilisk.setYRot(yaw);
@@ -218,8 +220,8 @@ public class BasiliskAttackGoal extends Goal {
     }
 
     /** Ticks of dash needed to cover a flat distance (target distance plus a little overshoot), capped at one full dash. */
-    static int lungeTicksFor(double flatDistance) {
-        double reach = Math.min(Math.max(flatDistance + 0.5D, 1.0D), LUNGE_MAX_DISTANCE);
+    static int lungeTicksFor(double flatDistance, double maxDistance) {
+        double reach = Math.min(Math.max(flatDistance + 0.5D, 1.0D), maxDistance);
         return (int) Math.ceil(reach / LUNGE_SPEED);
     }
 
@@ -273,6 +275,22 @@ public class BasiliskAttackGoal extends Goal {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    private double biteRange() {
+        return BITE_RANGE + BITE_RANGE_PER_SCALE * (basilisk.getScale() - 1.0D);
+    }
+
+    private double lungeMinRange() {
+        return biteRange() + LUNGE_MIN_GAP;
+    }
+
+    private double lungeMaxRange() {
+        return LUNGE_MAX_RANGE * BasiliskSize.reachMultiplier(basilisk.getScale());
+    }
+
+    private double lungeMaxDistance() {
+        return LUNGE_MAX_DISTANCE * BasiliskSize.reachMultiplier(basilisk.getScale());
+    }
 
     private void face(LivingEntity t) {
         basilisk.lookAt(t, 60.0F, 60.0F);

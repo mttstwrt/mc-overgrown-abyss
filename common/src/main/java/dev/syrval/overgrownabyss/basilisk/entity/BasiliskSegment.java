@@ -8,7 +8,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
@@ -31,6 +33,7 @@ public class BasiliskSegment extends Entity {
     private static final float BODY_DAMAGE_SHARE = 2.0F / 3.0F;
 
     private Basilisk parent;
+    private float boxScale = 1.0F; // follows the parent's size so the hitbox matches the scaled body
 
     public BasiliskSegment(EntityType<? extends BasiliskSegment> type, Level level) {
         super(type, level);
@@ -71,7 +74,17 @@ public class BasiliskSegment extends Entity {
             if (!this.level().isClientSide && this.tickCount > 20) this.discard();
             return;
         }
+        float scale = p.getBasiliskScale();
+        if (scale != boxScale) {
+            boxScale = scale;
+            refreshDimensions();
+        }
         p.placePart(this);
+    }
+
+    @Override
+    public EntityDimensions getDimensions(Pose pose) {
+        return super.getDimensions(pose).scale(boxScale);
     }
 
     /** The raised-head box is only hittable while the head is actually up there. */
