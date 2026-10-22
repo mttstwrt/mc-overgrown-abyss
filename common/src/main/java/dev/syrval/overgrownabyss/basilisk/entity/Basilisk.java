@@ -2,6 +2,7 @@ package dev.syrval.overgrownabyss.basilisk.entity;
 
 import dev.syrval.overgrownabyss.OvergrownAbyss;
 import dev.syrval.overgrownabyss.basilisk.BasiliskEntities;
+import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskStrollGoal;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskMoveControl;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskNavigation;
 import dev.syrval.overgrownabyss.basilisk.entity.ai.BasiliskStalkGoal;
@@ -37,7 +38,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -157,7 +157,7 @@ public class Basilisk extends Monster {
         this.goalSelector.addGoal(1, new FloatGoal(this));
         this.goalSelector.addGoal(2, new BasiliskAttackGoal(this));
         this.goalSelector.addGoal(3, new BasiliskStalkGoal(this));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, PATROL_SPEED));
+        this.goalSelector.addGoal(6, new BasiliskStrollGoal(this, PATROL_SPEED));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 12.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
@@ -496,7 +496,8 @@ public class Basilisk extends Monster {
     @Override
     public int getMaxFallDistance() {
         // The path planner reads this to decide how far down it may route a drop (and it rejects lava landings).
-        return (int) getAttributeValue(Attributes.SAFE_FALL_DISTANCE);
+        // Fall damage is negligible (SAFE_FALL_DISTANCE), but the discs float over a void: plan only short drops.
+        return Math.min((int) getAttributeValue(Attributes.SAFE_FALL_DISTANCE), TerrainProbe.EDGE_DROP);
     }
 
     @Override

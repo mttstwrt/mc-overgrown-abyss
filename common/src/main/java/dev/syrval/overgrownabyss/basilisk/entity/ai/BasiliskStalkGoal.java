@@ -75,8 +75,14 @@ public class BasiliskStalkGoal extends Goal {
         if (distance > CHASE_DISTANCE || basilisk.getRandom().nextDouble() < CLOSE_IN_CHANCE) {
             basilisk.getNavigation().moveTo(target, MOVE_SPEED);
         } else {
-            Vec3 p = ringPoint(basilisk, target, RING_RADIUS * BasiliskSize.reachMultiplier(basilisk.getScale()), RING_ROTATION, clockwise);
-            if (!basilisk.getNavigation().moveTo(p.x, p.y, p.z, MOVE_SPEED)) {
+            double radius = RING_RADIUS * BasiliskSize.reachMultiplier(basilisk.getScale());
+            Vec3 p = ringPoint(basilisk, target, radius, RING_ROTATION, clockwise);
+            if (TerrainProbe.isNearEdge(basilisk.level(), p.x, p.y, p.z)) {
+                clockwise = !clockwise; // that side is an edge: try the other way round
+                p = ringPoint(basilisk, target, radius, RING_ROTATION, clockwise);
+            }
+            if (TerrainProbe.isNearEdge(basilisk.level(), p.x, p.y, p.z)
+                || !basilisk.getNavigation().moveTo(p.x, p.y, p.z, MOVE_SPEED)) {
                 basilisk.getNavigation().moveTo(target, MOVE_SPEED); // ring point unreachable (trees, cliff): just close in
             }
         }

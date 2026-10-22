@@ -279,9 +279,12 @@ public class BasiliskAttackGoal extends Goal {
         if (ticks % REPATH_TICKS != 1) return;
         // Straight away from the target along the way we came, or a little to either side if that is blocked.
         double b = bearing(t);
-        for (double off : new double[] {0.0D, 0.6D, -0.6D}) {
-            Vec3 p = pointAround(t, b + off, retreatDistance);
-            if (basilisk.getNavigation().moveTo(p.x, p.y, p.z, RETREAT_SPEED)) return;
+        for (double scale : new double[] {1.0D, 0.6D}) {
+            for (double off : new double[] {0.0D, 0.6D, -0.6D}) {
+                Vec3 p = pointAround(t, b + off, retreatDistance * scale);
+                if (TerrainProbe.isNearEdge(basilisk.level(), p.x, p.y, p.z)) continue; // never retreat toward a drop
+                if (basilisk.getNavigation().moveTo(p.x, p.y, p.z, RETREAT_SPEED)) return;
+            }
         }
     }
 
@@ -300,7 +303,8 @@ public class BasiliskAttackGoal extends Goal {
         if (ticks >= FLANK_MAX_TICKS || basilisk.position().distanceTo(p) <= FLANK_ARRIVE_DISTANCE) { step = Step.DONE; return; }
         basilisk.getLookControl().setLookAt(t, 40.0F, 40.0F);
         if (ticks % REPATH_TICKS != 1) return;
-        if (!basilisk.getNavigation().moveTo(p.x, p.y, p.z, RETREAT_SPEED)) {
+        if (TerrainProbe.isNearEdge(basilisk.level(), p.x, p.y, p.z)
+            || !basilisk.getNavigation().moveTo(p.x, p.y, p.z, RETREAT_SPEED)) {
             flankBearing += Math.PI; // that side is blocked: try the opposite one
         }
     }

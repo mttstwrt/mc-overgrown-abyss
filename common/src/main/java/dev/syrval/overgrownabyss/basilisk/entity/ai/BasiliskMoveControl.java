@@ -73,12 +73,13 @@ public class BasiliskMoveControl extends MoveControl {
 
         double dx = target.getX() - basilisk.getX(), dz = target.getZ() - basilisk.getZ();
         double len = Math.max(1.0E-3D, Math.sqrt(dx * dx + dz * dz));
-        if (basilisk.onGround() || basilisk.horizontalCollision) {
+        boolean hopSafe = !TerrainProbe.isNearEdge(basilisk.level(), basilisk.getX() + dx / len * 2.0D, basilisk.getY(), basilisk.getZ() + dz / len * 2.0D);
+        if (hopSafe && (basilisk.onGround() || basilisk.horizontalCollision)) {
             basilisk.setDeltaMovement(dx / len * STUCK_PUSH, STUCK_HOP, dz / len * STUCK_PUSH);
             basilisk.hasImpulse = true;
         }
         if (basilisk.horizontalCollision) basilisk.requestClimb();
-        setWantedPosition(target.getX(), target.getY(), target.getZ(), STUCK_SPEED);
+        if (hopSafe) setWantedPosition(target.getX(), target.getY(), target.getZ(), STUCK_SPEED);
     }
 
     private boolean basiliskFrontIsUnsafe() {
@@ -92,10 +93,12 @@ public class BasiliskMoveControl extends MoveControl {
         int maxDrop = basilisk.getMaxFallDistance();
         // Probe from the edge of the body, not from its centre: the first blocks ahead are under the head itself.
         double edge = basilisk.getBbWidth() * 0.5D;
+        boolean standingNearEdge = TerrainProbe.isNearEdge(basilisk.level(), basilisk.getX(), basilisk.getY(), basilisk.getZ());
         for (double reach = edge + 1.0D; reach <= edge + 2.0D; reach += 1.0D) {
             double px = basilisk.getX() + dx * reach;
             double pz = basilisk.getZ() + dz * reach;
             if (TerrainProbe.isUnsafeLanding(basilisk.level(), px, basilisk.getY() + 0.2D, pz, maxDrop)) return true;
+            if (!standingNearEdge && TerrainProbe.isNearEdge(basilisk.level(), px, basilisk.getY(), pz)) return true; // keep the margin from a drop (but let one already near it walk away)
         }
         return false;
     }
