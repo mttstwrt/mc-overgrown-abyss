@@ -399,7 +399,17 @@ public class Basilisk extends Monster {
             chainReady = true;
         }
         chain.update(getX(), getY(), getZ(), getYRot(), rearAnim, isAsleep(),
-            (x, y, z) -> TerrainProbe.groundY(this.level(), x, y, z, (int) Math.ceil(3.0D * getScale())));
+            new BasiliskSegmentChain.GroundSampler() {
+                @Override
+                public double groundY(double x, double y, double z) {
+                    return TerrainProbe.groundY(Basilisk.this.level(), x, y, z, (int) Math.ceil(3.0D * getScale()));
+                }
+
+                @Override
+                public boolean solidAt(double x, double y, double z) {
+                    return TerrainProbe.isSolid(Basilisk.this.level(), x, y, z);
+                }
+            });
     }
 
     // ---------------------------------------------------------------- hitbox parts (plain entities)

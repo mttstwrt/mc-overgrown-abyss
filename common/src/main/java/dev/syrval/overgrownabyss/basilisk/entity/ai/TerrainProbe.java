@@ -39,6 +39,15 @@ public final class TerrainProbe {
         return level.noCollision(e, tall);
     }
 
+    /** True if the point is inside a block with collision (unloaded chunks count as open). */
+    public static boolean isSolid(Level level, double x, double y, double z) {
+        BlockPos pos = BlockPos.containing(x, y, z);
+        if (level.isOutsideBuildHeight(pos) || !level.hasChunkAt(pos)) return false;
+        BlockState state = level.getBlockState(pos);
+        VoxelShape shape = state.getCollisionShape(level, pos);
+        return !shape.isEmpty() && shape.bounds().move(pos).contains(x, y, z);
+    }
+
     /** Standing height of the first collidable surface at or below y (within maxDown cells), else NaN. */
     public static double groundY(Level level, double x, double y, double z, int maxDown) {
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();

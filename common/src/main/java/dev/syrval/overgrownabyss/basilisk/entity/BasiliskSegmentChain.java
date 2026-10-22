@@ -24,7 +24,17 @@ public final class BasiliskSegmentChain {
     /** Returns the standing height of the ground under (x, y, z), or NaN if none is close. */
     public interface GroundSampler {
         double groundY(double x, double y, double z);
+
+        /** True if the point is inside something solid (lets a sagging segment hug a wall instead of entering it). */
+        default boolean solidAt(double x, double y, double z) {
+            return false;
+        }
     }
+
+    /** Per-tick drop (x scale) of a segment with nothing under it; the fixed spacing turns it into a droop. */
+    public static final double SAG_PER_TICK = 0.35D;
+    /** Fraction of the way a segment's yaw/pitch moves toward its new value each tick (stops cubes tumbling). */
+    private static final float ROTATION_SMOOTHING = 0.5F;
 
     /** Active segment count (arrays are allocated for the maximum). Changed only by {@link #configure}. */
     public int count;
@@ -140,17 +150,32 @@ public final class BasiliskSegmentChain {
             }
             if (!(neckRaised && ease > 0.5D)) {
                 double g = ground.groundY(nx, ny, nz);
+                boolean supported = false;
                 if (!Double.isNaN(g)) {
-                    if (ny < g) { if (g - ny <= 1.5D * scale) ny = g; } // never sink into the floor; deep inside a wall (climbing) do not snap to its top
-                    else if (ny - g < 1.5D * scale) ny += (g - ny) * 0.4D; // settle onto it; beyond 1.5 stay in the air (climbing)
+                    if (ny < g) { if (g - ny <= 1.5D * scale) { ny = g; supported = true; } } // never sink into the floor; deep inside a wall (climbing) do not snap to its top
+                    else if (ny - g < 1.5D * scale) { ny += (g - ny) * 0.4D; supported = true; } // settle onto it
+                }
+                if (!supported && !neckRaised) {
+                    // Nothing under it (past a ledge, hanging on a wall): sag, then re-apply the fixed spacing to the
+                    // leader so the segment swings down into a droop. A segment that would enter a wall stays put.
+                    double sx = nx, sy = ny - SAG_PER_TICK * scale, sz = nz;
+                    if (!Double.isNaN(g)) sy = Math.max(sy, g);
+                    double ddx = sx - lx, ddy = sy - ly, ddz = sz - lz;
+                    double dl = Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+                    if (dl > 1.0E-6D) {
+                        sx = lx + ddx / dl * sp; sy = ly + ddy / dl * sp; sz = lz + ddz / dl * sp;
+                        if (!ground.solidAt(sx, sy, sz)) { nx = sx; ny = sy; nz = sz; }
+                    }
                 }
             }
 
             double mx = nx - lx, my = ny - ly, mz = nz - lz;
             double horiz = Math.sqrt(mx * mx + mz * mz);
             x[i] = nx; y[i] = ny; z[i] = nz;
-            yaw[i] = horiz > 1.0E-3D ? (float) (Math.toDegrees(Math.atan2(mz, mx)) + 90.0D) : headYaw;
-            pitch[i] = (float) Math.toDegrees(Math.atan2(my, horiz));
+            float newYaw = horiz > 1.0E-3D ? (float) (Math.toDegrees(Math.atan2(mz, mx)) + 90.0D) : headYaw;
+            float newPitch = (float) Math.toDegrees(Math.atan2(my, horiz));
+            yaw[i] = pyaw[i] + wrapDegrees(newYaw - pyaw[i]) * ROTATION_SMOOTHING;
+            pitch[i] = ppitch[i] + (newPitch - ppitch[i]) * ROTATION_SMOOTHING;
         }
 
         pcoil = coil;
