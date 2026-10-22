@@ -134,7 +134,7 @@ public class Basilisk extends Monster {
             .add(Attributes.SCALE, 1.0D)
             .add(Attributes.FOLLOW_RANGE, 40.0D)
             .add(Attributes.KNOCKBACK_RESISTANCE, 0.6D)
-            .add(Attributes.STEP_HEIGHT, 2.0D)               // NAGA: same 2.0 ledge-stepping
+            .add(Attributes.STEP_HEIGHT, BasiliskSize.stepHeight(BasiliskSize.MIN_SCALE)) // raised per size in applyScale; walls are climbed, never broken
             .add(Attributes.SAFE_FALL_DISTANCE, 24.0D)       // a snake lands softly: big drops are routine
             .add(Attributes.FALL_DAMAGE_MULTIPLIER, 0.25D);
     }
@@ -196,6 +196,8 @@ public class Basilisk extends Monster {
         setBase(Attributes.SCALE, scale);
         setBase(Attributes.MAX_HEALTH, BasiliskSize.maxHealth(scale));
         setBase(Attributes.ATTACK_DAMAGE, BasiliskSize.attackDamage(scale));
+        // Pathfinder (WalkNodeEvaluator) and entity movement both read maxUpStep(), i.e. this attribute.
+        setBase(Attributes.STEP_HEIGHT, BasiliskSize.stepHeight(scale));
         this.xpReward = BasiliskSize.xpReward(scale);
         int count = BasiliskSize.segmentCount(scale);
         if (chain.count != count || chain.scale != scale) {
