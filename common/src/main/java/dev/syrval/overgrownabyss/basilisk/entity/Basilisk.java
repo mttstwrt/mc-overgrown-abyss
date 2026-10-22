@@ -89,6 +89,10 @@ public class Basilisk extends Monster {
     private static final double SPAWN_SLEEP_CHANCE = 0.6D;
     /** Sleeping or engaged basilisks only despawn beyond this distance (blocks). */
     private static final double KEEP_LOADED_DISTANCE = 128.0D;
+    // --- climbing
+    private static final double CLIMB_WANTED_Y = 0.3D;   // wanted position this far above us
+    private static final double CLIMB_TARGET_Y = 0.5D;   // chased target this far above us
+    private static final int CLIMB_REQUEST_TICKS = 40;
 
     private static final EntityDataAccessor<Integer> DATA_PHASE =
         SynchedEntityData.defineId(Basilisk.class, EntityDataSerializers.INT);
@@ -104,6 +108,7 @@ public class Basilisk extends Monster {
     private float rearAnim, rearAnimO;
     private float jawAnim, jawAnimO;
 
+    private int climbUntil;   // not saved; tick until which a stuck-triggered climb stays on
     private int groggyTicks;  // not saved
     private int idleTicks = -1; // not saved; counts down while awake without a target, -1 = roll a new duration
 
@@ -487,11 +492,21 @@ public class Basilisk extends Monster {
     @Override
     public boolean onClimbable() {
         if (super.onClimbable()) return true; // vines, ladders
-        // Wall-climb like a spider, but only when the movement target is above us and we are idle/stalking.
-        return !this.level().isClientSide
-            && getPhase() == BasiliskPhase.IDLE
-            && this.horizontalCollision
-            && this.getMoveControl().getWantedY() > getY() + 0.3D;
+        // Wall-climb like a spider (any wall, including the chasm's tilted ones) while pressed against it and
+        // wanting to go up: the move target is above, the chased target is above, or the stuck fallback asked.
+        // IDLE also covers stalking; attack telegraphs and the lunge never climb.
+        if (this.level().isClientSide || isAsleep() || !this.horizontalCollision) return false;
+        BasiliskPhase phase = getPhase();
+        if (phase != BasiliskPhase.IDLE && phase != BasiliskPhase.RECOVER) return false;
+        LivingEntity target = getTarget();
+        return this.tickCount < climbUntil
+            || this.getMoveControl().getWantedY() > getY() + CLIMB_WANTED_Y
+            || (target != null && target.getY() > getY() + CLIMB_TARGET_Y);
+    }
+
+    /** Called by the stuck fallback: climb the wall in front for a moment even if the target is not above. */
+    public void requestClimb() {
+        climbUntil = this.tickCount + CLIMB_REQUEST_TICKS;
     }
 
     @Override

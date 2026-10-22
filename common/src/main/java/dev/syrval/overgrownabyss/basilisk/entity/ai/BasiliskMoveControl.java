@@ -77,6 +77,7 @@ public class BasiliskMoveControl extends MoveControl {
             basilisk.setDeltaMovement(dx / len * STUCK_PUSH, STUCK_HOP, dz / len * STUCK_PUSH);
             basilisk.hasImpulse = true;
         }
+        if (basilisk.horizontalCollision) basilisk.requestClimb();
         setWantedPosition(target.getX(), target.getY(), target.getZ(), STUCK_SPEED);
     }
 

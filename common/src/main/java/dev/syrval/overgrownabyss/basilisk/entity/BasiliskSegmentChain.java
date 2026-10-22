@@ -141,7 +141,7 @@ public final class BasiliskSegmentChain {
             if (!(neckRaised && ease > 0.5D)) {
                 double g = ground.groundY(nx, ny, nz);
                 if (!Double.isNaN(g)) {
-                    if (ny < g) ny = g;                       // never sink into the floor
+                    if (ny < g) { if (g - ny <= 1.5D * scale) ny = g; } // never sink into the floor; deep inside a wall (climbing) do not snap to its top
                     else if (ny - g < 1.5D * scale) ny += (g - ny) * 0.4D; // settle onto it; beyond 1.5 stay in the air (climbing)
                 }
             }
