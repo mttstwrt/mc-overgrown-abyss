@@ -1,5 +1,5 @@
 {
-  "simulation": { "gravity": 0.2, "dispersion": 2.0, "decay": 0.12, "max_density": 0.35 },
+  "simulation": { "gravity": 0.2, "dispersion": 2.0, "decay": 0.12, "max_density": 0.35, "wind_response": 0.5, "draft": { "speed": 0.4, "period": 60 } },
   "appearance": {
     "color": "#E6EEF0",
     "opacity": 0.12,

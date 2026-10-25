@@ -404,6 +404,10 @@ hole's gas out once.
 | `shimmer` | nothing: the crystal discs give off no gas (removed 2026-10-19), the medium is kept | faint violet, glowing of itself (`emissive` 0.35), short-lived (`decay` 0.15) |
 
 - How much of a kind there is: a source's `rate`, and how many there are, `every`. Halving `every` doubles the sources.
+- How it wanders: `draft` (`speed` in blocks per second, `period` in seconds between headings): spray 0.4 / 60, mist
+  0.3 / 90, cavern mist 0.2 / 120, bog 0.15 / 150. One heading per kind at a time, so all the mist of a hole goes the
+  same way; gas that runs to the hole's middle waits for G-022 in the library. `wind_response` (spray 0.5, mist 0.3,
+  bog 0.1, cavern mist 0) keeps a server's wind, once a mod gives one, out of the deep: there is none without it.
 - Gas is dark where the discs are dark, as blocks are. `emissive` is the lever for gas that should show in the dark. Mist
   is already lit by glow berries and lights inside leaves, through `block_light` 0.8.
 - Leaves stop gas, so mist on a jungle disc lies under the canopy.
