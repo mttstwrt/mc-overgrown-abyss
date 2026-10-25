@@ -7,8 +7,8 @@ Maven repository holding one build of its API:
 dev.syrval.volumetrics:volumetrics-common:0.1.0+mc1.21.1    jar, sources jar, POM
 ```
 
-Published 2026-10-15 from the library's branch `agent/G-001-chasm-volumetrics` (off its `1.21.1` line) at `144dc7f`.
-Everything below was read from that commit's sources; where it and this file disagree, the sources jar beside the jar
+Published 2026-10-25 from the library's `main` (one Stonecutter tree for 1.21.1 and 26.3; this is its
+`:common:1.21.1` build) at `e17180d`. Everything below was read from that commit's sources; where it and this file disagree, the sources jar beside the jar
 wins.
 
 ## How this mod takes it
@@ -25,18 +25,17 @@ wins.
 
 ## Publishing a new build here
 
-After the library's API changes. From wherever the library's 1.21.1 line is checked out (on 2026-10-15, the kit's
-`mods/mc-volumetric-effects-lib` on `agent/G-001-chasm-volumetrics`; in the kit, `bin/mcg mc-volumetric-effects-lib
-:common:publishToMavenLocal -Dmaven.repo.local=<absolute path of this folder>` does the same):
+After the library's API changes. With the library's `main` checked out in the kit (`mods/mc-volumetric-effects-lib`),
+from the kit's root:
 
 ```sh
-rm -rf ~/dev/my-projects/mc-mods/mc-abyss-ruins/libs/volumetrics/dev
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :common:publishToMavenLocal \
-    -Dmaven.repo.local=$HOME/dev/my-projects/mc-mods/mc-abyss-ruins/libs/volumetrics
+rm -rf mods/mc-abyss-ruins/libs/volumetrics/dev
+MC_M2_REPO=$PWD/mods/mc-abyss-ruins/libs/volumetrics bin/mc-lib publish 1.21.1
 ```
 
-`-Dmaven.repo.local` sends the publish here instead of `~/.m2`; give it an absolute path. Clearing `dev/` first keeps
-no file of an earlier build. Then change the commit named at the top of this file, and this file if the API changed.
+`MC_M2_REPO` sends the publish here instead of `~/.m2`; give it an absolute path. `bin/mc-lib sync` alone publishes to
+`~/.m2`, which this mod does not read. Clearing `dev/` first keeps no file of an earlier build. Then change the commit
+named at the top of this file, and this file if the API changed.
 
 For a game run with the gas, the library's loader jar goes into `<loader>/run/mods`:
 `fabric/build/libs/volumetrics-fabric-0.1.0+mc1.21.1-fabric.jar` or
@@ -125,7 +124,9 @@ made or moved. JSON also caps them (0.05 to 128 for a disc or sphere, to 256 for
 
 ### `Medium`: one kind of gas
 
-`record Medium(MediumParams simulation, Appearance appearance)`. Get one from the synced registry, as above, or
+`record Medium(MediumParams simulation, Appearance appearance, Optional<MediumBuoyancy> buoyancy, float windResponse,
+Optional<Draft.Settings> draft)`, with shorter constructors `(simulation, appearance)` and `(simulation, appearance,
+buoyancy)` for no buoyancy, the full wind and no draft. Get one from the synced registry, as above, or
 build one in code:
 
 ```java
@@ -173,11 +174,14 @@ A gas, `data/<namespace>/volumetrics/medium/<name>.json` (this mod's are in
 
 | Field | Meaning | Range | Default |
 |---|---|---|---|
-| `simulation.gravity` | Blocks per second. Positive sinks, negative rises | -64 to 64 | required |
+| `simulation.gravity` | Blocks per second. Positive sinks, negative rises. Not used when there is a `buoyancy` | -64 to 64 | 0 |
 | `simulation.dispersion` | Square blocks per second: how fast it spreads from dense to thin | 0 to 64 | required |
 | `simulation.decay` | Share lost per second | 0 to 20 | 0 |
 | `simulation.max_density` | How much a cell holds before gas piles up beside or above it | 0.01 to 16 | 1 |
 | `simulation.drift` | `{ "x": 1.5, "z": 0 }`: blocks per second carried east (`x`) and south (`z`); negative for west and north | -16 to 16 each | none |
+| `simulation.buoyancy` | The air decides whether it rises or sinks, in place of `gravity`: `{ "settles_at": 120 }` (blocks above sea level) or `{ "density": 0.4 }` (relative to air at sea level), and optionally `speed`. Air is densest low down, so a gas of density 1 rises to sea level from the abyss | exactly one of the two | none |
+| `simulation.wind_response` | How much of the server's wind pushes it, added to `drift`. Without a mod that gives the server a wind, there is none | 0 to 1 | 1 |
+| `simulation.draft` | `{ "speed": 0.3, "period": 90 }`: a slow sideways push of its own that turns to a new random heading every `period` seconds, its speed wobbling between 60% and 100% of `speed` (blocks per second). One heading for the whole kind at a time, the same on every client | speed 0 to 16, period above 0 | none |
 | `appearance.color` | `#RRGGBB` | | required |
 | `appearance.opacity` | Light through `n` blocks at full density is dimmed to `exp(-opacity * n)` | 0 to 16 | required |
 | `appearance.sky_light`, `block_light` | How strongly sky and light sources light it; at 1, as they light a block | 0 to 1 | 1, 0.5 |
