@@ -1,8 +1,0 @@
-{
-  "type": "overgrown_abyss:disc_ruins",
-  "sites": "troves",
-  "biomes": "#minecraft:is_overworld",
-  "step": "surface_structures",
-  "spawn_overrides": {},
-  "terrain_adaptation": "none"
-}

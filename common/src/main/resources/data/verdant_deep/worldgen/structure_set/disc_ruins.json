@@ -1,0 +1,12 @@
+{
+  "placement": {
+    "type": "verdant_deep:disc_ruins",
+    "salt": 1094861640
+  },
+  "structures": [
+    {
+      "structure": "verdant_deep:disc_ruins",
+      "weight": 1
+    }
+  ]
+}

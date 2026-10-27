@@ -1,10 +1,10 @@
 {
   "replace": false,
   "values": [
-    "overgrown_abyss:disc_lush",
-    "overgrown_abyss:disc_jungle",
-    "overgrown_abyss:disc_mangrove",
-    "overgrown_abyss:disc_crystal",
-    "overgrown_abyss:disc_lava"
+    "verdant_deep:disc_lush",
+    "verdant_deep:disc_jungle",
+    "verdant_deep:disc_mangrove",
+    "verdant_deep:disc_crystal",
+    "verdant_deep:disc_lava"
   ]
 }

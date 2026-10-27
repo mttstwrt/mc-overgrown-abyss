@@ -1,0 +1,13 @@
+{
+  "placement": {
+    "type": "verdant_deep:disc_ruins",
+    "sites": "troves",
+    "salt": 1094861642
+  },
+  "structures": [
+    {
+      "structure": "verdant_deep:disc_troves",
+      "weight": 1
+    }
+  ]
+}

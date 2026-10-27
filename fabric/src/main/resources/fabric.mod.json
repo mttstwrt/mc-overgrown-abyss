@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "overgrown_abyss",
+  "id": "verdant_deep",
   "version": "${version}",
-  "name": "Overgrown Abyss",
+  "name": "Verdant Deep",
   "description": "A giant ravine leading down to a ruined jungle city",
   "authors": [
     "syrval"
@@ -11,7 +11,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "dev.syrval.overgrownabyss.fabric.OvergrownAbyssFabric"
+      "dev.syrval.verdantdeep.fabric.VerdantDeepFabric"
     ]
   },
   "depends": {
@@ -25,6 +25,6 @@
     "volumetrics": "*"
   },
   "mixins": [
-    "overgrown_abyss.mixins.json"
+    "verdant_deep.mixins.json"
   ]
 }

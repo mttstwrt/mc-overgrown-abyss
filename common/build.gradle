@@ -43,7 +43,7 @@ def gitDirty = providers.exec {
 processResources {
     inputs.property('gitCommit', gitCommit)
     inputs.property('gitDirty', gitDirty)
-    filesMatching('overgrown_abyss-build.properties') {
+    filesMatching('verdant_deep-build.properties') {
         expand(commit: gitCommit.get(), dirty: gitDirty.get())
     }
 }

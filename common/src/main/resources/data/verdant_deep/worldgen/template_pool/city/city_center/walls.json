@@ -1,0 +1,95 @@
+{
+  "elements": [
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/bottom_1",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/bottom_2",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/bottom_left_corner",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/bottom_right_corner_1",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/bottom_right_corner_2",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/left",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/right",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/top",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/top_right_corner",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    },
+    {
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "minecraft:ancient_city/city_center/walls/top_left_corner",
+        "processors": "verdant_deep:city/generic",
+        "projection": "rigid"
+      },
+      "weight": 1
+    }
+  ],
+  "fallback": "minecraft:empty"
+}

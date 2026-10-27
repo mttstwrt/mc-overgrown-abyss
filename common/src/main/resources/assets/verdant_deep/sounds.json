@@ -1,0 +1,26 @@
+{
+  "entity.basilisk.ambient": {
+    "subtitle": "subtitles.entity.basilisk.ambient",
+    "sounds": [ "verdant_deep:entity/basilisk/ambient" ]
+  },
+  "entity.basilisk.hurt": {
+    "subtitle": "subtitles.entity.basilisk.hurt",
+    "sounds": [ "verdant_deep:entity/basilisk/hurt" ]
+  },
+  "entity.basilisk.death": {
+    "subtitle": "subtitles.entity.basilisk.death",
+    "sounds": [ "verdant_deep:entity/basilisk/death" ]
+  },
+  "entity.basilisk.rear": {
+    "subtitle": "subtitles.entity.basilisk.rear",
+    "sounds": [ "verdant_deep:entity/basilisk/rear" ]
+  },
+  "entity.basilisk.strike": {
+    "subtitle": "subtitles.entity.basilisk.strike",
+    "sounds": [ "verdant_deep:entity/basilisk/strike" ]
+  },
+  "entity.basilisk.slither": {
+    "subtitle": "subtitles.entity.basilisk.slither",
+    "sounds": [ "verdant_deep:entity/basilisk/slither" ]
+  }
+}

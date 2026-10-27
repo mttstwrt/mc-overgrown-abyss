@@ -7,7 +7,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'overgrown_abyss'
+rootProject.name = 'verdant_deep'
 
 include 'common'
 include 'fabric'

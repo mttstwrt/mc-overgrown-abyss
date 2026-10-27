@@ -1,5 +1,5 @@
 {
-  "type": "overgrown_abyss:ravine_carve",
+  "type": "verdant_deep:ravine_carve",
   "salt": 1094861636,
   "cell_size": 2048,
   "chance": 0.5,
@@ -204,7 +204,7 @@
     }
   ],
   "environment": {
-    "forbidden_biomes": "#overgrown_abyss:ravine_forbidden",
+    "forbidden_biomes": "#verdant_deep:ravine_forbidden",
     "cavern_biome": "minecraft:lush_caves"
   },
   "ravine": {

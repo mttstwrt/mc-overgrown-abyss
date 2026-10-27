@@ -1,0 +1,13 @@
+{
+  "placement": {
+    "type": "verdant_deep:ravine_centre",
+    "salt": 1094861637,
+    "ravine": "verdant_deep:ravine/carve"
+  },
+  "structures": [
+    {
+      "structure": "verdant_deep:city",
+      "weight": 1
+    }
+  ]
+}
