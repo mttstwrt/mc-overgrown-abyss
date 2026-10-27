@@ -26,6 +26,8 @@ import java.util.Set;
  */
 final class DialsFile {
     static final String NAME = VerdantDeep.MOD_ID + ".json";
+    /** The file's name before the mod was renamed; it is copied to {@link #NAME} once. */
+    private static final String LEGACY_NAME = "overgrown_abyss.json";
     private static final String ABOUT = "0 is none, 1 is as the mod ships, 2 is twice as much (holes: 0 to 1). "
             + "Read when a world loads; only chunks made after that change.";
     // The codec writes its fields in an order of its own. The file has the dials in the order they are described in.
@@ -42,6 +44,7 @@ final class DialsFile {
      */
     static Dials read(Path folder, Set<String> growthNames, Set<String> themeNames) {
         Path file = folder.resolve(NAME);
+        migrateLegacy(folder, file);
         boolean there = Files.exists(file);
         Dials given = Dials.NEUTRAL;
         // A dial left out reads as 1, so one the file lacks, a new one say, is told by the names the file has.
@@ -61,6 +64,19 @@ final class DialsFile {
             write(file, full);
         }
         return given;
+    }
+
+    private static void migrateLegacy(Path folder, Path file) {
+        Path legacy = folder.resolve(LEGACY_NAME);
+        if (Files.exists(file) || !Files.exists(legacy)) {
+            return;
+        }
+        try {
+            Files.copy(legacy, file);
+            VerdantDeep.LOGGER.info("Copied {} to {} (the mod was renamed); the old file is left in place", legacy, file);
+        } catch (IOException e) {
+            VerdantDeep.LOGGER.error("{} could not be copied to {} ({})", legacy, file, e.getMessage());
+        }
     }
 
     private static Optional<JsonElement> readJson(Path file) {
