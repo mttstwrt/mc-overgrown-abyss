@@ -11,16 +11,16 @@ of levers in SCOPE.md section 9, and `docs/SETTINGS.md` describes every setting 
 
 ## Where the levers are, and how to try one
 
-- Nearly all are in one file: `common/src/main/resources/data/overgrown_abyss/worldgen/density_function/ravine/carve.json`.
+- Nearly all are in one file: `common/src/main/resources/data/verdant_deep/worldgen/density_function/ravine/carve.json`.
   A theme's levers are in its entry of `disc_themes`; the falls and springs are in `falls` at the top of the file.
 - What a single plant is made of (a curtain's length, a cap's width, a bulb's lights) is in its own file under
   `worldgen/configured_feature/disc/`.
 - To try more or less of a thing without building the mod or making a datapack, turn its dial:
-  `config/overgrown_abyss.json` in the game's folder, which the mod writes the first time a world loads (`docs/SETTINGS.md`,
+  `config/verdant_deep.json` in the game's folder, which the mod writes the first time a world loads (`docs/SETTINGS.md`,
   "Dials"). 0 is none, 1 is as the mod ships, 2 is twice as much. It is read when a world loads, and only chunks not yet
   generated use the new values.
 - Anything a dial does not turn is a change to `carve.json` or to a feature file: in the mod, or in a datapack that holds
-  a whole copy of the file at the same path under `data/overgrown_abyss/`.
+  a whole copy of the file at the same path under `data/verdant_deep/`.
 - The log lines `Ravine settings:` and `Falls:` at world load show the values that are live. A value outside its range,
   or one of the rules below broken, fails the load with a message that names it.
 - Each entry of a theme's `growth` has its own draw for every column, made from its place in the list. So lowering an
@@ -199,7 +199,7 @@ not change.
 |---|---|---|---|
 | `count` | 1 to 2 | 0 to 16 | springs a hole has, where it has discs with wall behind them |
 | `height` | 3 to 7 | 2 to 16 | blocks over the disc's rim; see below |
-| `feature` | `overgrown_abyss:disc/wall_spring` | any configured feature | what makes the spring at the place given |
+| `feature` | `verdant_deep:disc/wall_spring` | any configured feature | what makes the spring at the place given |
 
 - `height` is a ceiling more than a setting. A dome leans in as it rises and vanilla's spring wants rock under it, so a
   spring is put no higher than its wall is still nearly upright. By the dome's shape that is 3 to 6 blocks over the middle
@@ -208,7 +208,7 @@ not change.
   on all but small discs; that was not tried.
 - In `wall_spring.json`: `rock_count` 4 and `hole_count` 1 are vanilla's own test (rock on three sides and one side
   open); `requires_block_below` is why a spring needs upright wall under it. `valid_blocks` is the tag
-  `#overgrown_abyss:spring_rock`; a wall of some other mod's stone needs that stone added to the tag, or no spring takes.
+  `#verdant_deep:spring_rock`; a wall of some other mod's stone needs that stone added to the tag, or no spring takes.
 - Where no place will do, the hole has the pool and no spring over it. Measured: 6 of 6 took.
 - Vanilla puts springs of its own in the hole's wall as well, so a hole had the odd fall from the wall before this.
 - A spring's pool is not joined to a fall. The end to look at: the dial `springs` at 5 (5 to 10 a hole).
@@ -231,7 +231,7 @@ rest, every number is a first guess and none of it has been looked at in game. T
 | `water.clear` | 6 | 0 to 16, lava only | blocks kept from other discs' ground at about the lava's height, and from roots. 0 for lava wherever a pond lies |
 | `water.depth` | 1 | 1 or 2 | 2 is safe while nothing grows in the lava. Keep at 1 where trees stand in it: a tree's foot is one block |
 | `water.stream_width` | none | 0 to 8 | rivers of lava; not tried |
-| `growth` | none | as on any theme | the obsidian trees are out for now. To put them back: `"growth": [{"feature": "overgrown_abyss:disc/obsidian_tree", "every": 30, "on": "lava"}]`, where `every` is blocks of lava for each place tried; about a third of the places grew a tree |
+| `growth` | none | as on any theme | the obsidian trees are out for now. To put them back: `"growth": [{"feature": "verdant_deep:disc/obsidian_tree", "every": 30, "on": "lava"}]`, where `every` is blocks of lava for each place tried; about a third of the places grew a tree |
 | in the tree's file, `obsidian_tree.json` (kept) | trunk 5 to 9, crown radius 2 | as any tree | `trunk_provider` and `dirt_provider` are the trunk and its foot: obsidian |
 | in the tree's file: `foliage_provider` | magma 3, glowstone 1 | any weights, any blocks | the crown. The two `weight`s are how much of it glows: about one block in four is glowstone |
 | `palette.top`, first layer | basalt, obsidian, smooth basalt in patches | any provider | `states` is an order, as on the jungle disc; `firstOctave` -4 makes patches about 8 blocks apart |
@@ -255,7 +255,7 @@ rest, every number is a first guess and none of it has been looked at in game. T
 - What the rules do not reach: what hangs from a disc higher up (vines, glow berries), and what vanilla builds in a hole,
   such as the props of a mineshaft.
 - A pack that turns `doFireTick` off needs none of it, and can have `clear` 0.
-- To find one: the dial `themes.overgrown_abyss:disc_lava` at 6, which is the weight 12 that made about two fifths of the
+- To find one: the dial `themes.verdant_deep:disc_lava` at 6, which is the weight 12 that made about two fifths of the
   discs low in a hole lava discs. Lava wherever a pond lies (`clear` 0 and `bank` 3) is the file's.
 
 ## Light: how much of a disc is dark
@@ -301,7 +301,7 @@ place is a block with a whole top under two blocks a body fits in. Four holes, r
   on the ground is a diamond that shrinks as it rises: 265 places from 3 blocks up, where a light hung under a small
   tree, 41 from 10, 5 from 13, none from 15.
 - **Inside leaves.** A light in a tree is put in place of a leaf that has a leaf or a log on all six of its sides
-  (`#overgrown_abyss:hides_light` is what counts as cover; add another mod's leaves there if a pack's trees do not use
+  (`#verdant_deep:hides_light` is what counts as cover; add another mod's leaves there if a pack's trees do not use
   the game's tag). Measured: of 579 such lights none had a side open. A bulb covers its own lights instead, a leaf on
   every side of every light that had air there: of the 3375 sides its lights turn outward (not to the stalk or to
   another light), 25 were not leaf, about one in a hundred. A vine, water or a cave vine was there first; where the
@@ -389,7 +389,7 @@ more. For the roots, the same of their bark, outside the middle of the hole wher
 
 Gas needs the gas library, Volumetrics, on the server and the client (`docs/SETTINGS.md`, Gas). In game,
 `/volumetrics stats` shows what it costs, and `/volumetrics enabled false` turns it off to compare. The kinds are files of
-their own in `data/overgrown_abyss/volumetrics/medium/`. Where they come from is in `carve.json`: a theme's `gas`, and
+their own in `data/verdant_deep/volumetrics/medium/`. Where they come from is in `carve.json`: a theme's `gas`, and
 `gas` at the top. Restart the world after a change: the library reads its media when a world loads, and the mod works a
 hole's gas out once.
 

@@ -1,6 +1,6 @@
 # Trove variety: design
 
-Mod: mc-abyss-ruins (overgrown abyss), MC 1.21.1, NeoForge + Fabric. Branch `agent/trove-variety`.
+Mod: verdant-deep (Verdant Deep), MC 1.21.1, NeoForge + Fabric. Branch `agent/trove-variety`.
 
 ## Intent
 
@@ -36,7 +36,7 @@ the chasm dangerous enough to justify the reward. Three changes:
 - Each trove has 2-4 masonry blocks and exactly one chest or barrel (`DiscTroveFilesTest.java:50,89,116-117`).
 - Per-theme trove config lives in `carve.json` `troves.kinds` / `troves.loot` (lines ~238-247, 841-847, 1253-1259);
   loot is the single table `minecraft:chests/jungle_temple`. Tier and depth/distance weighting code exists
-  (`DiscRuins.java:49-103`) but is inactive for troves. Mod loot tables: `data/overgrown_abyss/loot_table/chests/`.
+  (`DiscRuins.java:49-103`) but is inactive for troves. Mod loot tables: `data/verdant_deep/loot_table/chests/`.
 - Depth: "rings" are the discs of a cone (`ConeDiscLayout.java:9-16`); `DiscTraits.java:14-23` gives `height`
   (0 to 1 across the hole's discs) and `distance`. Themes are weighted in `carve.json` `disc_themes`
   (lush ~34, jungle ~263, mangrove ~874, crystal 1284, lava 1401; weights 4/4/3/2/2). Crystal: distance >= 0.55

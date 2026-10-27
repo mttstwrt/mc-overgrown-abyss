@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Repo `mods/mc-abyss-ruins`, branch `agent/trove-variety`, MC 1.21.1. Both NeoForge and Fabric must compile (`bin/mcg mc-abyss-ruins compileJava`, then `bin/mcg mc-abyss-ruins@fabric compileJava`).
+- Repo `mods/verdant-deep`, branch `agent/trove-variety`, MC 1.21.1. Both NeoForge and Fabric must compile (`bin/mcg verdant-deep compileJava`, then `bin/mcg verdant-deep@fabric compileJava`).
 - **No new loot tables.** Every chest uses the theme's current trove table (`minecraft:chests/jungle_temple`, set in `carve.json` `troves.loot`). Crystal and lava `troves.loot` use the same table.
 - Spawners get no telegraphing: no hint block, particle or sound.
 - Jackpot is more chests, not richer contents. Anti-goal: spawners in shallow troves often enough to feel unfair.
@@ -25,19 +25,19 @@
 
 ## File Structure
 
-Paths under `mods/mc-abyss-ruins/`:
+Paths under `mods/verdant-deep/`:
 
-- `common/src/main/java/dev/syrval/overgrownabyss/ravine/DiscRuins.java`: `Kind` gains `group`.
-- `common/src/main/java/dev/syrval/overgrownabyss/ravine/Dials.java`: dials `hoards`, `nests`.
-- `common/src/main/java/dev/syrval/overgrownabyss/compat/DialsFile.java`: file order.
-- `common/src/test/java/dev/syrval/overgrownabyss/compat/TroveTemplates.java` (new, test sources): generator that builds trove templates as `CompoundTag`s.
+- `common/src/main/java/dev/syrval/verdantdeep/ravine/DiscRuins.java`: `Kind` gains `group`.
+- `common/src/main/java/dev/syrval/verdantdeep/ravine/Dials.java`: dials `hoards`, `nests`.
+- `common/src/main/java/dev/syrval/verdantdeep/compat/DialsFile.java`: file order.
+- `common/src/test/java/dev/syrval/verdantdeep/compat/TroveTemplates.java` (new, test sources): generator that builds trove templates as `CompoundTag`s.
 - `common/src/test/.../compat/DiscTroveFilesTest.java`: actually run the template invariants.
-- `common/src/main/resources/data/overgrown_abyss/structure/trove/*.nbt`: new templates.
-- `common/src/main/resources/data/overgrown_abyss/worldgen/template_pool/disc_troves/*.json`: new pools.
-- `common/src/main/resources/data/overgrown_abyss/worldgen/density_function/ravine/carve.json`: new kinds, crystal and lava `troves`.
+- `common/src/main/resources/data/verdant_deep/structure/trove/*.nbt`: new templates.
+- `common/src/main/resources/data/verdant_deep/worldgen/template_pool/disc_troves/*.json`: new pools.
+- `common/src/main/resources/data/verdant_deep/worldgen/density_function/ravine/carve.json`: new kinds, crystal and lava `troves`.
 - `docs/SETTINGS.md`: dials, crystal and lava now have troves.
 
-Naming used throughout: pool ids `overgrown_abyss:disc_troves/<name>` where `<name>` is one of
+Naming used throughout: pool ids `verdant_deep:disc_troves/<name>` where `<name>` is one of
 `hoard`, `nest`, `hoard_nest` (overgrown style, shared by lush, jungle, mangrove), `crystal_cairn`, `crystal_hoard`,
 `crystal_nest`, `crystal_hoard_nest`, `lava_cairn`, `lava_hoard`, `lava_nest`, `lava_hoard_nest`. Template names are
 `trove/<name>_<n>.nbt`, `n` from 1 to 2. Kind groups: `hoard` (hoard, hoard_nest variants count under `hoard` and `nest`
@@ -56,17 +56,17 @@ both, see Task 2), `nest`.
 ### Task 1: Make trove template checks run, and generate templates
 
 **Files:**
-- Create: `common/src/test/java/dev/syrval/overgrownabyss/compat/TroveTemplates.java`
-- Modify: `common/src/test/java/dev/syrval/overgrownabyss/compat/DiscTroveFilesTest.java:60-120`
+- Create: `common/src/test/java/dev/syrval/verdantdeep/compat/TroveTemplates.java`
+- Modify: `common/src/test/java/dev/syrval/verdantdeep/compat/DiscTroveFilesTest.java:60-120`
 
 **Interfaces:**
 - Produces: `TroveTemplates.build(Style style, Kind kind, int variant) -> CompoundTag` (a vanilla structure template NBT), with `enum Style { OVERGROWN, CRYSTAL, LAVA }` and `enum Kind { CAIRN, HOARD, NEST, HOARD_NEST }`. `TroveTemplates.name(Style, Kind) -> String` returns the pool name from the naming list above. Template files are written by `TroveTemplates.writeAll(Path resources)`, run from a test only when env `WRITE_TROVE_TEMPLATES=1`.
 
 - [ ] **Step 1:** In `DiscTroveFilesTest`, find why `files()`, `kinds()` and `assertIsATrove` (:60-118) are never called, and add a `@Test allTroveTemplatesObeyTheirInvariants` that runs `assertIsATrove` over every trove NBT. Keep the existing weathering test as is.
-- [ ] **Step 2:** Run `bin/mcg mc-abyss-ruins test --tests '*DiscTroveFilesTest*'`. Expected: PASS for the six existing templates. If it fails, the existing templates violate the written invariants: fix the test's invariant, not the templates, and note it in the report.
+- [ ] **Step 2:** Run `bin/mcg verdant-deep test --tests '*DiscTroveFilesTest*'`. Expected: PASS for the six existing templates. If it fails, the existing templates violate the written invariants: fix the test's invariant, not the templates, and note it in the report.
 - [ ] **Step 3:** Generalize `assertIsATrove` to take the kind: cairn/marker keep `sizeX,sizeZ <= 2`, 1 container, 2-4 masonry; HOARD allows `size <= 4`, 2-3 containers; NEST adds exactly 1 `minecraft:spawner` block entity at y below the floor with a solid block on all 6 sides and not air; HOARD_NEST both. Every container must have an `id` and the theme's loot is applied by code, so nothing to check for tables. Kind is derived from the file name.
 - [ ] **Step 4:** Implement `TroveTemplates` to produce `HOARD`, `NEST`, `HOARD_NEST` for each of the three styles (cairn only for CRYSTAL and LAVA; overgrown cairn/marker already exist). Two variants each. Blocks per style: OVERGROWN reuse the existing cairn palette (mossy cobblestone, cobblestone, stone bricks; copy from an existing cairn template to match the `weathered` processor); CRYSTAL amethyst_block, calcite, smooth_basalt, budding_amethyst; LAVA blackstone, gilded_blackstone, magma_block, obsidian. Chests face outward; a NEST has its spawner `SpawnData` entity per Global Constraints, `RequiredPlayerRange` 16 and default delays, inside a full shell of the style's stone (2 blocks under the floor).
-- [ ] **Step 5:** Run the generator once (`WRITE_TROVE_TEMPLATES=1 bin/mcg mc-abyss-ruins test --tests '*TroveTemplates*'`), then rerun the full `DiscTroveFilesTest`. Expected: PASS for all templates.
+- [ ] **Step 5:** Run the generator once (`WRITE_TROVE_TEMPLATES=1 bin/mcg verdant-deep test --tests '*TroveTemplates*'`), then rerun the full `DiscTroveFilesTest`. Expected: PASS for all templates.
 - [ ] **Step 6:** Commit tests, generator and generated NBT as separate commits (test wiring; generator + templates).
 
 Why this test: it catches a template with no loot-capable container, an exposed spawner, or an out-of-spec size, none of which a compile or boot shows.
@@ -85,7 +85,7 @@ Why this test: it catches a template with no loot-capable container, an exposed 
 - [ ] **Step 1:** Write the failing test `hoardAndNestDialsScaleOnlyTheirOwnKinds` in `DialsTest`: a theme with kinds cairn (no groups, weight 1), hoard (`["hoard"]`, 2), nest (`["nest"]`, 2), hoard_nest (`["hoard","nest"]`, 4); with `hoards=0, nests=1` expect cairn 1, hoard removed, nest 2, hoard_nest removed; with `hoards=2, nests=3` expect 1, 4, 6, 24; with huge values expect weights capped at 1000.
 - [ ] **Step 2:** Run it; expected FAIL (unknown dial).
 - [ ] **Step 3:** Implement the `groups` field, the two dials through every place the existing `troves` dial is wired (record, `NEUTRAL`, `withNames`, `CODEC`, `turned()`, `turn()`, `DialsFile.ORDER`, `DialsFileTest:33`), and the SETTINGS.md table row.
-- [ ] **Step 4:** Run `bin/mcg mc-abyss-ruins test`. Expected: all pass, including the existing dial tests (`DialsTest:113` all-dials JSON may need the two new names).
+- [ ] **Step 4:** Run `bin/mcg verdant-deep test`. Expected: all pass, including the existing dial tests (`DialsTest:113` all-dials JSON may need the two new names).
 - [ ] **Step 5:** Commit.
 
 Why this test: pure logic with edge cases (removal at 0, cap, plain kinds untouched).
@@ -101,11 +101,11 @@ Why this test: pure logic with edge cases (removal at 0, cap, plain kinds untouc
 **Interfaces:**
 - Consumes: Task 1 templates `trove/{hoard,nest,hoard_nest}_{1,2}.nbt`, Task 2 `groups`.
 
-- [ ] **Step 1:** Create the three pools, same shape as `template_pool/disc_troves/cairn.json` (two elements each, processor `overgrown_abyss:disc_troves/weathered`, rigid, fallback empty).
+- [ ] **Step 1:** Create the three pools, same shape as `template_pool/disc_troves/cairn.json` (two elements each, processor `verdant_deep:disc_troves/weathered`, rigid, fallback empty).
 - [ ] **Step 2:** Add kinds to each of the three themes' `troves.kinds`: `hoard` weight 1 `groups ["hoard"]`; `nest` weight 1 `groups ["nest"]` with `sink` equal to the pocket depth plus floor; `hoard_nest` weight 1 `groups ["hoard","nest"]`; `by_height` ramps meeting Global Constraints. Before choosing ramp values, confirm which end of `height` is the bottom disc (`DiscTraits.java:11-27`, `Ramp` at `DiscTheme.java:53-68`) and state it in a comment-free commit message. Existing cairn/marker kinds unchanged. Expected values: hoard 0 at the top to about 0.5 weight at the bottom against cairn+marker total 2; nest 0.1 to 0.8; hoard_nest 0 to 0.3.
 - [ ] **Step 3:** Check the disc thickness where troves stand (`ravine/DiscLayout`/`ConeDiscLayout`) and set `sink` so the pocket is inside disc rock; if discs can be thinner than the pocket, shrink the pocket in `TroveTemplates` and regenerate.
 - [ ] **Step 4:** Write test `troveKindsRampWithDepthInEveryOvergrownTheme` in `DiscRuinsTest` that loads the three themes and asserts at height top: hoard and hoard_nest effective weight 0 and nest weight below 10% of the total; at bottom: hoard, nest, hoard_nest each above 10% of the total. (Catches a wrong ramp direction.)
-- [ ] **Step 5:** `bin/mcg mc-abyss-ruins test`, then `compileJava` for both loaders. Expected: pass.
+- [ ] **Step 5:** `bin/mcg verdant-deep test`, then `compileJava` for both loaders. Expected: pass.
 - [ ] **Step 6:** Commit.
 
 ---
@@ -135,7 +135,7 @@ Same as Task 4 for the lava theme (:1401 onward) with `lava_*` pools. Lava discs
 
 **Files:** Modify `docs/SETTINGS.md:549` (crystal and lava now have troves), add the two dials to the dials section.
 
-- [ ] **Step 1:** `bin/mcg mc-abyss-ruins test`, `compileJava`, and `bin/mcg mc-abyss-ruins@fabric compileJava`. Expected: all green.
+- [ ] **Step 1:** `bin/mcg verdant-deep test`, `compileJava`, and `bin/mcg verdant-deep@fabric compileJava`. Expected: all green.
 - [ ] **Step 2:** Run `/abyss stats` on a generated chasm (offline seed report if the command offers it: `AbyssStatsCommand`), with a seed that has many themes. Expected: chest and spawner counts above the old baseline; spawners appear mostly in deeper troves; crystal and lava troves present. If the harness can be published (`bin/mc-harness status`), boot NeoForge and Fabric once via `mc-build-runner`; otherwise record "not booted" as unverified. Stop any server started.
 - [ ] **Step 3:** Update the docs, `git status` clean in the repo, commit.
 - [ ] **Step 4:** Write the report `.agent/reports/2026-10-19-trove-variety.md` (what changed with branch and commits, verification commands and results, unverified: look of crystal and lava styles, blaze behavior, real spawner activation, boot) and a worklog line in `.agent/worklog.md`. Do not push or bump the version.

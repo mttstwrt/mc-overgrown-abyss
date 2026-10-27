@@ -1,7 +1,7 @@
 # Settings
 
 Everything the mod's holes are made from is in one file,
-`common/src/main/resources/data/overgrown_abyss/worldgen/density_function/ravine/carve.json`, and this describes every
+`common/src/main/resources/data/verdant_deep/worldgen/density_function/ravine/carve.json`, and this describes every
 setting in it. A datapack may hold a file of its own at the same path under `data/`; it replaces the whole of the mod's, so
 it has to keep up when the mod's settings change. The log line `Ravine settings:` at world load shows which values are live.
 
@@ -10,7 +10,7 @@ each one's limits and which way to turn it for which look.
 
 ## Dials
 
-For more or less of a thing without touching that file there are the dials: `config/overgrown_abyss.json` in the game's
+For more or less of a thing without touching that file there are the dials: `config/verdant_deep.json` in the game's
 folder (in Prism, the instance's `.minecraft/config`; on a server, the `config` folder beside `server.properties`, and on
 the server alone). The mod writes it the first time a world loads, with every dial at 1. 0 is none, 1 is as the settings
 have it, 2 is twice as much; `holes` goes from 0 to 1 and the rest from 0 to 10. The file is read each time a world loads,
@@ -26,7 +26,7 @@ explored, new ground meets old at a seam.
 | `ruins`, `troves` | each theme's `ruins` or `troves`: `chance` first, up to 1, and what the dial asks beyond that comes off `every`, so more discs have them before a disc has more. 0 takes the block out |
 | `hoards`, `nests` | the `weight` of each kind in a theme's `troves` whose `groups` has `"hoard"` or `"nest"` (both, if it has both), up to 1000. A kind turned to 0 is taken out; a kind in neither group is left as it is |
 | `rough_ground` | each theme's `ground`: the `cover` of its mounds and of its outcrops, not their height. 0 takes `ground` out |
-| `growth.<name>` | the `every` of each growth, on a disc or under the roots, whose feature is in the tag `#overgrown_abyss:dial/<name>` (`tags/worldgen/configured_feature/dial/`). The mod has `lights`, `giants` and `rim`; a feature in two of them, as the glowing bulbs are, is turned by both. 0 takes those growths out of their lists |
+| `growth.<name>` | the `every` of each growth, on a disc or under the roots, whose feature is in the tag `#verdant_deep:dial/<name>` (`tags/worldgen/configured_feature/dial/`). The mod has `lights`, `giants` and `rim`; a feature in two of them, as the glowing bulbs are, is turned by both. 0 takes those growths out of their lists |
 | `themes.<biome id>` | that theme's `weight` |
 
 What a dial gives is held to the limits each setting has and then checked by the same rules as the file. If it does not
@@ -115,14 +115,14 @@ in its middle. Its numbers:
 `disc_themes` (optional, see `DiscTheme`) are the kinds of disc. Each disc is given one by a weighted draw, and a theme sets:
 
 - `biome`: the biome stamped over the disc's dome and platform. It colours grass, leaves and water, decides what spawns, and
-  keeps the surrounding biome's features off the disc. The mod's own are in `data/overgrown_abyss/worldgen/biome/`.
+  keeps the surrounding biome's features off the disc. The mod's own are in `data/verdant_deep/worldgen/biome/`.
 - `inherits`: a biome the disc's biome takes its content from, as that biome is when the level loads, with whatever other mods
   have added to it.
   - Features: the parent's are grown on the disc by its own placement rules, with the disc's top as the ground. `stages` chooses
     which stages of decoration are grown (only `vegetal_decoration` unless given, which leaves out lakes, geodes, monster rooms,
     ores and springs; an empty list grows none) and `without_features` names placed features to leave out.
   - Spawns: the parent's, changed by the disc biome's own file. A mob listed under `spawners` in
-    `data/overgrown_abyss/worldgen/biome/disc_*.json` is added, and replaces the parent's entry for the same mob in the same
+    `data/verdant_deep/worldgen/biome/disc_*.json` is added, and replaces the parent's entry for the same mob in the same
     category (so a new weight or group size). `without_spawns` names mobs to leave out of what is inherited. The mod's own
     files list no mobs, so by default a disc spawns exactly what its parent does.
 - `weight`, and three optional ramps that multiply it by where the disc is among the discs of its own hole: `by_height`
@@ -278,7 +278,7 @@ mangrove's has no block light and monsters can spawn on it (`docs/TUNING.md`, "L
 - `glow_lichen_high` (jungle, mangrove and lush, on the top and under the disc, and under the hole's roots): glow lichen
   on whatever is overhead and has 8 open blocks under it: a dome's ceiling and leaning wall, the underside of a platform
   or a root. From the ground it looks up to 32 blocks for a place. Lichen gives 7, so from there none of it reaches the
-  ground. What it will hold to is the tag `#overgrown_abyss:holds_lichen`; a pack that makes discs or roots of other
+  ground. What it will hold to is the tag `#verdant_deep:holds_lichen`; a pack that makes discs or roots of other
   blocks adds them there.
 
 The numbers to change are each growth's `every` (larger is fewer), and in the two `*_in_leaves` files the `y_spread`, which
@@ -312,7 +312,7 @@ measured for blocked ground since the jungle's trees were thinned and the ground
     is still and held in on every side, as a disc's water is, and it lights the disc.
   - Nothing grows on it. The obsidian trees that stood in its lava are out for now (the owner, 2026-10-11); their file,
     `obsidian_tree.json`, is kept. To put them back, give the theme
-    `"growth": [{"feature": "overgrown_abyss:disc/obsidian_tree", "every": 30, "on": "lava"}]`.
+    `"growth": [{"feature": "verdant_deep:disc/obsidian_tree", "every": 30, "on": "lava"}]`.
     - The tree is vanilla's acacia in other blocks: the forked trunk, 5 to 9 tall, of obsidian, and the flat crown of
       magma blocks with about one block in four glowstone (its `foliage_provider`, two `weight`s of 3 and 1). The crown
       glows, and its magma burns whoever walks on it.
@@ -343,7 +343,7 @@ measured for blocked ground since the jungle's trees were thinned and the ground
 Jungle and mangrove grow their own trees because the parent's may not grow on a disc at all: an overworld overhaul such as
 William Wythers' Overhauled Overworld replaces those biomes with trees that only grow at certain heights above sea level and on
 soils its own terrain lays down. The disc's trees are vanilla's, kept under the mod's own ids
-(`data/overgrown_abyss/worldgen/configured_feature/disc/`) so that such a pack cannot change them, with these changes: more vines
+(`data/verdant_deep/worldgen/configured_feature/disc/`) so that such a pack cannot change them, with these changes: more vines
 hanging from their leaves; a `min_clipped_height`, so that a tree under a low part of the dome grows as tall as there is
 room instead of not at all; a block more of trunk on the jungle tree and the short mangrove, which lifts their lowest
 leaves over a player's head; and root arms up to 24 blocks long on the tall mangrove (vanilla's 15 is too short for a trunk
@@ -431,7 +431,7 @@ Three settings keep a disc's plants from ending in a wall at its edge and from l
 `roots` (optional, see `RootSettings`) are the wooden roots that wind through a hole. Without the block a hole has none. They
 are blocks written over whatever is there: a root runs into the wall, through a platform or stem in its way, and across the
 floor. The city and the mod's own ruins build round them (their rules leave alone the blocks of the tag
-`#overgrown_abyss:ruins_cannot_replace`, which holds the two woods; a pack that makes roots of other blocks adds them there).
+`#verdant_deep:ruins_cannot_replace`, which holds the two woods; a pack that makes roots of other blocks adds them there).
 Measured outside the game with the mod's numbers, on level ground: a hole 150 deep has 45 to 63 roots and 124,000 to 168,000
 blocks of root, one 294 deep has 92 to 126 roots and 221,000 to 310,000 blocks, over half of it in the lowest third of
 the hole.
@@ -491,7 +491,7 @@ a number of them, not each disc a chance of one, so they stay something to come 
   has none. A pool lies on the disc at the foot of the wall for the water to come down into, 3 blocks out from under the
   spring and right up to the wall. The spring itself is `feature`, the mod's `disc/wall_spring`, which is vanilla's own
   spring: it only makes one in a block with rock over it, under it and on three sides and with one side open, of the
-  blocks in the tag `#overgrown_abyss:spring_rock` (the stones of the overworld, dirt, gravel, calcite, clay, moss and
+  blocks in the tag `#verdant_deep:spring_rock` (the stones of the overworld, dirt, gravel, calcite, clay, moss and
   smooth basalt). The wall is whatever the terrain left there, so the place reckoned for a spring and seven beside it are
   tried in turn, up and down first; where none will do the hole has a pool there and no spring. A spring's pool is not
   joined to any fall: a disc's top is a bowl, lowest in the middle, and still water cannot be laid across a dip. Vanilla
@@ -515,10 +515,10 @@ stays level there. To have none, take the block out or turn the `falls` dial to 
 Gas is a haze through each hole, mist, spray at the falls, swamp breath, smoke off lava and a violet shimmer, drawn by the
 owner's gas library, Volumetrics
 (`mc-volumetric-effects-lib`). It is optional. Without it on the server nothing is sent, and the rest of this section does
-nothing. To see the gas, Volumetrics must be on the server and the client, and Overgrown Abyss on the client. The world's
+nothing. To see the gas, Volumetrics must be on the server and the client, and Verdant Deep on the client. The world's
 blocks are never changed by it.
 
-The kinds are the library's media, in `data/overgrown_abyss/volumetrics/medium/`: `haze`, `mist`, `spray`, `cavern_mist`,
+The kinds are the library's media, in `data/verdant_deep/volumetrics/medium/`: `haze`, `mist`, `spray`, `cavern_mist`,
 `bog`, `ember` and `shimmer`. A medium is how the gas moves and looks: `gravity` (positive sinks), `dispersion`, `decay`,
 `color`, `opacity`, `emissive` and the rest, all as the library's own SCOPE has them. The library holds up to 32 kinds at
 once near the camera, so a use that wants a look of its own can have a medium of its own.
@@ -558,8 +558,8 @@ Ruins stand on some discs, and on more of them the lower in a hole the disc is. 
 at the middle of the hole's height, nearly always at the bottom and one time in four at the top (`chance` 0.6, `by_height`
 1.6 to 0.4), with a ruin for about every 3000 blocks of top, by the same measure more at the bottom and fewer at the top. A
 lush disc has them three times in ten and a mangrove disc one time in four, both with `by_height` 1.8 to 0.4 and a ruin for
-every 4000. A crystal disc has none, nor a lava disc. They are one structure, `overgrown_abyss:disc_ruins`, so
-`/locate structure overgrown_abyss:disc_ruins` finds the nearest disc with one (it looks 100 chunks each way).
+every 4000. A crystal disc has none, nor a lava disc. They are one structure, `verdant_deep:disc_ruins`, so
+`/locate structure verdant_deep:disc_ruins` finds the nearest disc with one (it looks 100 chunks each way).
 
 The mod's own pieces are vanilla's templates, named by id and not copied, in two families:
 
@@ -574,7 +574,7 @@ The mod's own pieces are vanilla's templates, named by id and not copied, in two
   of the huts has a chest. Most markers are in a template's lowest layer, which lies in the ground here, so the chest is
   set into the floor with its lid level with the ground, and now and then under a block of it.
 
-The kinds, each a pool in `data/overgrown_abyss/worldgen/template_pool/disc_ruins/`. The ground and air are what vanilla's
+The kinds, each a pool in `data/verdant_deep/worldgen/template_pool/disc_ruins/`. The ground and air are what vanilla's
 templates measure; a pack that replaces a template changes them, and the log's `Disc ruins of ...` line says what they are
 in a level.
 
@@ -594,13 +594,13 @@ in a level.
 So the grand kinds gather low in a hole and the camps, huts and rubble of whoever came later high in it. Lush discs have
 pillars, chambers, statues, huts and rubble; mangrove discs houses, pillars, huts and rubble, on what dry ground they have.
 
-Jungle and lush discs also borrow the structures of the tag `#overgrown_abyss:on_discs/jungle` (weight 15 on jungle, 5 on
+Jungle and lush discs also borrow the structures of the tag `#verdant_deep:on_discs/jungle` (weight 15 on jungle, 5 on
 lush). The mod's own tag holds the three structures of Epic Structures: Jungle Temples, all optional, so without that mod it
 is empty and nothing changes. With it, the 14 pieces of `epic:epic_temple_ruin` stand on discs wherever one fits; the two
 temples (`epic:epic_temple`, `epic:epic_temple_large`) are 47 blocks each way and 48 high and fit under no dome as the discs
 are. To lend the discs another mod's ruins, add its structure to the tag in a pack of your own.
 
-What the chests hold is a loot table for each theme and rank, in `data/overgrown_abyss/loot_table/chests/disc/`:
+What the chests hold is a loot table for each theme and rank, in `data/verdant_deep/loot_table/chests/disc/`:
 `jungle_1` to `jungle_3`, `lush_1` to `lush_3` and `mangrove_1` to `mangrove_3`. Each has three pools: valuables, what
 grows or lies on that kind of disc, and a prize that is mostly not there. The first is the table of a theme's discs up to a
 rank of 0.6, the second from there and the third from 0.85, with depth counting twice what distance does. Over 24 holes

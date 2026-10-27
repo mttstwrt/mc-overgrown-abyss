@@ -1,6 +1,6 @@
-# Overgrown Abyss: Project Scope
+# Verdant Deep: Project Scope
 
-Working title: **Overgrown Abyss** (mod id and data namespace `overgrown_abyss`, package `dev.syrval.overgrownabyss`). The spec [`03-abyss.md`](03-abyss.md) still says "Abyss" and `abyss:` for the namespace; read those as `overgrown_abyss`. Common rules: [`../README.md`](../README.md) and
+Working title: **Verdant Deep** (mod id and data namespace `verdant_deep`, package `dev.syrval.verdantdeep`). The spec [`03-abyss.md`](03-abyss.md) still says "Abyss" and `abyss:` for the namespace; read those as `verdant_deep`. Common rules: [`../README.md`](../README.md) and
 [`../AGENTS.md`](../AGENTS.md).
 
 Goal: a giant "Made in Abyss" style ravine whose walls are lush and varied, opening onto a flat-floored cavern
@@ -19,16 +19,16 @@ newer versions later**. This changes:
 | "No dependencies on other mods" | Relaxed by the owner: common libraries/APIs are allowed. Still forbidden as hard dependencies: terrain/biome/content mods (Larion, biome packs) and sibling projects. Larion remains a test target only. |
 | "Jungle" theme | The spec reskins to stone bricks/mossy variants and a vines/azalea/moss palette, which fits a jungle ruin. Still vanilla blocks only. Add jungle-specific block choices (mossy stone brick, vines, jungle leaves, bamboo, glow lichen) to the processor table. |
 
-Note: the README says four projects, "none depends on any third-party mod". Overgrown Abyss and Rift share `ravine-core` by
+Note: the README says four projects, "none depends on any third-party mod". Verdant Deep and Rift share `ravine-core` by
 source inclusion. With two loaders that module must follow the same `common/fabric/neoforge` split, or be a
 `common`-only module with loader-free code. That affects Rift too; decide before either starts.
 
 ## 2. Architecture
 
 ```
-mc-abyss-ruins/
+verdant-deep/
   common/      codecs, ravine cells, carve density function types, structure types, processors, mixins
-               + data/overgrown_abyss/** (worldgen JSON: pools, processors, placed/configured features, loot, tags)
+               + data/verdant_deep/** (worldgen JSON: pools, processors, placed/configured features, loot, tags)
   fabric/      entrypoint, BiomeInjector (BiomeModifications), registry glue
   neoforge/    entrypoint, BiomeInjector (biome_modifier JSON), registry glue
   ravine-core/ shared source module (shape + fluid + cells); see below
@@ -42,10 +42,10 @@ Layers, mapped to code:
 | Shape (carve, plateau, cells) | Density-function types + `min(original, carve)` wrap hook | `ravine-core` in `common` | Yes (shared mixin) |
 | Fluid override | Mixin on fluid-picker creation | `common/…/compat` (version-sensitive) | Yes, but breaks per MC version |
 | Wall dressing | Vanilla placed features gated by noise zones | JSON in `common` + `BiomeInjector` per loader | JSON yes; injection per loader |
-| Bottom city | Custom `overgrown_abyss:city` jigsaw structure, vanilla pool copies, rule processors, `append_loot` | JSON + one structure type in `common` | Yes |
+| Bottom city | Custom `verdant_deep:city` jigsaw structure, vanilla pool copies, rule processors, `append_loot` | JSON + one structure type in `common` | Yes |
 | City placement | Custom structure-placement type at the ravine cell centre | `ravine-core` in `common` | Yes |
 | Wall ruins (later) | Jigsaw structures anchored on ledges | JSON in `common` | Yes |
-| Disc ruins | Custom `overgrown_abyss:disc_ruins` structure and placement: one piece of a template pool at each place the discs' own code finds for a ruin | Sites in `common/…/ravine`, structure and placement in `common/…/compat`, pools and processors in JSON | Yes |
+| Disc ruins | Custom `verdant_deep:disc_ruins` structure and placement: one piece of a template pool at each place the discs' own code finds for a ruin | Sites in `common/…/ravine`, structure and placement in `common/…/compat`, pools and processors in JSON | Yes |
 | Roots | Winding wooden roots grown once for each hole and written into each chunk with the discs' materials; a block tag keeps the mod's structures from building over them | Growing and blocks in `common/…/ravine`, written by `compat/DiscPainter`, numbers and the tag in JSON | Yes |
 | Gas | A haze through each hole, and mist, spray, cavern mist, bog, ember and shimmer from each disc theme's surfaces, the falls, springs and cavern floor, drawn by the owner's gas library (Volumetrics) when it is installed | Sources and the haze worked out in `common/…/ravine` (`HoleGas`); sent by `compat/GasTicker` and `HoleGasPayload`; drawn by `compat/client/VolumetricsGas`, the one class that imports the library; media, sources and the haze in JSON | Yes (optional dependency) |
 
@@ -102,14 +102,14 @@ for 1.21.1 on Fabric before Phase 1.
 2. **Fluid override mixin target differs in names/mappings per MC version**: isolate in `compat`; add a startup self-check that logs loudly if the mixin target is missing.
 3. **Two loaders double the test matrix**: automate one dedicated-server smoke test per loader (boot, generate fixed-seed area, check no exceptions).
 4. **Sharing `ravine-core` with Rift** now has a two-loader shape; agree on its layout first.
-5. **Other mods overriding vanilla Ancient City templates.** Our pools and processor lists are copies in the `overgrown_abyss` namespace, so overrides of vanilla *pool* or *processor* JSON do not affect us. Vanilla *template* files (NBT) are referenced by ID, so a pack or mod that replaces one (same path) wins by pack priority and Overgrown Abyss would use its version. **[recall; verify in 1.21.1 source that template lookup follows pack priority.]** Effects: (a) the look changes and our reskin table may not map the other mod's blocks, so Deep Dark blocks could leak through; (b) different jigsaw blocks can break the connections our pool wiring expects, leaving gaps or generation errors. Responses:
+5. **Other mods overriding vanilla Ancient City templates.** Our pools and processor lists are copies in the `verdant_deep` namespace, so overrides of vanilla *pool* or *processor* JSON do not affect us. Vanilla *template* files (NBT) are referenced by ID, so a pack or mod that replaces one (same path) wins by pack priority and Verdant Deep would use its version. **[recall; verify in 1.21.1 source that template lookup follows pack priority.]** Effects: (a) the look changes and our reskin table may not map the other mod's blocks, so Deep Dark blocks could leak through; (b) different jigsaw blocks can break the connections our pool wiring expects, leaving gaps or generation errors. Responses:
    - *Iteration 1:* accept as a known limit and document it. Add a startup check that compares each referenced template's jigsaw layout (or hash) with the expected vanilla one and logs a loud warning on mismatch.
-   - *Later:* each piece we author ourselves under the `overgrown_abyss` namespace removes the exposure for that piece. Full isolation arrives when all pieces are our own.
+   - *Later:* each piece we author ourselves under the `verdant_deep` namespace removes the exposure for that piece. Full isolation arrives when all pieces are our own.
    - *Seen 2026-10-09:* the owner's pack has Dungeons and Taverns' Ancient City overhaul, which replaces all 18 city
      templates the disc ruins use and the city's own. Template lookup does follow pack priority. Since that day the disc
      ruins measure each template as the level has it (section 7, Ruins by depth), so (a) remains and a replaced piece no
      longer reaches past the room found for it. The city at the floor is as it was: not looked at with that pack.
-   - *Open decision (owner):* whether Overgrown Abyss should deliberately honour mod-added or overridden Ancient City pieces. Not decided. Default until decided: do not promise support, and do not block it. If wanted later, the cheap route is Lithostitched-style pool injection or documenting how packs can extend our pools (see library notes).
+   - *Open decision (owner):* whether Verdant Deep should deliberately honour mod-added or overridden Ancient City pieces. Not decided. Default until decided: do not promise support, and do not block it. If wanted later, the cheap route is Lithostitched-style pool injection or documenting how packs can extend our pools (see library notes).
 6. Existing spec risks stand (fluid override fragility, still reads as Deep Dark, footprint/cavern alignment).
 
 ## 6. Decisions made while building Phases 3 and 4
@@ -120,7 +120,7 @@ for 1.21.1 on Fabric before Phase 1.
 - **Cavern is radius 136, height 56.** First pass 128/48 felt cramped, second pass 160/80 too big (owner review). The
   city spans about 220 blocks, so 136 leaves a margin and the dome is 33 high at the city's edge, taller than every piece
   except the 31-tall centre. Tunable in the same JSON.
-- **City placement** is `overgrown_abyss:ravine_centre`, one start chunk per ravine cell. It extends vanilla's
+- **City placement** is `verdant_deep:ravine_centre`, one start chunk per ravine cell. It extends vanilla's
   random-spread placement because `/locate` special-cases that class. Cells without a ravine, and levels that were not
   carved, produce no start.
 - **Pool wiring uses `pool_aliases`.** The vanilla templates hard-code `minecraft:ancient_city/*` pool names in their
@@ -135,7 +135,7 @@ for 1.21.1 on Fabric before Phase 1.
 
 - **Ravines open on land only (owner review).** Each cell is checked once: five columns along the centre line (both
   ends, midpoints and centre) are sampled at sea level through the level's biome source, and the ravine is dropped if any
-  is in `#overgrown_abyss:ravine_forbidden` (ocean, river, beach by default; editable in the datapack). Biome-based so it
+  is in `#verdant_deep:ravine_forbidden` (ocean, river, beach by default; editable in the datapack). Biome-based so it
   follows whatever biome source the terrain mod brings. Costs ravine count: on seed 20261003 only 3 of 7 cells near spawn
   survive in vanilla terrain and 1 of 7 under Larion, whose spawn area is mostly ocean. Raise `chance` to compensate.
 - **The cavern is a lush caves biome (owner review).** `environment.cavern_biome` in `ravine/carve.json`. The biome
@@ -194,7 +194,7 @@ caves, natural fluids) was checked in dev dedicated servers on a fixed seed (202
 |---|---|---|---|
 | Boots, no errors | yes | yes | yes |
 | Ravines kept near spawn (of 7 hashed) | 3 | 3 | 1 |
-| `/locate structure overgrown_abyss:city` | finds it | finds it | finds it |
+| `/locate structure verdant_deep:city` | finds it | finds it | finds it |
 | City generates, pieces | 77 | 77 | 78 |
 | Floor y | -40 | -40 | -104 |
 | Chests with our loot table | 28 | 28 | 26 + 1 ice box |
@@ -273,7 +273,7 @@ Checked with `./gradlew :common:test` and one NeoForge dedicated server boot (se
 | Check | Result |
 |---|---|
 | Unit tests: sizes skewed small at the time (under 28% of ravines over 250 long, against 37% before); this was later reversed, see the note below the table, about three quarters of ravines bow against their lean, every ravine keeps at least half its wiggle | pass |
-| NeoForge boot with the new `size_bias` field, no errors; `/locate structure overgrown_abyss:city` still finds a city (1037 blocks away) | yes |
+| NeoForge boot with the new `size_bias` field, no errors; `/locate structure verdant_deep:city` still finds a city (1037 blocks away) | yes |
 
 Not verified:
 - **Nothing was looked at in game**, and the new mix was not rendered. Fabric and Larion were not run this round.
@@ -901,7 +901,7 @@ This pass builds the foundation and four starter themes. Structures on discs and
 - **Biome.** A theme's biome is stamped over the disc's dome and platform and 4 blocks round them, by the same resolver wrap as
   the cavern's (`FootprintBiomeResolver`, renamed from `CavernBiomeResolver`). Where the spaces of several discs overlap the
   highest disc has it, so a rider keeps its own biome inside its host's dome. A disc in the cavern's airspace keeps its own biome
-  rather than the cavern's lush caves. The four biomes are datapack files in `data/overgrown_abyss/worldgen/biome/`: each sets
+  rather than the cavern's lush caves. The four biomes are datapack files in `data/verdant_deep/worldgen/biome/`: each sets
   `grass_color`, `foliage_color` and for two of them water colours, takes its spawn lists and sounds from vanilla's jungle or lush
   caves, and lists no features.
 - **Growth.** A disc biome is not one the biome source can produce, so vanilla never runs a feature list for it (checked earlier in
@@ -1715,13 +1715,13 @@ placement."
 - **A weight is a preference, not a share.** A tall kind only has room on few discs, so it is given a large weight and
   stands wherever there is the height for it; where there is not, the next kind in the order takes the place. The tower has
   the largest weight on jungle discs and is still the rarest ruin.
-- **A real structure** (`overgrown_abyss:disc_ruins`, `DiscRuinsStructure` and `DiscRuinsPlacement` in `compat`): a chunk's
+- **A real structure** (`verdant_deep:disc_ruins`, `DiscRuinsStructure` and `DiscRuinsPlacement` in `compat`): a chunk's
   start holds one piece for every ruin whose middle is in the chunk, since the game makes one start of a structure in a
   chunk and discs lie over one another. Each piece is one element of its kind's pool, drawn and turned by the site's own
   seed and put with the middle of its lowest layer on the site. Vanilla's jigsaw placement is not used: it turns the first
   piece about its corner, or about a named jigsaw block the vanilla templates do not have, and a ruin has to stay in the
   round found for it. So a ruin is one piece and nothing is joined on to it. The placement extends vanilla's random-spread
-  one, as the city's does and for the same reason: `/locate structure overgrown_abyss:disc_ruins` works.
+  one, as the city's does and for the same reason: `/locate structure verdant_deep:disc_ruins` works.
 - **The pieces are vanilla's own templates, by id,** as the city's are (`03-abyss.md`: do not redistribute vanilla templates).
   Two families: the free-standing pieces of the Ancient City, through the city's own reskin, which makes them outposts of
   the city below (camps, chambers, statues, pillars, rubble, and the four tall ruins as keeps and towers); and vanilla's cold
@@ -1768,7 +1768,7 @@ number to look at first is the dome's height (`height_ratio`, `min_height`), not
 | | NeoForge 21.1.252 | Fabric 0.19.5 |
 |---|---|---|
 | Boots; pools, processor lists, structure and set load | no errors | no errors |
-| `/locate structure overgrown_abyss:disc_ruins` from the centre | [-1552, ~, 2560], 39 blocks | the same |
+| `/locate structure verdant_deep:disc_ruins` from the centre | [-1552, ~, 2560], 39 blocks | the same |
 | Starts and pieces in the hole | 11 and 11 | 11 and 11, the same templates, turns and places |
 | Pieces with their blocks built, of those | 11 | 11 |
 | Ground right under a piece, of its columns | 81% at least, 98% in the middle one | the same |
@@ -1846,7 +1846,7 @@ template is measured, yesterday's kinds included.
   keep 2 to 0.3, vault 1.8 to 0.5, house 1.5 to 0.7; camp 0.7 to 1.4, hut 0.6 to 1.6, rubble 0.5 to 2.
 - **`structures` in a theme's ruins: a tag of other structures.** Each structure in the tag that starts on the ground from a
   template pool at one fixed depth is a kind: its first piece, alone, `1 - start_height` layers in the ground. Others are
-  left out with the reason in the log. The mod's tag `#overgrown_abyss:on_discs/jungle` holds Epic's three structures, all
+  left out with the reason in the log. The mod's tag `#verdant_deep:on_discs/jungle` holds Epic's three structures, all
   optional, and is named by the jungle theme (weight 15) and the lush one (5). The pieces keep their own processors and loot.
 
 **Two things that were not in the plan, found while building it.**
@@ -1906,7 +1906,7 @@ do; the grand kinds by more.
 | The mod alone: pieces in the hole (yesterday 11) | 26 | 26, the same templates, turns and places |
 | Of them under y 20, from y 20 to 79, above | 10, 15, 1 | the same |
 | Columns of a piece's floor with air under them | none | none |
-| `/locate structure overgrown_abyss:disc_ruins` from the hole's centre | 26 blocks away | the same |
+| `/locate structure verdant_deep:disc_ruins` from the hole's centre | 26 blocks away | the same |
 | `borrowed-ruins` pack: pieces | 51 | 51, the same |
 | Of them village centres, outpost plates, trail ruins | 35, 4, none | the same |
 | Epic Structures: Jungle Temples 1.0.2 added for the run: pieces | 26, of them 3 Epic's | the same |
@@ -1914,7 +1914,7 @@ do; the grand kinds by more.
 | Dungeons and Taverns' overhaul added for the run | measured at its own sizes (up to 20 blocks of air on jungle discs, where vanilla's need 19); 26 pieces, none over air | not run: the jar is NeoForge's only |
 
   With no other mod the log has no warning from the ruins, and one line for each theme: `Disc ruins of
-  overgrown_abyss:disc_jungle: 10 kinds with 54 pieces, needing rounds 8 to 24 blocks across and 2 to 19 blocks of air`.
+  verdant_deep:disc_jungle: 10 kinds with 54 pieces, needing rounds 8 to 24 blocks across and 2 to 19 blocks of air`.
 
 Not verified by the sandbox's runs: anything by eye, in game. Not run there: Larion, the owner's whole pack, a client.
 The owner ran this build in their pack later the same day (NeoForge, with Larion, Epic and Dungeons and Taverns; the log
@@ -1940,7 +1940,7 @@ down, and further from the center of the hole", and "draft the loot tables".
 **What looking first turned up.**
 
 - **The treasure pointed straight down.** The city on the hole's floor has a table of the mod's own
-  (`overgrown_abyss:chests/city`, of the Ancient City's grade), and every chest of a ruin on a disc held vanilla's jungle
+  (`verdant_deep:chests/city`, of the Ancient City's grade), and every chest of a ruin on a disc held vanilla's jungle
   temple loot.
 - **Few ruins had a chest at all.** Of the city pieces the towers, keeps, the vault and the chambers have one or two; camps,
   pillars, the statue and rubble have none. Vanilla's ocean ruins have theirs only as a data marker (a structure block
@@ -2001,7 +2001,7 @@ down, and further from the center of the hole", and "draft the loot tables".
 | Chests in ruins (were 8) | 17: 8 in city pieces, 9 at markers in huts and houses | the same places, tables and seeds |
 | By table | `jungle_1` 1, `jungle_2` 10, `jungle_3` 2, `lush_2` 1, `mangrove_2` 2, `mangrove_3` 1 | the same |
 | `/loot spawn` of each of the nine tables | each drops items; one that does not exist is refused | the same |
-| `/locate structure overgrown_abyss:disc_ruins` from the hole's centre | 26 blocks away | the same |
+| `/locate structure verdant_deep:disc_ruins` from the hole's centre | 26 blocks away | the same |
 
   `afterPlace` has no unit test; the read-back is what shows it. The first run showed its one mistake: markers were asked
   for as places in the template, not in the level, so no hut had a chest.
@@ -2053,7 +2053,7 @@ describes each lever.
 - **Roots cut through the city, in data.** All six lists of rules the mod's structures use ended with vanilla's
   `protected_blocks` on `#minecraft:features_cannot_replace`. That rule reads the block already in the world and drops the
   piece's own block if the tag has it (read from the 1.21.1 bytecode of `ProtectedBlockProcessor`). The lists now name
-  `#overgrown_abyss:ruins_cannot_replace`, vanilla's tag plus the two woods. Roots are in the chunk before any structure, so
+  `#verdant_deep:ruins_cannot_replace`, vanilla's tag plus the two woods. Roots are in the chunk before any structure, so
   the city and the mod's ruins on discs build round them.
 
 **Found on the way, and what was done about it.** These came from drawing real holes' roots outside the game before
@@ -2413,7 +2413,7 @@ hole's middle, where the disc's dome is cut into the wall: a block just inside t
 is handed that place and seven beside it, up and down first, and places `feature` at each in turn until one takes. The
 feature is the judge of the rock, since the wall is whatever the terrain left there. It is `disc/wall_spring`, vanilla's
 own spring with water, which wants rock over it, under it and on three sides and one side open, of the blocks in the tag
-`#overgrown_abyss:spring_rock`. A pool on the disc at the wall's foot catches the water. Where no place will do, the hole
+`#verdant_deep:spring_rock`. A pool on the disc at the wall's foot catches the water. Where no place will do, the hole
 has the pool and no spring over it.
 
 **What the first build got wrong.** Four of six springs took, and two of those poured down beside their pools.
@@ -2740,7 +2740,7 @@ taken out of a saved world and the rest counted without the game.
 
 - **Lights in leaves.** `shroomlight_in_leaves` (jungle) and `froglight_in_leaves` (mangrove) are growths of their own:
   from a place on the ground they go 10 blocks up, then on up through air, leaves and wood for at most 22 more to the
-  first leaf that has a leaf or a log on all six sides (the new tag `#overgrown_abyss:hides_light`), and put the light in
+  first leaf that has a leaf or a log on all six sides (the new tag `#verdant_deep:hides_light`), and put the light in
   its place: a try for every 2 columns of jungle ground and every 40 of mangrove. The trees' own `attached_to_leaves` lights are gone from all five tree files, and `froglight_bulbs`, the
   froglights in the mud, is gone altogether; `froglight_in_leaves` has its place in the mangrove's list. The other new
   entries (the jungle's lights before its hanging vines, the lush disc's moss before its rim growth, the second vine
@@ -2868,7 +2868,7 @@ ruins with a light rule of their own, so that fights need not depend on darkness
 **What changed, in data.**
 
 - `glow_lichen_high`: glow lichen on whatever is overhead. From the place it is given it looks up through air, leaves
-  and wood, 32 blocks at most, for an open block under something of the new tag `#overgrown_abyss:holds_lichen` (stone,
+  and wood, 32 blocks at most, for an open block under something of the new tag `#verdant_deep:holds_lichen` (stone,
   the dirts and muds, the mossy masonry, mangrove roots, the two woods of the hole's roots), and takes it only if the 8
   blocks under it are open. Lichen gives 7, and the game's feature may spread it a block. One file for three uses: a
   theme's `growth` on the top (a dome's ceiling and leaning wall), `"on": "underside"`, and under roots.
@@ -2957,7 +2957,7 @@ and datapacks are annoying to install with prism. I would prefer settings driven
 the settings should hold and where, they chose a file in the config folder, dials only (one number for each thing; no
 presets, no values by path), and a change that applies to every world at its next load.
 
-**What was built.** `config/overgrown_abyss.json`, written the first time a world loads and read each time one does:
+**What was built.** `config/verdant_deep.json`, written the first time a world loads and read each time one does:
 `holes`, `roots`, `falls`, `springs`, `ruins`, `troves`, `rough_ground`, one dial for each group of growth and one for each
 theme. 0 is none, 1 is as the settings have it, 2 is twice as much. `docs/SETTINGS.md` has what each turns.
 
@@ -2965,7 +2965,7 @@ theme. 0 is none, 1 is as the settings have it, 2 is twice as much. `docs/SETTIN
   JSON a datapack would give, the numbers are changed there, and the result is read back through the same codec. So the
   codec stays the one schema, every limit and rule it has holds for what the dials give, and a dial needs no copy of a
   settings record. With every dial at 1 nothing is written or read, and the settings are the same object.
-- A group of growth is a tag of configured features under `overgrown_abyss:dial/`. The mod has `lights`, `giants` and `rim`,
+- A group of growth is a tag of configured features under `verdant_deep:dial/`. The mod has `lights`, `giants` and `rim`,
   made from what the `no-lights` and `no-giants` packs took out and from every feature grown on a rim; the glowing bulbs are
   in two and are turned by both. The groups and the themes are named by the data, so a pack's tag or theme gets a dial
   without a change to the mod.
@@ -3016,7 +3016,7 @@ the codec and back unchanged, nothing the city's placement reads moved, every fe
 settings, and the file made, filled in, not written again, and left alone.
 
 **A fault the runs found: looking for the city where there is none.** With `holes` at 0, `/locate structure
-overgrown_abyss:city` held the server's thread for over a minute on both loaders, and the watchdog ended the server
+verdant_deep:city` held the server's thread for over a minute on both loaders, and the watchdog ended the server
 (`max-tick-time` 60000). None of that time was the mod's. `/locate` asks about one chunk of every cell out to a hundred
 cells from the player, 40,401 of them, and for each the game asks the chunk storage (`StructureCheck.tryLoadFromStorage`)
 before it asks the placement or the structure anything; the cells are 64 chunks apart, so each is a region file of its
@@ -3024,8 +3024,8 @@ own. The dial only made this easy to reach: a level whose noise settings are not
 
 The level knows which cells hold a hole, so `StructureCheckMixin` wraps that one call: for the city, in a cell that holds no
 hole, the answer is "not here" and the storage is not asked. It is a seventh mixin. After it, on both loaders: with `holes`
-0 the command said `Could not find a structure of type "overgrown_abyss:city" nearby` within half a second, and as the mod
-ships it gave `The nearest overgrown_abyss:city is at [-1728, ~, 1712]`, the same on both. What it gives up: a city in a
+0 the command said `Could not find a structure of type "verdant_deep:city" nearby` within half a second, and as the mod
+ships it gave `The nearest verdant_deep:city is at [-1728, ~, 1712]`, the same on both. What it gives up: a city in a
 chunk that was made under other settings, in a cell where today's settings put no hole, is not found by the command.
 
 **Not verified.** Nothing was looked at in game. The owner's pack (Larion, C2ME) was not run. In a generated world only
@@ -3065,8 +3065,8 @@ source code of the volumetrics library so that is something we can fix. For init
   up in the library's synced registry.
 - Where the library is not:
   - Nothing of the gas is registered. There is no payload, so a client without the library is never sent one.
-  - NeoForge's payloads from Architectury are optional, so a client without Overgrown Abyss still joins.
-- The four media, in `data/overgrown_abyss/volumetrics/medium/`:
+  - NeoForge's payloads from Architectury are optional, so a client without Verdant Deep still joins.
+- The four media, in `data/verdant_deep/volumetrics/medium/`:
   - `mist`: pale, sinking.
   - `bog`: heavy, green, on the mangrove discs.
   - `ember`: rising off lava.
@@ -3149,7 +3149,7 @@ judge; the kit's report for the goal (`.agent/reports/`) has the stills.
 ## 9. Future additions (owner wishlist)
 
 Nothing here is started. The first two items are third-party mods; the rules in `../AGENTS.md` apply, so they may only
-ever be **soft, optional integrations**. Overgrown Abyss must load and work without them, and must not declare them as hard
+ever be **soft, optional integrations**. Verdant Deep must load and work without them, and must not declare them as hard
 dependencies. Everything below is the owner's description; no mod APIs, data formats or versions have been looked up yet
 (treat as `[recall; verify]` and check against the real jars before building).
 
@@ -3165,12 +3165,12 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
 ### Epic Structures (large jungle temples)
 
 - **On discs since 2026-10-09** (section 7, Ruins by depth): its jar was read, and its structures are in the mod's tag
-  `#overgrown_abyss:on_discs/jungle` as optional entries. Its 14 standalone ruins stand on jungle and lush discs where they
+  `#verdant_deep:on_discs/jungle` as optional entries. Its 14 standalone ruins stand on jungle and lush discs where they
   fit; its temples fit under no dome. What follows is the older idea of joining its pieces to the city, which is not started.
 - **Why:** its large jungle temples look great. The idea is to merge their paths and jigsaw pieces with our jungle
   reskin of the Ancient City, so the city grows temple districts and approach paths instead of only reskinned vanilla
   pieces.
-- **Likely approach:** add their pieces to our `overgrown_abyss:city/*` template pools only when the mod is present,
+- **Likely approach:** add their pieces to our `verdant_deep:city/*` template pools only when the mod is present,
   using the same pool-alias and processor-list setup as the vanilla city. Candidate routes are Lithostitched-style pool
   injection (already held in reserve in section 3) or a loader-conditional datapack file in each loader module. Our
   reskin processors would then need to tolerate or retheme their blocks.
@@ -3205,7 +3205,7 @@ dependencies. Everything below is the owner's description; no mod APIs, data for
 
 - **Idea:** upside-down temple buildings hanging from overhangs and the cavern roof, like the Western Air Temple in
   Avatar: The Last Airbender. Unlike the two mods above this is not an integration: it needs buildings we author
-  ourselves, shipped inside Overgrown Abyss, vanilla blocks only.
+  ourselves, shipped inside Verdant Deep, vanilla blocks only.
 - **Fits the existing plan:** this is a variant of Phase 5 (wall ruins in `03-abyss.md`: jigsaw structures anchored on
   ledges, one shared architectural vocabulary, own loot tables). The difference is that the anchor is a ceiling, not a
   floor, so pieces are built to hang and grow downwards.
@@ -3311,7 +3311,7 @@ modifier that names the mod's tables; a datapack over any of the files above.
   dangerous - even as players get good equipment".
 - **Chests that refill (in the pack; not tried).** The owner's pack has Lootr, whose config refills chests by loot table or
   by a table's mod id, every `refresh_value` ticks (24000, 20 minutes); all its lists are empty there. Naming
-  `overgrown_abyss` in `refresh_modids` would refill the city's chests at the bottom too; naming the nine disc tables in
+  `verdant_deep` in `refresh_modids` would refill the city's chests at the bottom too; naming the nine disc tables in
   `refresh_loot_tables` refills only the discs'. This is why the disc ruins have tables of the mod's own.
 - **Mobs on a disc (exists, unused).** A disc biome's own spawn list is merged over its parent's (section 7, "A disc biome's
   own spawns"), so a pack raises a mob's rate on a kind of disc with an entry in that biome's file. On NeoForge a biome

@@ -29,8 +29,8 @@ After the library's API changes. With the library's `main` checked out in the ki
 from the kit's root:
 
 ```sh
-rm -rf mods/mc-abyss-ruins/libs/volumetrics/dev
-MC_M2_REPO=$PWD/mods/mc-abyss-ruins/libs/volumetrics bin/mc-lib publish 1.21.1
+rm -rf mods/verdant-deep/libs/volumetrics/dev
+MC_M2_REPO=$PWD/mods/verdant-deep/libs/volumetrics bin/mc-lib publish 1.21.1
 ```
 
 `MC_M2_REPO` sends the publish here instead of `~/.m2`; give it an absolute path. `bin/mc-lib sync` alone publishes to
@@ -49,7 +49,7 @@ Package `dev.syrval.volumetrics.api`, and `api.client` for what is client only.
 
 ```java
 Registry<Medium> media = level.registryAccess().registry(VolumetricsRegistries.MEDIUM).orElseThrow();
-Medium mist = media.getOptional(ResourceLocation.fromNamespaceAndPath("overgrown_abyss", "mist")).orElseThrow();
+Medium mist = media.getOptional(ResourceLocation.fromNamespaceAndPath("verdant_deep", "mist")).orElseThrow();
 
 GasEmitters.Handle handle = GasEmitters.of(level).add(mist, new EmitterShape.Disc(3f, 1f), new Vec3(x, y, z), 1.5f);
 handle.moveTo(new Vec3(x + 1, y, z));   // as often as wanted
@@ -78,7 +78,7 @@ handle.remove();
 ### `client.GasFogs`: fogs from code
 
 ```java
-Medium haze = media.getOptional(ResourceLocation.fromNamespaceAndPath("overgrown_abyss", "haze")).orElseThrow();
+Medium haze = media.getOptional(ResourceLocation.fromNamespaceAndPath("verdant_deep", "haze")).orElseThrow();
 Fog fog = new Fog(haze.appearance(), new FogShape.Round(174f, 69f, 344f), new Vec3(x, floor - 24, z), 0.022f, 0.004f, 24f);
 GasFogs.Handle handle = GasFogs.of(level).add(fog);
 handle.set(fog);      // another fog in its place, from the next frame
@@ -157,7 +157,7 @@ writes emitter JSON rather than using them.
 ## Datapack files
 
 A gas, `data/<namespace>/volumetrics/medium/<name>.json` (this mod's are in
-`data/overgrown_abyss/volumetrics/medium/`):
+`data/verdant_deep/volumetrics/medium/`):
 
 ```json
 {

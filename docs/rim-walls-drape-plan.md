@@ -188,12 +188,12 @@ discs and walls are today's.
     "overhang_depth": 24,
     "wall_depth": 24,
     "growth": [
-      { "feature": "overgrown_abyss:rim/vine_curtain", "every": 12, "on": "edge" },
-      { "feature": "overgrown_abyss:rim/lip_bush", "every": 40, "on": "lip" },
-      { "feature": "overgrown_abyss:rim/moss_lip", "every": 30, "on": "lip" },
-      { "feature": "overgrown_abyss:rim/glow_berries_overhang", "every": 12, "on": "overhang" },
-      { "feature": "overgrown_abyss:rim/hanging_roots", "every": 20, "on": "overhang" },
-      { "feature": "overgrown_abyss:rim/glow_lichen_wall", "every": 25, "on": "wall" }
+      { "feature": "verdant_deep:rim/vine_curtain", "every": 12, "on": "edge" },
+      { "feature": "verdant_deep:rim/lip_bush", "every": 40, "on": "lip" },
+      { "feature": "verdant_deep:rim/moss_lip", "every": 30, "on": "lip" },
+      { "feature": "verdant_deep:rim/glow_berries_overhang", "every": 12, "on": "overhang" },
+      { "feature": "verdant_deep:rim/hanging_roots", "every": 20, "on": "overhang" },
+      { "feature": "verdant_deep:rim/glow_lichen_wall", "every": 25, "on": "wall" }
     ]
   },
   "upper": {
@@ -406,7 +406,7 @@ settles each place against the blocks, **scanning the column** rather than trust
   beside it (`wall`).
 - `biomes`: `level.getBiome(pos).is(...)`.
 
-Feature files in `data/overgrown_abyss/worldgen/configured_feature/rim/`, vanilla types only:
+Feature files in `data/verdant_deep/worldgen/configured_feature/rim/`, vanilla types only:
 - `vine_curtain`: the `disc/vines_hanging` pattern. Columns 6 to 28 long, most short, 2 to 6 columns a patch.
 - `glow_berries_overhang`: reuse `disc/glow_berries_hanging`.
 - `hanging_roots`: the mod's own, as `disc/mangrove_roots_hanging` is.
