@@ -7,9 +7,9 @@ Maven repository holding one build of its API:
 dev.syrval.volumetrics:volumetrics-common:0.1.0+mc1.21.1    jar, sources jar, POM
 ```
 
-Published 2026-10-27 from the library's `agent/VOL-022-per-source-draft` (one Stonecutter tree for 1.21.1 and 26.3; this is
-its `:common:1.21.1` build) at `e243051`. Everything below was read from that commit's sources; where it and this file
-disagree, the sources jar beside the jar wins.
+Published 2026-10-28 from the library's `main` (one Stonecutter tree for 1.21.1 and 26.3; this is its `:common:1.21.1`
+build) at `3f7c660`, the merge of VOL-022. Everything below was read from `e243051`'s sources; the commits between touch no
+`api` class. Where this file and the sources jar beside the jar disagree, the sources jar wins.
 
 ## Emitter flows
 
