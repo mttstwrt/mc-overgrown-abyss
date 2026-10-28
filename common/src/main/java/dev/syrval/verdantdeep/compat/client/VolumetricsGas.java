@@ -2,9 +2,11 @@ package dev.syrval.verdantdeep.compat.client;
 
 import dev.syrval.verdantdeep.VerdantDeep;
 import dev.syrval.verdantdeep.compat.HoleGasPayload;
+import dev.syrval.verdantdeep.ravine.GasFlow;
 import dev.syrval.verdantdeep.ravine.GasFog;
 import dev.syrval.verdantdeep.ravine.GasShape;
 import dev.syrval.verdantdeep.ravine.GasSource;
+import dev.syrval.volumetrics.api.EmitterFlow;
 import dev.syrval.volumetrics.api.EmitterShape;
 import dev.syrval.volumetrics.api.Fog;
 import dev.syrval.volumetrics.api.FogShape;
@@ -27,13 +29,17 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Gas drawn through the gas library: each source sent becomes one of its emitters from code, and each fog one of its fogs, in
+ * Gas drawn through the gas library: each source sent becomes one of its emitters from code, each flow region an emitter that only moves gas, and each fog one of its fogs, in
  * the client's level. The only class of the mod that knows that library; it is loaded only when the library is there.
  *
  * <p>Each gas is looked up among the library's media, which the server's datapacks give the client: the mod's own are in
  * its data, so the server needs the library too. A gas the client was not given is skipped, and named once in the log.
  */
 final class VolumetricsGas implements GasDrawer {
+    // How fast mist drifts toward a hole's axis, in blocks per second.
+    private static final float FLOW_SPEED = 1.5f;
+    // How far past a flow region's box the drift still acts, in blocks.
+    private static final float FLOW_REACH = 6f;
     private final Map<Long, Drawn> holes = new HashMap<>();
     private final Set<ResourceLocation> missing = new HashSet<>();
     // The level the emitters were made in. They go with it, so a payload for another level starts afresh.
@@ -72,6 +78,17 @@ final class VolumetricsGas implements GasDrawer {
                 continue;
             }
             made.add(emitters.add(medium.get(), shapeOf(source.shape()), new Vec3(source.x(), source.y(), source.z()), source.rate()));
+        }
+        // A flow region is an emitter that gives off nothing and only moves the gas of its medium.
+        for (GasFlow flow : payload.flows()) {
+            Optional<Medium> medium = found.computeIfAbsent(flow.medium(), id -> media.flatMap(registry -> registry.getOptional(id)));
+            if (medium.isEmpty()) {
+                warnOfMissing(flow.medium());
+                continue;
+            }
+            GasEmitters.Handle handle = emitters.add(medium.get(), new EmitterShape.Disc(flow.radius(), flow.height()), new Vec3(flow.x(), flow.y(), flow.z()), 0f);
+            handle.setFlow(EmitterFlow.toward(payload.centreX(), payload.centreZ(), FLOW_SPEED, FLOW_REACH));
+            made.add(handle);
         }
         GasFogs fogs = GasFogs.of(client);
         List<GasFogs.Handle> madeFogs = new ArrayList<>(payload.fogs().size());
