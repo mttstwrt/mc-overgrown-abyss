@@ -22,8 +22,10 @@ import net.minecraft.resources.ResourceLocation;
  * thousands of sources and a handful of kinds.
  *
  * @param hole the id the server gives the hole (see {@code RavineCarve.gasNear}); a later payload for it replaces this one
+ * @param centreX the column of the hole's vertical axis, which the mist on its discs flows toward
+ * @param centreZ the column of the hole's vertical axis
  */
-public record HoleGasPayload(long hole, List<GasSource> sources, List<GasFog> fogs) implements CustomPacketPayload {
+public record HoleGasPayload(long hole, double centreX, double centreZ, List<GasSource> sources, List<GasFog> fogs) implements CustomPacketPayload {
     public static final Type<HoleGasPayload> TYPE = new Type<>(VerdantDeep.id("hole_gas"));
     public static final StreamCodec<ByteBuf, HoleGasPayload> STREAM_CODEC = StreamCodec.of(HoleGasPayload::write, HoleGasPayload::read);
     private static final byte CYLINDER = 0;
@@ -42,7 +44,7 @@ public record HoleGasPayload(long hole, List<GasSource> sources, List<GasFog> fo
 
     /** The payload that takes a hole's gas away. */
     public static HoleGasPayload gone(long hole) {
-        return new HoleGasPayload(hole, List.of(), List.of());
+        return new HoleGasPayload(hole, 0, 0, List.of(), List.of());
     }
 
     /** Whether this takes the hole's gas away, sending nothing in its place. */
@@ -59,6 +61,8 @@ public record HoleGasPayload(long hole, List<GasSource> sources, List<GasFog> fo
 
     private static void write(ByteBuf buf, HoleGasPayload payload) {
         ByteBufCodecs.VAR_LONG.encode(buf, payload.hole);
+        buf.writeDouble(payload.centreX);
+        buf.writeDouble(payload.centreZ);
         Map<Kind, Integer> kinds = new LinkedHashMap<>();
         for (GasSource source : payload.sources) {
             kinds.putIfAbsent(new Kind(source.medium(), source.shape(), source.rate()), kinds.size());
@@ -93,6 +97,8 @@ public record HoleGasPayload(long hole, List<GasSource> sources, List<GasFog> fo
 
     private static HoleGasPayload read(ByteBuf buf) {
         long hole = ByteBufCodecs.VAR_LONG.decode(buf);
+        double centreX = buf.readDouble();
+        double centreZ = buf.readDouble();
         int kindCount = count(buf);
         List<Kind> kinds = new ArrayList<>(kindCount);
         for (int k = 0; k < kindCount; k++) {
@@ -114,7 +120,7 @@ public record HoleGasPayload(long hole, List<GasSource> sources, List<GasFog> fo
             fogs.add(new GasFog(ResourceLocation.STREAM_CODEC.decode(buf), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat()));
         }
-        return new HoleGasPayload(hole, sources, fogs);
+        return new HoleGasPayload(hole, centreX, centreZ, sources, fogs);
     }
 
     // A count read from the wire is checked before anything is made that size.

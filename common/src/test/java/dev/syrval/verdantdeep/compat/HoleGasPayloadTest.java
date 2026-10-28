@@ -38,7 +38,7 @@ class HoleGasPayloadTest {
                 new GasSource(EMBER, new GasShape.Sphere(1.5F), 30_000_000.5, -40.25, 12.5, 1.2F),
                 new GasSource(MIST, new GasShape.Cylinder(3, 1), 1030.5, 64, -2040.5, 0.6F));
         var fogs = List.of(new GasFog(HAZE, 1024.5, -64, -2047.5, 174, 69, 344, 0.022F, 0.004F, 24));
-        var payload = new HoleGasPayload(-123_456_789_012L, sources, fogs);
+        var payload = new HoleGasPayload(-123_456_789_012L, 1024.5, -2047.5, sources, fogs);
         assertEquals(payload, roundTrip(payload));
     }
 
@@ -53,6 +53,7 @@ class HoleGasPayloadTest {
     void aCountPastTheCapIsRefusedBeforeAnythingIsMade() {
         ByteBuf buf = Unpooled.buffer();
         ByteBufCodecs.VAR_LONG.encode(buf, 1L);
+        buf.writeDouble(0).writeDouble(0);
         ByteBufCodecs.VAR_INT.encode(buf, HoleGas.MAX_SOURCES + 1);
         assertThrows(DecoderException.class, () -> HoleGasPayload.STREAM_CODEC.decode(buf));
     }
@@ -63,6 +64,6 @@ class HoleGasPayloadTest {
         for (int i = 0; i <= HoleGas.MAX_SOURCES; i++) {
             many.add(new GasSource(MIST, new GasShape.Sphere(1), i, 0, 0, 1));
         }
-        assertThrows(IllegalArgumentException.class, () -> new HoleGasPayload(1, many, List.of()));
+        assertThrows(IllegalArgumentException.class, () -> new HoleGasPayload(1, 0, 0, many, List.of()));
     }
 }
