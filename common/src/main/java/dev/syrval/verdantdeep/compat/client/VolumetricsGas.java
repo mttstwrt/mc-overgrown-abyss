@@ -29,8 +29,9 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Gas drawn through the gas library: each source sent becomes one of its emitters from code, each flow region an emitter that only moves gas, and each fog one of its fogs, in
- * the client's level. The only class of the mod that knows that library; it is loaded only when the library is there.
+ * Gas drawn through the gas library: each source sent becomes one of its emitters from code, each flow region an
+ * emitter that only moves gas, and each fog one of its fogs, in the client's level. The only class of the mod that knows
+ * that library; it is loaded only when the library is there.
  *
  * <p>Each gas is looked up among the library's media, which the server's datapacks give the client: the mod's own are in
  * its data, so the server needs the library too. A gas the client was not given is skipped, and named once in the log.
