@@ -7,9 +7,15 @@ Maven repository holding one build of its API:
 dev.syrval.volumetrics:volumetrics-common:0.1.0+mc1.21.1    jar, sources jar, POM
 ```
 
-Published 2026-10-25 from the library's `main` (one Stonecutter tree for 1.21.1 and 26.3; this is its
-`:common:1.21.1` build) at `e17180d`. Everything below was read from that commit's sources; where it and this file disagree, the sources jar beside the jar
-wins.
+Published 2026-10-27 from the library's `agent/VOL-022-per-source-draft` (one Stonecutter tree for 1.21.1 and 26.3; this is
+its `:common:1.21.1` build) at `e243051`. Everything below was read from that commit's sources; where it and this file
+disagree, the sources jar beside the jar wins.
+
+## Emitter flows
+
+`GasEmitters.Handle.setFlow(EmitterFlow)` makes an emitter push gas of its own medium horizontally toward a point:
+`EmitterFlow.toward(double x, double z, float speed, float reach)`. The push acts within the emitter shape's box grown by
+`reach` blocks and tapers to rest at the point. An emitter's rate may be zero, so an emitter can carry only a flow.
 
 ## How this mod takes it
 
