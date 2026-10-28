@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.syrval.verdantdeep.ravine.GasFlow;
 import dev.syrval.verdantdeep.ravine.GasFog;
 import dev.syrval.verdantdeep.ravine.GasShape;
 import dev.syrval.verdantdeep.ravine.GasSource;
@@ -38,7 +39,8 @@ class HoleGasPayloadTest {
                 new GasSource(EMBER, new GasShape.Sphere(1.5F), 30_000_000.5, -40.25, 12.5, 1.2F),
                 new GasSource(MIST, new GasShape.Cylinder(3, 1), 1030.5, 64, -2040.5, 0.6F));
         var fogs = List.of(new GasFog(HAZE, 1024.5, -64, -2047.5, 174, 69, 344, 0.022F, 0.004F, 24));
-        var payload = new HoleGasPayload(-123_456_789_012L, 1024.5, -2047.5, sources, fogs);
+        var flows = List.of(new GasFlow(MIST, 1030.5, 62, -2040.5, 7.5F, 9));
+        var payload = new HoleGasPayload(-123_456_789_012L, 1024.5, -2047.5, sources, fogs, flows);
         assertEquals(payload, roundTrip(payload));
     }
 
@@ -64,6 +66,6 @@ class HoleGasPayloadTest {
         for (int i = 0; i <= HoleGas.MAX_SOURCES; i++) {
             many.add(new GasSource(MIST, new GasShape.Sphere(1), i, 0, 0, 1));
         }
-        assertThrows(IllegalArgumentException.class, () -> new HoleGasPayload(1, 0, 0, many, List.of()));
+        assertThrows(IllegalArgumentException.class, () -> new HoleGasPayload(1, 0, 0, many, List.of(), List.of()));
     }
 }

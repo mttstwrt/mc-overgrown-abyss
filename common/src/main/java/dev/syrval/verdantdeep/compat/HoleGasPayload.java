@@ -1,6 +1,7 @@
 package dev.syrval.verdantdeep.compat;
 
 import dev.syrval.verdantdeep.VerdantDeep;
+import dev.syrval.verdantdeep.ravine.GasFlow;
 import dev.syrval.verdantdeep.ravine.GasFog;
 import dev.syrval.verdantdeep.ravine.GasShape;
 import dev.syrval.verdantdeep.ravine.GasSource;
@@ -17,7 +18,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * The gas of one hole, sent to a player who comes near it: every source and every fog, or none to take the hole's gas away
+ * The gas of one hole, sent to a player who comes near it: every source, fog and flow region, or none to take the hole's gas away
  * again. The kinds of source (a gas, a shape and a rate) are written once and each source names its kind, since a hole has
  * thousands of sources and a handful of kinds.
  *
@@ -25,7 +26,7 @@ import net.minecraft.resources.ResourceLocation;
  * @param centreX the column of the hole's vertical axis, which the mist on its discs flows toward
  * @param centreZ the column of the hole's vertical axis
  */
-public record HoleGasPayload(long hole, double centreX, double centreZ, List<GasSource> sources, List<GasFog> fogs) implements CustomPacketPayload {
+public record HoleGasPayload(long hole, double centreX, double centreZ, List<GasSource> sources, List<GasFog> fogs, List<GasFlow> flows) implements CustomPacketPayload {
     public static final Type<HoleGasPayload> TYPE = new Type<>(VerdantDeep.id("hole_gas"));
     public static final StreamCodec<ByteBuf, HoleGasPayload> STREAM_CODEC = StreamCodec.of(HoleGasPayload::write, HoleGasPayload::read);
     private static final byte CYLINDER = 0;
@@ -38,18 +39,22 @@ public record HoleGasPayload(long hole, double centreX, double centreZ, List<Gas
         if (fogs.size() > HoleGas.MAX_FOGS) {
             throw new IllegalArgumentException("A hole sends at most " + HoleGas.MAX_FOGS + " fogs, got " + fogs.size());
         }
+        if (flows.size() > HoleGas.MAX_FLOWS) {
+            throw new IllegalArgumentException("A hole sends at most " + HoleGas.MAX_FLOWS + " flows, got " + flows.size());
+        }
         sources = List.copyOf(sources);
         fogs = List.copyOf(fogs);
+        flows = List.copyOf(flows);
     }
 
     /** The payload that takes a hole's gas away. */
     public static HoleGasPayload gone(long hole) {
-        return new HoleGasPayload(hole, 0, 0, List.of(), List.of());
+        return new HoleGasPayload(hole, 0, 0, List.of(), List.of(), List.of());
     }
 
     /** Whether this takes the hole's gas away, sending nothing in its place. */
     public boolean isGone() {
-        return sources.isEmpty() && fogs.isEmpty();
+        return sources.isEmpty() && fogs.isEmpty() && flows.isEmpty();
     }
 
     @Override
@@ -93,6 +98,15 @@ public record HoleGasPayload(long hole, double centreX, double centreZ, List<Gas
             buf.writeFloat(fog.topDensity());
             buf.writeFloat(fog.edge());
         }
+        ByteBufCodecs.VAR_INT.encode(buf, payload.flows.size());
+        for (GasFlow flow : payload.flows) {
+            ResourceLocation.STREAM_CODEC.encode(buf, flow.medium());
+            buf.writeDouble(flow.x());
+            buf.writeDouble(flow.y());
+            buf.writeDouble(flow.z());
+            buf.writeFloat(flow.radius());
+            buf.writeFloat(flow.height());
+        }
     }
 
     private static HoleGasPayload read(ByteBuf buf) {
@@ -120,7 +134,13 @@ public record HoleGasPayload(long hole, double centreX, double centreZ, List<Gas
             fogs.add(new GasFog(ResourceLocation.STREAM_CODEC.decode(buf), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat()));
         }
-        return new HoleGasPayload(hole, centreX, centreZ, sources, fogs);
+        int flowCount = count(buf, HoleGas.MAX_FLOWS);
+        List<GasFlow> flows = new ArrayList<>(flowCount);
+        for (int f = 0; f < flowCount; f++) {
+            flows.add(new GasFlow(ResourceLocation.STREAM_CODEC.decode(buf), buf.readDouble(), buf.readDouble(), buf.readDouble(),
+                    buf.readFloat(), buf.readFloat()));
+        }
+        return new HoleGasPayload(hole, centreX, centreZ, sources, fogs, flows);
     }
 
     // A count read from the wire is checked before anything is made that size.

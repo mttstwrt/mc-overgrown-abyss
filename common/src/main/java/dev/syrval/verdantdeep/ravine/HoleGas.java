@@ -1,10 +1,12 @@
 package dev.syrval.verdantdeep.ravine;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Where one hole gives off gas: from its discs, as each theme lists (see {@link DiscTheme.Gas}), at its falls and springs, and
@@ -14,14 +16,20 @@ import java.util.OptionalInt;
  *
  * @param sources the hole's sources, at most {@link #MAX_SOURCES}
  * @param fogs    the hole's fogs, at most {@link #MAX_FOGS}
+ * @param flows   where the gas on the hole's discs drifts toward its axis, at most {@link #MAX_FLOWS}
  * @param dropped how many more sources there were, left out so that what a player is sent stays bounded
  */
-public record HoleGas(List<GasSource> sources, List<GasFog> fogs, int dropped) {
-    public static final HoleGas NONE = new HoleGas(List.of(), List.of(), 0);
+public record HoleGas(List<GasSource> sources, List<GasFog> fogs, List<GasFlow> flows, int dropped) {
+    public static final HoleGas NONE = new HoleGas(List.of(), List.of(), List.of(), 0);
     /** The most sources one hole sends. */
     public static final int MAX_SOURCES = 4096;
     /** The most fogs one hole sends. */
     public static final int MAX_FOGS = 4;
+    /** The most flow regions one hole sends. */
+    public static final int MAX_FLOWS = 256;
+    // A flow region covers from this far under a disc's platform to this far above it.
+    private static final double FLOW_BELOW = 1;
+    private static final double FLOW_ABOVE = 8;
     private static final int GAS_HASH_BASE = 2_000_000;
     // Hash indices kept apart for this many gas entries per theme.
     private static final int MAX_GASES = 64;
@@ -33,6 +41,10 @@ public record HoleGas(List<GasSource> sources, List<GasFog> fogs, int dropped) {
     public HoleGas {
         sources = List.copyOf(sources);
         fogs = List.copyOf(fogs);
+        flows = List.copyOf(flows);
+        if (flows.size() > MAX_FLOWS) {
+            throw new IllegalArgumentException("A hole has at most " + MAX_FLOWS + " flows, got " + flows.size());
+        }
         if (fogs.size() > MAX_FOGS) {
             throw new IllegalArgumentException("A hole has at most " + MAX_FOGS + " fogs, got " + fogs.size());
         }
@@ -49,8 +61,26 @@ public record HoleGas(List<GasSource> sources, List<GasFog> fogs, int dropped) {
             fromCavern(settings, gas.cavern(), bounds, cell, found);
         });
         fromThemes(settings, cell, discs, found);
+        List<GasFlow> flows = flowsOf(discs);
         int dropped = Math.max(0, found.size() - MAX_SOURCES);
-        return new HoleGas(found.subList(0, found.size() - dropped), fogs, dropped);
+        return new HoleGas(found.subList(0, found.size() - dropped), fogs, flows, dropped);
+    }
+
+    // One region for each gas of each disc's theme, standing from under the platform's top (its middle is at `floor`) to above it.
+    private static List<GasFlow> flowsOf(CellDiscs discs) {
+        List<Disc> all = discs.layout().discs();
+        List<GasFlow> flows = new ArrayList<>();
+        for (int i = 0; i < all.size() && flows.size() < MAX_FLOWS; i++) {
+            Disc disc = all.get(i);
+            var media = new LinkedHashSet<ResourceLocation>();
+            discs.themes().get(i).ifPresent(theme -> theme.gas().forEach(gas -> media.add(gas.medium())));
+            for (ResourceLocation medium : media) {
+                if (flows.size() < MAX_FLOWS) {
+                    flows.add(new GasFlow(medium, disc.x(), disc.floor() - FLOW_BELOW, disc.z(), (float) disc.radius(), (float) (FLOW_BELOW + FLOW_ABOVE)));
+                }
+            }
+        }
+        return flows;
     }
 
     // Chunk by chunk, as growth is, because what keeps lava clear of what burns is worked out for a chunk at a time.
