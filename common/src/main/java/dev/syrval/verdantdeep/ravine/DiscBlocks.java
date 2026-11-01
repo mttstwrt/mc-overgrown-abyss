@@ -70,6 +70,7 @@ final class DiscBlocks {
     /** The columns of the chunk whose lowest corner is {@code (minX, minZ)} where a fall's still water lies (see {@link DiscFalls}). */
     static void forEachFallWater(CellDiscs cellDiscs, int minX, int minZ, DiscFallSink sink) {
         cellDiscs.falls().forEachColumn(minX, minZ, column -> sink.accept(column.x(), column.level(), column.z(), column.depth(), column.cut(), column.lip()));
+        cellDiscs.falls().forEachFlow(minX, minZ, flow -> sink.flow(flow.x(), flow.z(), flow.top(), flow.bottom()));
     }
 
     /**
@@ -151,6 +152,9 @@ final class DiscBlocks {
 
         void support(Disc disc, DiscPalette palette) {
             switch (disc.support()) {
+                case Disc.Support.Attached attached -> {
+                    // Its back meets the retained wall; there is no separate support to paint.
+                }
                 case Disc.Support.Standing standing -> {
                     // The underside is lowest in the middle and rises with the bowl, and the stem's flare is under all of it.
                     double underside = disc.undersideAt(shape(), 0);

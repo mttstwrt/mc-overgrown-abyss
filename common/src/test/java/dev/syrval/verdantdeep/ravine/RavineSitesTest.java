@@ -3,6 +3,7 @@ package dev.syrval.verdantdeep.ravine;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.mojang.serialization.JsonOps;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -178,6 +179,24 @@ class RavineSitesTest {
         RavineSites sites = new RavineSites(CONE, LEVEL);
         sites.followGround(ground((x, z) -> 83), 70);
         assertTrue(sites.boundsOf(HOLE).isEmpty(), "13 over a sea at 70");
+    }
+
+    @Test
+    void aHigherElevationGateKeepsMountainTerrainAndRejectsLowlands() {
+        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, CONE).getOrThrow().getAsJsonObject();
+        var rim = json.getAsJsonObject("cone").getAsJsonObject("rim");
+        rim.addProperty("min_above_sea", 48);
+        rim.addProperty("dip", 12);
+        RavineSettings highlands = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
+        assertTrue(holeOn(highlands, ground((x, z) -> 100)).isEmpty(), "low hills no longer qualify");
+        assertTrue(holeOn(highlands, ground((x, z) -> 110)).isEmpty(), "just below the elevation gate");
+        assertEquals(99, lipOn(highlands, ground((x, z) -> 111)), "the boundary qualifies, with room for the entrance dip");
+        assertEquals(148, lipOn(highlands, ground((x, z) -> 160)), "mountains retain more vertical space");
+        assertTrue(holeOn(highlands, ground((x, z) -> x > HOLE.centreX() + 30 ? 100 : 160)).isEmpty(),
+                "a mountain beside low terrain must still pass around the whole mouth");
+        RavineSites raisedSea = new RavineSites(highlands, LEVEL);
+        raisedSea.followGround(ground((x, z) -> 111), 70);
+        assertTrue(raisedSea.boundsOf(HOLE).isEmpty(), "elevation is relative to the terrain pack's sea level");
     }
 
     @Test

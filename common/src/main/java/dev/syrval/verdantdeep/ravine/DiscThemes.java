@@ -25,6 +25,24 @@ final class DiscThemes {
         return List.copyOf(assigned);
     }
 
+    /** Surface platforms draw only from the collar's allowed biomes, retaining each theme's normal weight and limits. */
+    static List<Optional<DiscTheme>> assign(RavineSettings settings, RavineCell cell, List<DiscTraits> traits, DiscLayout layout) {
+        var allowed = settings.cone().flatMap(ConeSettings::rim).map(rim -> rim.collar().surfaceThemes()).orElse(List.of());
+        if (allowed.isEmpty()) {
+            return assign(settings, cell, traits);
+        }
+        List<DiscTheme> themes = settings.discThemes();
+        List<DiscTheme> surfaceThemes = themes.stream()
+                .filter(theme -> theme.biome().filter(allowed::contains).isPresent()).toList();
+        var assigned = new ArrayList<Optional<DiscTheme>>(traits.size());
+        for (int i = 0; i < traits.size(); i++) {
+            List<DiscTheme> choices = layout.isSurface(layout.discs().get(i)) ? surfaceThemes : themes;
+            OptionalInt picked = pick(choices, traits.get(i), RavineCells.unit(cell.hash(), THEME_HASH_BASE + i));
+            assigned.add(picked.isPresent() ? Optional.of(choices.get(picked.getAsInt())) : Optional.empty());
+        }
+        return List.copyOf(assigned);
+    }
+
     /** Which of the themes a uniform draw in [0, 1) picks for a disc with these traits; empty if none has any weight for it. */
     static OptionalInt pick(List<DiscTheme> themes, DiscTraits traits, double unit) {
         double total = 0;

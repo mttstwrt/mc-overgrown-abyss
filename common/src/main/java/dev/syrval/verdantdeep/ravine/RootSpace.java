@@ -13,7 +13,7 @@ record RootSpace(RavineSettings settings, ConeSettings cone, RavineBounds bounds
 
     /** Radius of the hole's wall on the side of the axis that a column is on, at a height. */
     double wall(double x, double z, double y) {
-        return ConeShape.wallRadiusAt(settings, cone, bounds, cell, x, z, Math.clamp(y, bounds.floorY(), bounds.topY()));
+        return ConeShape.wallRadiusAt(settings, cone, bounds, cell, x, z, Math.max(y, bounds.floorY()));
     }
 
     /** Radius of the clear air round the axis at a height. */
@@ -38,7 +38,7 @@ record RootSpace(RavineSettings settings, ConeSettings cone, RavineBounds bounds
         return cell.centreZ() + fromAxis * Math.sin(angle);
     }
 
-    /** The height of the ground over a column, or the hole's top where the ground is at least that high. */
+    /** The ground over a column, surveyed high enough for the layout's uppermost platforms. */
     int groundOver(double x, double z) {
         return ground.heightAt((int) Math.floor(x), (int) Math.floor(z));
     }

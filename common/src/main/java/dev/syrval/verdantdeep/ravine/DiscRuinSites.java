@@ -321,6 +321,7 @@ final class DiscRuinSites {
             for (Disc other : layout.discs()) {
                 double apart = round.distanceTo(other.x(), other.z());
                 boolean crosses = switch (other.support()) {
+                    case Disc.Support.Attached attached -> false;
                     case Disc.Support.Standing stem -> other != disc && other.undersideAt(shape, 0) > lowest && stem.bottom() <= top
                             && apart < round.radius() + shape.stemRadiusFor(other.radius()) + MARGIN;
                     case Disc.Support.Hanging root -> root.top() > lowest && other.floor() <= top

@@ -3461,3 +3461,235 @@ modifier that names the mod's tables; a datapack over any of the files above.
    test targets, not dependencies.
 2. Decide per mod whether it is a pure datapack integration (preferred) or needs Java.
 3. Add a check that the build and both loader servers still boot **without** the mod.
+
+
+### Chasm entrances in high terrain (2026-10-31)
+
+The entrance bowl previously started at each side's local edge height. On the uphill side this left a vertical
+face between the lip and that higher edge. The bowl now starts at the lip on every side and eases the uphill height
+in across the collar width with smoothstep, including its radial derivative in the distance approximation. At the
+outer end of that blend it rejoins the previous local-edge profile. The existing deterministic roughness remains.
+
+Shipped settings now require ground 48 blocks above the level's sea all round the mouth (was 20), favoring mountains
+and highlands without depending on biome names. This also excludes lower hills; fewer cells will qualify. The dip is
+12 blocks (was 3), and the collar rises 24 over a width of 56 (was 34 over 30). Before roughness and wall displacement,
+level ground meets this approach about 40 blocks outside the mouth, rather than 9. No new loader hook or setting schema.
+
+Verification: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew build --offline --no-daemon --console=plain` passed;
+both loader jars built, common purity passed, and the common suite reported 250 tests, zero failures/errors and two
+skips. Regression coverage checks uphill entrances around the whole mouth, the return to the local-edge profile,
+unchanged level-ground behavior at existing settings, footprint limits, and an elevation gate relative to sea level.
+
+Fabric and NeoForge dedicated-server/client `join` smoke runs were attempted through `bin/mc-test`. Both stop before
+Minecraft launches: `ClassNotFoundException: dev.architectury.transformer.TransformerRuntime`. The kit's automatic
+retry and boot canary fail on the same launcher error. No client joined and no terrain screenshots were obtained.
+The visual gate remains unverified: review the approach on a mountainside and level high ground, its exposed stone,
+chasm frequency and vertical room in fresh fixed-seed worlds on both loaders, including the Larion test target.
+
+
+### Entrance slopes reaching the upper discs (2026-10-31)
+
+The owner's screenshot showed the remaining long vertical drop below the softened rim. The entrance now joins the
+cone 48 blocks below its surveyed lip, just below the top platform layer, and climbs out into the surrounding terrain.
+This is `rim.collar.depth`, optional with a default of zero for existing datapacks. The lower join uses the cone's
+radius at that height, so the main hole stays continuous. The entrance is united with the existing cone; lower walls,
+platform heights and the sea-relative mountain gate are retained. Depth is limited to leave the cavern floor intact.
+
+The shipped approach rises 32 blocks over 72 radially and its roughness is 4 blocks over a wavelength of 32. Each side
+still follows its surveyed uphill height rather than imposing a uniform height on a mountainside. Small roughness
+fades in from the lower join. The broader approach exposes upper platforms to the sky. Root wall and ceiling probes
+now query the entrance as well, so wall anchors follow the rock remaining after this cut.
+
+Regression tests load the shipped cone and check the join below the upper platforms, gradual widening, retained lower
+walls, finite footprint, root anchors and codec compatibility. An existing ruin-fit test assumed a tall piece could
+never fit: upper discs now open to the sky, so its impossible piece is instead wider than any disc. Both loader jars
+and the full suite pass (254 tests, zero failures/errors, two skipped). Existing TerrainProbe deprecation notes remain.
+
+
+Runtime verification used `SERVER_LAUNCH=gradle` to bypass the test kit's broken direct launcher. NeoForge and Fabric
+both booted dedicated servers and joined with real headless clients. On seed 11 the qualifying chasm is at -1572,2594,
+with floor -40 and lip 125. Both runs teleported there, generated the area and passed fatal-log checks on the server
+and client. NeoForge: `.agent/tests/verdant-deep@neoforge/20261031-214050-206726292-verdant-deep-entrance-review/`;
+Fabric: `.agent/tests/verdant-deep@fabric/20261031-214338-030444206-verdant-deep-entrance-review/` (paths relative to the
+kit). Each captured two screenshots. The headless client's six-chunk render distance cuts off much of the wider
+approach and lower hole, so these are runtime evidence, not sufficient visual acceptance of the whole silhouette.
+Review in the owner's terrain pack, with a longer view distance and fresh chunks, remains outstanding; Larion was
+not installed for these runs. A preliminary vanilla run on seed 20261003 booted and joined but had no qualifying
+chasms in the logged cells near the origin; it is not evidence for the new entrance shape.
+
+### Terrain-following bowl variation (2026-11-01)
+
+Owner playtest feedback retains the current bowl scale while varying its joins and weathering. The shipped collar's
+`bottom_variation` 24 lifts the lower join by a seeded 0–24 blocks from the existing 48-block depth. This lets bowls
+meet the upper platforms or leave a short drop, while existing roots anchor to the resulting wall. `weathering` 6
+adds broad worn relief and smaller gullies, fading to zero at the join. Width, height, terrain eligibility and frequency
+are unchanged; a size adjustment awaits further owner sampling.
+
+`disc_bands` 3 adds concentric arcs across the bowl. Each platform follows the local bowl surface rather than a flat
+layer, allowing successive arcs up the higher mountainside and gaps on the low side. Candidates require surrounding
+natural terrain and headroom, avoid strong platform overlap, and stay inside the existing outer radius and disc cap.
+They are appended after existing riders with separate seeded draws. Root links can query wall and terrain above the
+old lip to reach these platforms. All three new settings default to zero for existing datapacks.
+
+Verification: Minecraft 1.21.1 Fabric and NeoForge `assemble` pass; 64 focused entrance, cone and root tests pass with
+zero failures, errors or skips. Existing entrance expectations now use the seeded join instead of a fixed depth.
+Command: `bin/mcg verdant-deep assemble :common:test --tests '*EntranceSlopeTest' --tests '*ConeRimTest'
+--tests '*ConeShapeTest' --tests '*Root*Test'`. Appearance, uphill arc density and smooth root connections remain
+owner acceptance checks in fresh chunks.
+
+NeoForge dedicated-server startup passed (`Done`); shutdown saved all dimensions and no server process remained.
+The temporary working-directory override did not redirect Loom's runtime: this check used the existing
+`neoforge/run` directory and loaded/saved its dev world. Its files were preserved. Readiness, shutdown and the
+limitation are recorded in `plan/projects/verdant-deep/review/rim-terrain-variation/startup.md` in the kit, with
+`startup.log` alongside it. Fabric startup was not repeated for this common-code change.
+
+### Cohesive surface forest discs (2026-11-01)
+
+Owner review showed isolated colored platforms over an obvious stone bowl. The entrance now has an explicit
+`rim.collar.surface_themes` allow list: jungle and mangrove. A platform counts as surface when its dome intersects
+the bowl surface at its centre or sampled points around its footprint. This includes ordinary upper platforms exposed
+by the entrance cut, not only the extra concentric arcs. Allowed themes keep their existing weights and limits;
+disallowed themes never act as a fallback. Empty or omitted lists leave existing datapacks unrestricted.
+
+`surface_size_bias` 0.8 skews size draws towards the large end of the existing 20–64-block radius range. Exposed ring
+platforms are refit at the biased radius when terrain permits, otherwise their original placement survives. Bowl arcs
+lose their old 28-block radius cap and buried-roof requirement; outer terrain, clear-air and footprint bounds still
+apply. Wider forest canopies should obscure the stone terraces and read as one entrance biome from afar. Bowl scale
+and the ordinary underground theme pool remain unchanged. Visual coverage remains the owner's in-game check.
+
+Fabric and NeoForge 1.21.1 assemble pass; 59 focused theme, cone and entrance tests pass with zero failures, errors or
+skips. Existing growth-only fixtures explicitly omit the surface restriction, and existing biome-ownership coverage
+also checks that exposed platforms receive only allowed surface themes.
+
+NeoForge startup reached `Done` in a guarded temporary Loom run directory; the existing dev runtime stayed untouched.
+After `stop`, all dimensions saved, but the Gradle launcher exceeded the 30-second exit deadline and was terminated.
+No Java processes remained and temporary runtime data was removed. Evidence and the cleanup limitation are in the
+kit's `plan/projects/verdant-deep/review/surface-biomes/report.md`.
+
+### Cover the exposed bowl with receding terraces (2026-11-01)
+
+Owner map and hillside views showed that forest discs still clustered inward, leaving a broad stone rim. Surface
+placement now surveys radial sectors in 8-block increments to find each side's contiguous exposed bowl slope.
+Its width and rise determine the number of terraces, up to the shipped `disc_bands` 6. Each sector spans from near
+the lower join to its exposed outer edge; heights follow the bowl locally. Angular sampling uses 65% of `cone.spacing`
+at the outer edge to provide overlap there without excessive inner-tier gaps.
+
+Neighboring terraces intentionally overlap. The former strong-overlap rejection is replaced by a narrow check for
+nearly coincident platforms at the same height. Only terrain under the platform's centre must attach to exposed stone;
+the footprint can cross the bowl edge into surrounding terrain. This removes the former outer-side rejection that
+left bare strips. Footprint/clear-air bounds and the 512-disc cap remain. Existing ordinary discs and riders still get
+priority under that cap. No bowl-size or eligibility settings changed.
+
+Terrace geometry does not read theme IDs. Theme assignment still receives each disc's position and the completed
+layout separately. Future desert/badlands/spruce surface themes can therefore be weighted using native-biome and
+edge context at the assignment stage without changing the geometry. The current jungle/mangrove allow list remains;
+new biomes, native-biome sampling and those weights are deferred.
+
+Both loader assembles and 78 existing focused placement/theme/root tests pass. Growth-only test fixtures omit extra
+terraces so neighboring platforms do not inflate one platform's growth counts. Plot tests identify full footprints,
+because overlapping discs can share a centre-column height. Visual stone coverage and the hillside stepping pattern
+remain owner acceptance checks in fresh chunks.
+
+Coverage iteration runtime evidence: NeoForge reached `Done` in a guarded temporary directory, saved all dimensions
+on `stop`, and required launcher process-group cleanup after the 40-second exit deadline. No process from that check
+remained; existing dev runtime data stayed untouched. See the kit's
+`plan/projects/verdant-deep/review/bowl-coverage/report.md` for this iteration's builds, tests and startup evidence.
+
+### Reduce surface terrace crowding (2026-11-01)
+
+The owner found the six-tier coverage pass much too dense. The shipped maximum is now four tiers, with full
+`cone.spacing` around the bowl instead of 65% spacing. Platforms within `discs.min_height` vertically must have
+centre separation of at least 55% of their combined radii. This particularly thins the crowded lower join while
+retaining overlap between receding uphill terraces. Terrain surveys, size bias, bowl shape, and the surface theme
+allow list are retained. This is an aesthetic tuning pass; density and retained stepping remain owner checks in
+fresh chunks.
+
+Both loader assembles and the same 78 focused placement/theme/root tests pass with no failures/errors/skips.
+NeoForge startup passed in a guarded temporary directory; all dimensions saved on shutdown. Launcher process-group
+cleanup was required after the post-save exit deadline; no Java processes remained. Evidence is in the kit's
+`plan/projects/verdant-deep/review/surface-density/report.md`.
+
+### Keep surface platforms behind the bowl rim (2026-11-01)
+
+Owner accepted density but found platforms extending too far beyond the rim. The radial survey now measures the
+exposed bowl's edge itself, rather than treating its last exposed point as a platform centre. Outer centres reserve
+at least a minimum-radius platform plus `edge_falloff` + 8 blocks of natural ground (16 blocks shipped).
+Each radius is bounded by that surveyed edge, with eight checks around the footprint plus the natural-ground
+allowance to fit irregular sides. Platforms shrink in 8-block steps, trying the minimum radius before being omitted
+if they cannot fit. The open central join does not require terrain behind its inward-facing samples.
+
+The natural rim should partly screen the entrance biome. Four-tier density, angular spacing, neighbor separation,
+size bias, and surface theme choices remain as accepted. Actual counts may drop where a platform cannot fit behind
+the rim. Both loader assembles and all 78 focused tests pass; visual screening remains an owner check in fresh chunks.
+NeoForge startup passed in a guarded temporary directory; all dimensions saved on shutdown. Launcher group cleanup
+was required after the post-save exit deadline; no Java processes remained. Evidence is in the kit's
+`plan/projects/verdant-deep/review/rim-inset/report.md`.
+
+### Broad bowl gardens and inward cascades (2026-11-01)
+
+Owner selected the sparse, large wall-attached shelves of concept C with the connected cascades of concept A.
+The entrance retains its bowl and rim footprint. Bowl placement now fits broad uphill gardens before smaller
+downhill receivers, reserves each drawn radius behind the rim, and lifts the platform to the slope at its outward
+shoulder so its front projects over air while its back joins retained rock. Up to three shelves per group and
+`rim.collar.disc_spacing` 128 replace the four crowded terrace bands; same-height gardens cannot overlap, while
+vertically separated shelves may overlap to receive a fall. The top of a shelf also stays `ceiling_margin` below
+the local surveyed rim ground. Foliage screening and the resulting silhouette remain owner checks.
+
+`surface_bowl_depth` 2 keeps bowl shelves shallow enough for feeder channels. Up to half the hole's waterfall
+starts first try a pool behind a surface garden's centre and a channel toward its inward lip. Shelf receivers are
+preferred before a long fall to the floor, including when continuing a surface cascade. Existing containment,
+ruin, root, palette and minimum-drop checks still reject unsuitable routes. The shipped start budget is 3–5,
+chain continuation 0.85, and wide-curtain chance 0.4; geometry can produce fewer falls or shorter chains.
+
+All water remains vanilla, with no Streams Reflowing dependency or integration. Its terrain-mapped streams crossing
+terrain replaced by a chasm are a known owner-reported compatibility issue, deferred separately. Its waterfall
+appearance is a visual reference for future refinement, not a claim that these vanilla-water falls reproduce it.
+
+Verification and remaining visual checks: `plan/projects/verdant-deep/review/bowl-shelves/report.md` in the kit.
+
+### Receding amphitheatre and separate surface carving (2026-11-01)
+
+Owner playtests found the sparse garden layout unclear and its cascades absent. Surface placement now uses shared
+tier heights, 20 blocks apart, with up to four tiers. The bowl surface is inverted to find the wall at each height,
+and overlapping discs step outward along it. `disc_spacing` 40 gives continuous arcs of round shelves;
+`disc_gap_share` 0.18 omits centres across a shared seeded wedge, with small tier-to-tier angular staggering.
+Low sides may hold fewer tiers. Radius fitting keeps the inward edges distinct instead of pinning all fronts
+against the central clear-air boundary. Shelf backs may stay buried in terrain beyond the exposed bowl edge,
+while their tops remain below the local natural rim and their footprints remain within the chasm's outer radius.
+
+Surface membership is fixed once when the layout is built. Surface discs no longer excavate domes; added bowl
+shelves use wall attachment without a separate rock stem. Underground discs retain their domes and supports.
+Surface biome ownership excludes buried backs, so a hypothetical dome cannot paint the outside terrain's biome.
+The shipped surface bowl depth is now zero, including exposed ordinary discs, giving streams flat ground.
+
+Surface feeder pools now try the centre and inward half of the shelf instead of its buried back. Outlet directions
+also aim into a lower shelf's pool-safe interior before the ordinary inward fan. The earlier level-channel path could
+fail across a cupped centre; coarse fan angles could hit a lower disc's bank where no pool fits. Fixed tier planes
+sit halfway between block samples, because integer flat planes put the first air sample exactly on the platform
+boundary and caused all new terrace feeders to fail their strict open-air check. Existing containment, palette,
+ruin, root and drop checks remain authoritative.
+
+Build, existing-test and startup evidence, plus a single offline diagnostic of planned surface tiers and cascades:
+`plan/projects/verdant-deep/review/amphitheatre/report.md` in the kit. The owner reviews the actual silhouette,
+vegetation, water appearance and rim concealment in fresh chunks. Streams Reflowing compatibility remains deferred.
+
+
+### Explicit waterfall columns and stable shelf cores (2026-11-01)
+
+The owner accepted the amphitheatre silhouette but still saw no cascades. The installed jar matched the previous
+build and the falls dial was enabled. A diagnostic with real ruin pieces and doubled ruins/troves still planned two
+connected surface falls; ruin exclusions did not eliminate all routes. Minecraft's postprocessing hook does tick
+source water, so no specific activation failure was established. Previously only channels and pools were painted,
+leaving the entire visible drop to subsequent water propagation.
+
+The generator now retains and emits every validated drop column, including curtain widths, and paints vanilla
+falling-water states through its open span above the receiver. Source lips still tick normally. Solid blocks are
+preserved, and existing landing, pool, root and ruin checks remain in force. This makes the initial falling volume
+part of generation; actual appearance and continued flow remain owner acceptance checks in fresh chunks.
+
+Jungle and mangrove palettes previously omitted their bodies, retaining gravel veins from original terrain inside
+the shelves. Their bodies now use cobblestone and packed mud, respectively, replacing the loose cores beneath ponds
+with stable materials that also resist vanilla stone-replacing ore features. Existing worlds are not repaired.
+
+Verification evidence: `plan/projects/verdant-deep/review/cascade-flow/` in the kit. Streams Reflowing integration
+remains deferred; the new falls use ordinary vanilla water.

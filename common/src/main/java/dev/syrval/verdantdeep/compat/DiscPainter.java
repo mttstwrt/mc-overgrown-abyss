@@ -1,9 +1,11 @@
 package dev.syrval.verdantdeep.compat;
 
+import dev.syrval.verdantdeep.ravine.DiscFallSink;
 import dev.syrval.verdantdeep.ravine.RavineFootprint;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.RandomState;
@@ -13,7 +15,7 @@ import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 /**
  * Gives the discs of one chunk their materials (see {@code DiscPalette}), by writing over the rock the terrain made them of,
  * then the ground that stands over their platforms (see {@code DiscGround}), their ponds and streams (see {@code DiscWater}),
- * the still water of the hole's falls (see {@code DiscFalls}), and last the hole's roots (see {@code RootBlocks}), which go through
+ * the channels and falling water of the hole's falls (see {@code DiscFalls}), and last the hole's roots (see {@code RootBlocks}), which go through
  * whatever is there. It writes straight into the chunk, as carvers do, so it handles plain blocks only: a block that needs a
  * block entity is placed without one.
  */
@@ -61,21 +63,36 @@ public final class DiscPainter {
             }
         });
         BlockState air = Blocks.AIR.defaultBlockState();
-        footprint.forEachFallWater(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), (x, level, z, depth, cut, lip) -> {
-            // As for a pond, only under open air, which here is over the ground that is cut away to let the water through.
-            if (chunk.isOutsideBuildHeight(level + cut + 1) || !chunk.getBlockState(pos.set(x, level + cut + 1, z)).isAir()) {
-                return;
+        footprint.forEachFallWater(chunkPos.getMinBlockX(), chunkPos.getMinBlockZ(), new DiscFallSink() {
+            @Override
+            public void accept(int x, int level, int z, int depth, int cut, boolean lip) {
+                // The planner leaves rock around the channel and beneath its bed.
+                if (chunk.isOutsideBuildHeight(level + cut + 1) || !chunk.getBlockState(pos.set(x, level + cut + 1, z)).isAir()) {
+                    return;
+                }
+                for (int up = cut; up > 0; up--) {
+                    chunk.setBlockState(pos.set(x, level + up, z), air, false);
+                }
+                for (int below = 0; below < depth; below++) {
+                    chunk.setBlockState(pos.set(x, level - below, z), water, false);
+                }
+                if (lip) {
+                    chunk.markPosForPostprocessing(pos.set(x, level, z));
+                }
             }
-            for (int up = cut; up > 0; up--) {
-                chunk.setBlockState(pos.set(x, level + up, z), air, false);
-            }
-            for (int below = 0; below < depth; below++) {
-                chunk.setBlockState(pos.set(x, level - below, z), water, false);
-            }
-            // A lip is water with an open side. Marked, the game ticks it when the chunk comes alive, as it does water the terrain
-            // left with somewhere to run, and from there it runs by the game's own rules.
-            if (lip) {
-                chunk.markPosForPostprocessing(pos.set(x, level, z));
+
+            @Override
+            public void flow(int x, int z, int top, int bottom) {
+                // Generate the visible drop with its shelves. It remains ordinary falling water, fed by the source lip,
+                // rather than depending on that lip's first tick to grow the whole waterfall after the player arrives.
+                BlockState falling = water.setValue(LiquidBlock.LEVEL, 8);
+                for (int y = Math.min(top, chunk.getMaxBuildHeight() - 1); y >= Math.max(bottom, chunk.getMinBuildHeight()); y--) {
+                    BlockState existing = chunk.getBlockState(pos.set(x, y, z));
+                    if (existing.isAir() || existing.is(Blocks.WATER)) {
+                        chunk.setBlockState(pos, falling, false);
+                        chunk.markPosForPostprocessing(pos);
+                    }
+                }
             }
         });
         footprint.forEachRootBlock(

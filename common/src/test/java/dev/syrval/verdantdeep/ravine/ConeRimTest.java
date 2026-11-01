@@ -265,62 +265,32 @@ class ConeRimTest {
         return sites.boundsOf(c).orElseThrow();
     }
 
-    // Blocks of a column's ground that the bowl takes away, the column being that far out from the mouth.
-    private static int cutInto(SurfaceProbe ground, RavineBounds bounds, RavineCell c, double out, double degrees) {
-        double radial = CONE.topRadius() + out;
-        int x = (int) Math.floor(c.centreX() + radial * Math.cos(Math.toRadians(degrees)));
-        int z = (int) Math.floor(c.centreZ() + radial * Math.sin(Math.toRadians(degrees)));
-        int surface = ground.heightAt(x, z, 1000);
-        int cut = 0;
-        while (surface - cut > bounds.topY() && Carved.distance(SETTINGS, bounds, c, x, surface - cut, z) < 0) {
-            cut++;
-        }
-        return cut;
-    }
-
     @Test
-    void onASlopeTheWallRunsUpToTheGroundOnTheUphillSideAndTheBowlStartsThere() {
-        RavineCell c = cell(0, 2);
-        RavineBounds bounds = onTheHillside(c);
-        // The mouth spans 90 blocks of the slope: the lip is under the ground at the axis, the edge 40 over it to the east.
-        assertEquals(150 - 3, bounds.topY(), 1.01);
-        int lip = bounds.topY();
-        assertEquals(lip + 43, bounds.edgeAt(1, 0), 2.01);
-        assertEquals(lip, bounds.edgeAt(-1, 0), 1e-9);
-        for (int y = lip + 2; y < lip + 38; y += 3) {
-            assertTrue(carve(bounds, c, -2, y, 0) < 0, "open inside the mouth at y=" + y);
-            assertTrue(carve(bounds, c, 2, y, 0) > 0, "the wall on the uphill side stands at y=" + y);
-            assertTrue(carve(bounds, c, 2, y, 0) <= 2 + 1e-9, "and is no further from the air than from the mouth");
-            assertTrue(carve(bounds, c, 20, y, 0) > 0, "with the hill behind it");
-        }
-        assertTrue(carve(bounds, c, 2, lip + 50, 0) < 0, "open over the edge");
-        // On the downhill side the ground is under the lip, and so is the bowl's start.
-        assertTrue(carve(bounds, c, 5, lip + 4, 180) < 0);
-        int surface = bowlSurface(bounds, c, 1, 0);
-        assertEquals(bounds.edgeAt(1, 0), surface, COLLAR.roughness() + 1.5, "the bowl starts at the edge on the uphill side");
-    }
-
-    @Test
-    void theBowlTakesOnlyAShallowCutOutOfASlopeAllRoundTheMouth() {
-        int deepest = 0;
-        int deepestLevel = 0;
+    void anUphillEntranceSlopesDownToTheLipInsteadOfLeavingACliff() {
         for (int cz = 0; cz < 3; cz++) {
-            RavineCell c = cell(3, cz);
-            SurfaceProbe ground = hillside(c);
+            RavineCell c = cell(0, cz);
             RavineBounds bounds = onTheHillside(c);
-            // The same hole with a level mouth, as it would be if the bowl started from the lip all round.
-            RavineBounds level = new RavineBounds(bounds.floorY(), bounds.topY());
-            for (int degrees = 0; degrees < 360; degrees += 10) {
-                // From far enough out for the whole column to be outside the mouth.
-                for (int out = 3; out <= 150; out += 2) {
-                    deepest = Math.max(deepest, cutInto(ground, bounds, c, out, degrees));
-                    deepestLevel = Math.max(deepestLevel, cutInto(ground, level, c, out, degrees));
+            int lip = bounds.topY();
+            assertTrue(bounds.edgeAt(1, 0) > lip + 35, "a tall uphill edge exercises the blend");
+            for (int degrees = 0; degrees < 360; degrees += 15) {
+                assertEquals(lip, bowlSurface(bounds, c, 1, degrees), COLLAR.roughness() + 1.5,
+                        "the approach starts at the lip on every side");
+                assertTrue(carve(bounds, c, 2, lip + 5, degrees) < 0, "no vertical face beside the mouth");
+                double angle = Math.toRadians(degrees);
+                double uphill = bounds.edgeAt(Math.cos(angle), Math.sin(angle)) - lip;
+                for (int out = 3; out < COLLAR.width(); out++) {
+                    double t = out / COLLAR.width();
+                    double expected = lip + uphill * t * t * (3 - 2 * t) + COLLAR.riseAt(out);
+                    assertEquals(expected, bowlSurface(bounds, c, out, degrees), COLLAR.roughness() + 1.5,
+                            "the hillside height eases in across the collar");
+                }
+                for (int out = (int) COLLAR.width(); out <= 100; out += 5) {
+                    double expected = lip + uphill + COLLAR.riseAt(out);
+                    assertEquals(expected, bowlSurface(bounds, c, out, degrees), COLLAR.roughness() + 1.5,
+                            "beyond the collar the bowl follows the local edge");
                 }
             }
         }
-        // 10 blocks where the slope and the bowl are furthest apart, and the bowl's roughness and the edge's blending on that.
-        assertTrue(deepest >= 6 && deepest <= 15, "the bowl cuts " + deepest + " blocks into the slope");
-        assertTrue(deepestLevel > 40, "started from the lip it would cut " + deepestLevel);
     }
 
     @Test

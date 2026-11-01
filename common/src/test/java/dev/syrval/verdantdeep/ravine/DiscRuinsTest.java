@@ -422,7 +422,8 @@ class DiscRuinsTest {
     @Test
     void aPieceStandsOnlyWhereItFitsAndAnotherOfItsKindTakesItsPlace() throws Exception {
         DiscRuins ruins = ruins(1, 1500, EVEN, kind("mixed", 1, EVEN));
-        RuinPieces.Piece giant = piece("mixed", 0, 100, 30, 200, 0);
+        // Upper discs can now open to the sky, so height alone no longer makes a piece impossible to place.
+        RuinPieces.Piece giant = piece("mixed", 0, 100, 200, 200, 0);
         RuinPieces.Piece small = piece("mixed", 1, 1, 5, 4, 0);
         RavineSettings settings = with(ruined(Optional.empty(), ruins));
         List<RuinSite> withBoth = new ArrayList<>();
@@ -432,7 +433,7 @@ class DiscRuinsTest {
             smallAlone.addAll(discs(settings, cz, pieces(ruins, List.of(small))).ruins());
         }
         assertTrue(smallAlone.size() > 150, smallAlone.size() + " ruins");
-        assertEquals(smallAlone, withBoth, "a piece far too tall for any disc, drawn first a hundred times in a hundred and one, leaves every place to the other");
+        assertEquals(smallAlone, withBoth, "a piece too wide for any disc, drawn first a hundred times in a hundred and one, leaves every place to the other");
 
         DiscRuins twoKinds = ruins(1, 1500, EVEN, kind("none", 1000, EVEN), kind("mixed", 1, EVEN));
         RavineSettings two = with(ruined(Optional.empty(), twoKinds));

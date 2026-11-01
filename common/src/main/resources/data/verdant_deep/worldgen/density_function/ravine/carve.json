@@ -316,6 +316,12 @@
         "edge": 0.4
       },
       "palette": {
+        "body": {
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:cobblestone"
+          }
+        },
         "top": [
           {
             "thickness": 1,
@@ -976,6 +982,12 @@
         "large": 2
       },
       "palette": {
+        "body": {
+          "type": "minecraft:simple_state_provider",
+          "state": {
+            "Name": "minecraft:packed_mud"
+          }
+        },
         "top": [
           {
             "thickness": 2,
@@ -1954,16 +1966,26 @@
     "rider_chance": 0.5,
     "rider_scale": 0.6,
     "rim": {
-      "min_above_sea": 20,
-      "dip": 3,
+      "min_above_sea": 48,
+      "dip": 12,
       "low_share": 0.5,
       "top_room": 22,
       "collar": {
-        "width": 30,
-        "height": 34,
+        "width": 72,
+        "height": 32,
+        "depth": 48,
+        "bottom_variation": 24,
+        "weathering": 6,
+        "disc_bands": 4,
+        "disc_spacing": 40,
+        "disc_layer_spacing": 20,
+        "disc_gap_share": 0.18,
+        "surface_themes": ["verdant_deep:disc_jungle", "verdant_deep:disc_mangrove"],
+        "surface_size_bias": 0.8,
+        "surface_bowl_depth": 0,
         "profile": 2,
-        "roughness": 2,
-        "roughness_wavelength": 12
+        "roughness": 4,
+        "roughness_wavelength": 32
       }
     },
     "upper": {
@@ -2043,8 +2065,8 @@
   },
   "falls": {
     "count": {
-      "min_inclusive": 2,
-      "max_inclusive": 4
+      "min_inclusive": 3,
+      "max_inclusive": 5
     },
     "by_height": {
       "bottom": 0.5,
@@ -2057,10 +2079,10 @@
       "radius": 3,
       "depth": 2
     },
-    "chain": 0.6,
+    "chain": 0.85,
     "max_steps": 4,
     "curtain": {
-      "chance": 0.2,
+      "chance": 0.4,
       "width": {
         "min_inclusive": 3,
         "max_inclusive": 5

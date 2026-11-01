@@ -1,9 +1,11 @@
 package dev.syrval.verdantdeep.ravine;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.Set;
 
 /**
  * The discs of a cone. Most are in the ring: free-standing, in layers from the lowest layer's height to under the top of the
@@ -29,10 +31,13 @@ final class ConeDiscLayout implements DiscLayout {
     static final int MAX_DISCS = 512;
     // A disc's centre may sit this fraction of its radius past the wall, so it joins the wall instead of touching it.
     static final double EMBED = 0.3;
+    // A surface shelf projects most of its width into the bowl, leaving its back in the retained slope.
+    private static final double SHELF_EMBED = 0.65;
     // A disc's centre moves by under a block when it is put halfway between block coordinates (see Disc.placed).
     static final double PLACING_SLACK = 1;
     private static final int HASH_BASE = 9000;
     private static final int RIDER_HASH_BASE = 600_000;
+    private static final int BOWL_HASH_BASE = 800_000;
     private static final double JITTER = 0.8;
     // Riders stand on the far side of their host from the cone's axis, within this angle either way of straight out, so that
     // the host and what grows on it are between them and anyone looking from the middle.
@@ -55,10 +60,15 @@ final class ConeDiscLayout implements DiscLayout {
     private final HoleGround ground;
     private final double layerGap;
     private final List<Disc> discs;
+    private final Set<Disc> surfaceDiscs;
     private final DiscIndex index;
 
     // A disc as placed, and whether it was drawn to hang, which it does only if it then turns out to have a ceiling.
-    private record Drawn(Disc disc, boolean toHang) {}
+    private record Drawn(Disc disc, boolean toHang, boolean surface) {
+        Drawn(Disc disc, boolean toHang) {
+            this(disc, toHang, false);
+        }
+    }
 
     /** The discs of a hole whose ground is nowhere lower than its top. */
     ConeDiscLayout(RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell) {
@@ -77,7 +87,7 @@ final class ConeDiscLayout implements DiscLayout {
         for (int layer = 0; layer < layers(); layer++) {
             for (int slot = 0; slot < slots(layer); slot++) {
                 boolean toHang = RavineCells.unit(cell.hash(), base(layer, slot) + 5) < cone.hangChance();
-                at(layer, slot).ifPresent(disc -> drawn.add(new Drawn(disc, toHang)));
+                at(layer, slot).ifPresent(disc -> drawn.add(new Drawn(surfaceShape(disc), toHang)));
             }
         }
         // Riders are added behind the discs they stand on, so each gets its turn as a host too.
@@ -86,14 +96,22 @@ final class ConeDiscLayout implements DiscLayout {
                 rider(drawn.get(host).disc(), host, place).ifPresent(drawn::add);
             }
         }
+        addBowlDiscs(drawn, ground);
         List<Disc> placed = drawn.stream().map(Drawn::disc).toList();
         var supported = new ArrayList<Disc>(placed.size());
+        var surface = new HashSet<Disc>();
         for (Drawn each : drawn) {
             Disc disc = each.disc();
             Optional<Disc.Support> root = each.toHang() ? rootOf(placed, disc) : Optional.empty();
-            supported.add(disc.withSupport(root.orElseGet(() -> new Disc.Support.Standing(Discs.bottomOf(placed, shape, disc)))));
+            Disc supportedDisc = disc.withSupport(each.surface() ? new Disc.Support.Attached()
+                    : root.orElseGet(() -> new Disc.Support.Standing(Discs.bottomOf(placed, shape, disc))));
+            supported.add(supportedDisc);
+            if (each.surface() || exposedAtEntrance(supportedDisc)) {
+                surface.add(supportedDisc);
+            }
         }
         this.discs = List.copyOf(supported);
+        this.surfaceDiscs = Set.copyOf(surface);
         this.index = new DiscIndex(discs, settings.edgeFalloff());
     }
 
@@ -198,11 +216,180 @@ final class ConeDiscLayout implements DiscLayout {
         return cone.rim().isPresent() ? Math.min(height, ground.domeRoom(x, z, radius, floor, cone.ceilingMargin())) : height;
     }
 
+    private record BowlSpan(double angle, double inner, double outer) {}
+
+    /** Shared floor heights make overlapping discs read as broken amphitheatre tiers rather than scattered gardens. */
+    private void addBowlDiscs(List<Drawn> drawn, SurfaceProbe probe) {
+        if (cone.rim().isEmpty()) {
+            return;
+        }
+        RimSettings.Collar collar = cone.rim().get().collar();
+        if (collar.discBands() == 0 || collar.depth() == 0) {
+            return;
+        }
+        int surveyTop = bounds.highestEdge() + (int) Math.ceil(collar.depth() + collar.height());
+        HoleGround bowlGround = new HoleGround(probe, surveyTop);
+        double join = ConeShape.entranceFloor(cone, bounds, cell);
+        double joinRadius = ConeShape.radiusAt(settings, cone, bounds, join);
+        double spacing = collar.discSpacing() > 0 ? collar.discSpacing() : cone.spacing();
+        double layerSpacing = collar.discLayerSpacing() > 0 ? collar.discLayerSpacing() : cone.layerSpacing();
+        int slots = Math.clamp((int) Math.ceil(2 * Math.PI * (cone.outerRadius() - shape.minRadius()) / spacing), 3, MAX_SLOTS);
+        double gap = RavineCells.unit(cell.hash(), BOWL_HASH_BASE + MAX_LAYERS * MAX_SLOTS * 8);
+        // Keep whole-block samples off the platform's exact SDF boundary so the open block above it is strictly air.
+        double lowest = Math.ceil(join + shape.floorThickness() + collar.surfaceBowlDepth()) + 0.5;
+        for (int band = 0; band < collar.discBands() && drawn.size() < MAX_DISCS; band++) {
+            double floor = lowest + band * layerSpacing;
+            for (int slot = 0; slot < slots && drawn.size() < MAX_DISCS; slot++) {
+                double turn = (slot + 0.5 + (band % 2) * 0.15
+                        + (RavineCells.unit(cell.hash(), BOWL_HASH_BASE + 8 * slot) - 0.5) * 0.2) / slots;
+                double fromGap = Math.abs(turn - gap);
+                fromGap = Math.min(fromGap, 1 - fromGap);
+                if (fromGap < collar.discGapShare() / 2) {
+                    continue;
+                }
+                Optional<BowlSpan> span = bowlSpan(bowlGround, joinRadius, turn * 2 * Math.PI);
+                if (span.isPresent()) {
+                    bowlDisc(bowlGround, span.get(), floor, band, slot)
+                            .ifPresent(disc -> drawn.add(new Drawn(disc, false, true)));
+                }
+            }
+        }
+    }
+
+    private Optional<BowlSpan> bowlSpan(HoleGround ground, double joinRadius, double angle) {
+        double inner = Double.NaN;
+        double outer = Double.NaN;
+        // A radial survey avoids sampling every block of the bowl with the world's expensive terrain density.
+        for (double distance = joinRadius + shape.minRadius() / 2;
+                distance <= cone.outerRadius(); distance += HoleGround.GRID) {
+            double x = cell.centreX() + distance * Math.cos(angle);
+            double z = cell.centreZ() + distance * Math.sin(angle);
+            double surface = ConeShape.entranceSurface(settings, cone, bounds, cell, x, z);
+            if (ground.heightAt((int) Math.floor(x), (int) Math.floor(z)) <= surface + 1) {
+                if (Double.isFinite(inner)) {
+                    break;
+                }
+                continue;
+            }
+            if (!Double.isFinite(inner)) {
+                inner = distance;
+            }
+            outer = distance;
+        }
+        return Double.isFinite(inner) ? Optional.of(new BowlSpan(angle, inner, outer)) : Optional.empty();
+    }
+
+    private Optional<Disc> bowlDisc(HoleGround bowlGround, BowlSpan span, double floor, int band, int slot) {
+        double dx = Math.cos(span.angle());
+        double dz = Math.sin(span.angle());
+        double inner = span.inner();
+        double outer = cone.outerRadius() - PLACING_SLACK;
+        if (floor < ConeShape.entranceSurface(settings, cone, bounds, cell,
+                cell.centreX() + inner * dx, cell.centreZ() + inner * dz)
+                || floor > ConeShape.entranceSurface(settings, cone, bounds, cell,
+                cell.centreX() + span.outer() * dx, cell.centreZ() + span.outer() * dz)) {
+            return Optional.empty();
+        }
+        double wall = wallAtFloor(span, floor);
+        if (wall < inner || wall > outer) {
+            return Optional.empty();
+        }
+        int base = BOWL_HASH_BASE + 8 * (band * MAX_SLOTS + slot);
+        double radius = shape.radiusFor(surfaceDraw(RavineCells.unit(cell.hash(), base + 1)));
+        // Constant-width shelves recede with their tier: enlarging every higher disc to the clear axis hides that stepping.
+        radius = Math.min(radius, (span.outer() - span.inner()) / 2);
+        double clear = clearFor(floor) + PLACING_SLACK;
+        // Place the front in air and the back in the wall at this floor; fit the drawn size without moving the tier up or down.
+        radius = Math.min(radius, Math.min((wall - clear) / (1 + SHELF_EMBED), (outer - wall) / (1 - SHELF_EMBED)));
+        double distance;
+        double x;
+        double z;
+        while (true) {
+            if (radius < shape.minRadius()) {
+                return Optional.empty();
+            }
+            distance = wall - SHELF_EMBED * radius;
+            x = cell.centreX() + distance * dx;
+            z = cell.centreZ() + distance * dz;
+            if (insideBowlRim(bowlGround, x, z, floor, radius)) {
+                break;
+            }
+            if (radius <= shape.minRadius()) {
+                return Optional.empty();
+            }
+            radius = Math.max(shape.minRadius(), radius - HoleGround.GRID);
+        }
+        RimSettings.Collar collar = cone.rim().orElseThrow().collar();
+        double bowl = Math.min(collar.surfaceBowlDepth(), shape.bowlDepthFor(radius, RavineCells.unit(cell.hash(), base + 2)));
+        double rim = bowlGround.heightAt((int) Math.floor(cell.centreX() + span.outer() * dx),
+                (int) Math.floor(cell.centreZ() + span.outer() * dz));
+        double backX = x + radius * dx * 0.75;
+        double backZ = z + radius * dz * 0.75;
+        if (floor + bowl > rim - cone.ceilingMargin()
+                || bowlGround.heightAt((int) Math.floor(backX), (int) Math.floor(backZ)) <= floor + bowl
+                || ConeShape.entranceSurface(settings, cone, bounds, cell, backX, backZ) <= floor + bowl) {
+            return Optional.empty();
+        }
+        // Same-tier neighbors deliberately overlap into arcs; distinct floors provide the receding steps and waterfall drops.
+        return Optional.of(Disc.placed(x, z, floor, radius, shape.heightFor(radius), bowl));
+    }
+
+    /** Radial position of this tier's back wall, using the same bowl surface as the carve. */
+    private double wallAtFloor(BowlSpan span, double floor) {
+        double inner = span.inner();
+        double outer = span.outer();
+        for (int i = 0; i < 14; i++) {
+            double middle = (inner + outer) / 2;
+            double x = cell.centreX() + middle * Math.cos(span.angle());
+            double z = cell.centreZ() + middle * Math.sin(span.angle());
+            if (ConeShape.entranceSurface(settings, cone, bounds, cell, x, z) < floor) {
+                inner = middle;
+            } else {
+                outer = middle;
+            }
+        }
+        return (inner + outer) / 2;
+    }
+
+    private boolean insideBowlRim(HoleGround ground, double x, double z, double floor, double radius) {
+        double reach = radius + PLACING_SLACK;
+        double joinRadius = ConeShape.radiusAt(settings, cone, bounds, ConeShape.entranceFloor(cone, bounds, cell));
+        for (int sample = 0; sample < 8; sample++) {
+            double angle = sample * Math.PI / 4;
+            double px = x + reach * Math.cos(angle);
+            double pz = z + reach * Math.sin(angle);
+            double radial = cell.distanceToCentre(px, pz);
+            if (radial <= joinRadius) {
+                continue;
+            }
+            if (radial > cone.outerRadius()) {
+                return false;
+            }
+            double over = ground.heightAt((int) Math.floor(px), (int) Math.floor(pz));
+            double surface = ConeShape.entranceSurface(settings, cone, bounds, cell, px, pz);
+            // With no dome a buried back can cross the exposed rim safely, but it must stay below the natural ground there.
+            if (over <= surface + 1 && floor + cone.rim().orElseThrow().collar().surfaceBowlDepth() > over - cone.ceilingMargin()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * The ring's disc at a position as placed, before it is given its stem or root among the others ({@link #discs()} has those),
      * or empty if its dome would not fit under the ceiling margin.
      */
     Optional<Disc> at(int layer, int slot) {
+        double unit = RavineCells.unit(cell.hash(), base(layer, slot) + 1);
+        Optional<Disc> original = ringDisc(layer, slot, unit);
+        if (original.isEmpty() || !exposedAtEntrance(original.get()) || surfaceDraw(unit) == unit) {
+            return original;
+        }
+        // Refit the larger platform against both radial bounds and local terrain, keeping the original when it cannot fit.
+        return ringDisc(layer, slot, surfaceDraw(unit)).filter(this::exposedAtEntrance).or(() -> original);
+    }
+
+    private Optional<Disc> ringDisc(int layer, int slot, double sizeDraw) {
         long hash = cell.hash();
         int base = base(layer, slot);
         double floor = nominalFloor(layer) + (RavineCells.unit(hash, base) - 0.5) * cone.layerJitter() * cone.layerSpacing();
@@ -210,7 +397,7 @@ final class ConeDiscLayout implements DiscLayout {
         double clear = clearFor(floor);
         // The cone's width at this height does not limit the disc: what does not fit carves into the rock around the cone.
         // Only the outer radius holds it, with the disc's inner edge at the clear air round the axis.
-        double radius = Math.min(shape.radiusFor(RavineCells.unit(hash, base + 1)), (cone.outerRadius() - clear - PLACING_SLACK) / 2);
+        double radius = Math.min(shape.radiusFor(sizeDraw), (cone.outerRadius() - clear - PLACING_SLACK) / 2);
         if (radius < shape.minRadius() / 2) {
             return Optional.empty();
         }
@@ -283,11 +470,56 @@ final class ConeDiscLayout implements DiscLayout {
             return Optional.empty();
         }
         Disc rider = Disc.placed(x, z, floor, radius, height, shape.bowlDepthFor(radius, RavineCells.unit(hash, base + 6)));
-        return Optional.of(new Drawn(rider, RavineCells.unit(hash, base + 5) < cone.hangChance()));
+        return Optional.of(new Drawn(surfaceShape(rider), RavineCells.unit(hash, base + 5) < cone.hangChance()));
     }
 
     private static double lerp(double t, double from, double to) {
         return from + t * (to - from);
+    }
+
+    private double surfaceDraw(double unit) {
+        double bias = cone.rim().map(rim -> rim.collar().surfaceSizeBias()).orElse(0F);
+        return bias == 0 ? unit : 1 - Math.pow(1 - unit, 1 + 3 * bias);
+    }
+
+    private Disc surfaceShape(Disc disc) {
+        if (!exposedAtEntrance(disc)) {
+            return disc;
+        }
+        double bowl = Math.min(disc.bowl(), cone.rim().orElseThrow().collar().surfaceBowlDepth());
+        return new Disc(disc.x(), disc.z(), disc.floor(), disc.radius(), disc.height(), bowl, disc.support());
+    }
+
+    private boolean exposedAtEntrance(Disc disc) {
+        if (cone.rim().isEmpty()) {
+            return false;
+        }
+        // Include ordinary upper platforms whose dome opens through the bowl, not just the added concentric arcs.
+        for (int sample = 0; sample < 9; sample++) {
+            double share = sample == 0 ? 0 : 0.7;
+            double angle = (sample - 1) * Math.PI / 4;
+            double x = disc.x() + share * disc.radius() * Math.cos(angle);
+            double z = disc.z() + share * disc.radius() * Math.sin(angle);
+            double roof = disc.floor() + disc.height() * Math.sqrt(1 - share * share);
+            if (roof > ConeShape.entranceSurface(settings, cone, bounds, cell, x, z) + 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isSurface(Disc disc) {
+        return surfaceDiscs.contains(disc);
+    }
+
+    @Override
+    public boolean biomeContains(Disc disc, DiscShape shape, double x, double y, double z, double margin) {
+        if (!disc.biomeContains(shape, x, y, z, margin)) {
+            return false;
+        }
+        return !isSurface(disc) || ConeShape.entranceSurface(settings, cone, bounds, cell, x, z)
+                <= disc.topAt(Math.hypot(x - disc.x(), z - disc.z())) + margin;
     }
 
     @Override

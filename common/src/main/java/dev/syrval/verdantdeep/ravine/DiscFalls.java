@@ -17,9 +17,10 @@ import net.minecraft.util.InclusiveRange;
 /**
  * The falls of one hole (see {@link FallSettings}), found once for its cell and then only read.
  *
- * <p>A fall starts where a disc's own stream or pond comes up against the bank inside its rim. Still water is led on from there
- * through the bank, at the same level, to the platform's last column, the lip, which the game runs when the chunk comes
- * alive. Where it lands on a lower disc it is given a pool, and from the pool it may be led on to that disc's rim and over
+ * <p>A fall starts where a disc's own stream or pond comes up against the bank inside its rim. Surface gardens may instead
+ * start with a pool on their open inner half and a channel led inward across the platform. Still water is led on from there
+ * through the bank, at the same level, to the platform's last column, the lip. Its validated drop is generated as falling
+ * water, and the game ticks both the drop and its source lip when their chunks come alive. Where it lands on a lower disc it is given a pool, and from the pool it may be led on to that disc's rim and over
  * again. A fall is only made where it comes down on a disc's top with room for a pool, or on the hole's floor: never on a
  * ruin, a root, a stem or the wall. A disc whose theme has lava for water starts none and takes none, nor a spring.
  *
@@ -28,7 +29,7 @@ import net.minecraft.util.InclusiveRange;
  * water is cut down to it, by no more than leaves that block.
  */
 final class DiscFalls {
-    static final DiscFalls NONE = new DiscFalls(List.of(), List.of(), List.of());
+    static final DiscFalls NONE = new DiscFalls(List.of(), List.of(), List.of(), List.of());
     // Level ground kept round a fall's water, for a bank to stand on, and clear of what a disc grows.
     static final double CLEAR = 2.5;
     // Round the column a fall comes down a disc grows nothing this far out, so that no crown is spread under the water.
@@ -80,6 +81,9 @@ final class DiscFalls {
      */
     record Fall(int from, int x, int z, int level, int width, int drop, OptionalInt onto, int step) {}
 
+    /** A column of falling water, from its top block down to its last open block above the receiver. */
+    record Flow(int x, int z, int top, int bottom) {}
+
     /** A place in the world. */
     record Place(int x, int y, int z) {}
 
@@ -96,6 +100,7 @@ final class DiscFalls {
     private final List<Column> columns;
     private final List<Fall> falls;
     private final List<Spring> springs;
+    private final Map<Long, List<Flow>> flowsByChunk = new HashMap<>();
     private final Map<Long, List<Spring>> springsByChunk = new HashMap<>();
     private final Map<Long, List<Column>> byChunk = new HashMap<>();
     private final Set<Key> held = new HashSet<>();
@@ -103,10 +108,13 @@ final class DiscFalls {
     private final Map<Long, List<Integer>> near = new HashMap<>();
     private final Map<Integer, List<DiscGround.Flat>> clear = new HashMap<>();
 
-    private DiscFalls(List<Column> columns, List<Fall> falls, List<Spring> springs) {
+    private DiscFalls(List<Column> columns, List<Fall> falls, List<Spring> springs, List<Flow> flows) {
         this.columns = List.copyOf(columns);
         this.falls = List.copyOf(falls);
         this.springs = List.copyOf(springs);
+        for (Flow flow : flows) {
+            flowsByChunk.computeIfAbsent(chunkOf(flow.x(), flow.z()), chunk -> new ArrayList<>()).add(flow);
+        }
         for (Spring spring : this.springs) {
             Place first = spring.tries().getFirst();
             springsByChunk.computeIfAbsent(chunkOf(first.x(), first.z()), chunk -> new ArrayList<>()).add(spring);
@@ -149,7 +157,7 @@ final class DiscFalls {
         var grower = new Grower(settings, settings.cone().get(), settings.falls().get(), bounds, cell, layout, themes, traits, ruins, roots);
         grower.grow();
         grower.spring();
-        return new DiscFalls(List.copyOf(grower.taken.values()), grower.grown, grower.sprung);
+        return new DiscFalls(List.copyOf(grower.taken.values()), grower.grown, grower.sprung, grower.flows);
     }
 
     List<Fall> falls() {
@@ -172,6 +180,11 @@ final class DiscFalls {
     /** Calls {@code sink} with each column of a fall's water in the chunk whose lowest corner is {@code (minX, minZ)}. */
     void forEachColumn(int minX, int minZ, Consumer<Column> sink) {
         byChunk.getOrDefault(chunkOf(minX, minZ), List.of()).forEach(sink);
+    }
+
+    /** Calls {@code sink} for each falling column in this chunk. */
+    void forEachFlow(int minX, int minZ, Consumer<Flow> sink) {
+        flowsByChunk.getOrDefault(chunkOf(minX, minZ), List.of()).forEach(sink);
     }
 
     /** Whether a column of a disc is a fall's water, which then takes the place of any the disc's own theme would put there. */
@@ -224,10 +237,11 @@ final class DiscFalls {
         private final Map<Key, Column> taken = new LinkedHashMap<>();
         private final List<Fall> grown = new ArrayList<>();
         private final List<Spring> sprung = new ArrayList<>();
+        private final List<Flow> flows = new ArrayList<>();
         private final int[] startedOn;
 
-        /** A place where a disc's own water meets its bank, and the way straight out from the disc's middle through it. */
-        private record Start(int id, int disc, int x, int z, double angle) {}
+        /** A channel's first column and direction, with a source pool when it feeds a surface garden's inward stream. */
+        private record Start(int id, int disc, int x, int z, double angle, boolean fed) {}
 
         /** What a fall comes down on: the top of a disc at a height, or the floor. */
         private record Landing(OptionalInt onto, int y) {}
@@ -262,12 +276,24 @@ final class DiscFalls {
 
         void grow() {
             int wanted = RootRoutes.countFor(falls.count(), RavineCells.unit(cell.hash(), COUNT_DRAW));
-            List<Start> order = DiscRuinSites.inOrder(
-                    starts().stream().filter(start -> weightOf(start) > 0).toList(), this::weightOf, start -> RavineCells.unit(cell.hash(), ORDER_DRAWS + start.id()));
+            List<Start> starts = starts();
+            List<Start> surface = ordered(surfaceStarts(starts.size()));
+            // Keep room for the deeper hole's falls while giving the gardens deliberate streams of their own. A cascade
+            // is tried before a long fall, so an angled outlet can catch a shelf when the straight inward one misses it.
+            int gardens = (wanted + 1) / 2;
+            int started = start(surface, gardens, true);
+            started += start(surface, gardens - started, false);
+            int left = wanted - started;
+            List<Start> order = ordered(starts);
             // Most places a fall could start have nothing under them but the floor. Left to the draw alone a hole would have
-            // few pools and fewer cascades, so half its falls, rounded up, are first looked for among those that land on a disc.
-            int started = start(order, (wanted + 1) / 2, true);
-            start(order, wanted - started, false);
+            // few pools and fewer cascades, so half the remaining falls are first looked for among those that land on a disc.
+            int ontoDiscs = start(order, (left + 1) / 2, true);
+            start(order, left - ontoDiscs, false);
+        }
+
+        private List<Start> ordered(List<Start> starts) {
+            return DiscRuinSites.inOrder(
+                    starts.stream().filter(start -> weightOf(start) > 0).toList(), this::weightOf, start -> RavineCells.unit(cell.hash(), ORDER_DRAWS + start.id()));
         }
 
         /** Finds the hole's springs, on discs taken in an order drawn for them. Falls come first, and a spring keeps out of their water. */
@@ -370,26 +396,119 @@ final class DiscFalls {
                     continue;
                 }
                 Disc disc = discs.get(i);
+                boolean surface = layout.isSurface(disc);
                 double ring = disc.radius() - water.get().bank() - 0.5;
                 int around = Math.max(8, (int) (2 * Math.PI * ring / BETWEEN_STARTS));
                 for (int step = 0; step < around; step++) {
                     double angle = 2 * Math.PI * step / around;
+                    if (surface && Math.cos(angle) * (cell.centreX() - disc.x())
+                            + Math.sin(angle) * (cell.centreZ() - disc.z()) <= 0) {
+                        continue;
+                    }
                     int x = (int) Math.round(disc.x() + ring * Math.cos(angle));
                     int z = (int) Math.round(disc.z() + ring * Math.sin(angle));
                     if (water.get().depthAt(disc, cell.hash(), i, x, z) > 0) {
-                        found.add(new Start(found.size(), i, x, z, angle));
+                        found.add(new Start(found.size(), i, x, z, angle, false));
                     }
                 }
             }
             return found;
         }
 
+        private List<Start> surfaceStarts(int firstId) {
+            var found = new ArrayList<Start>();
+            for (int i = 0; i < discs.size(); i++) {
+                Disc disc = discs.get(i);
+                if (!layout.isSurface(disc) || themes.get(i).filter(theme -> !theme.holdsLava()).isEmpty()) {
+                    continue;
+                }
+                double inward = Math.atan2(cell.centreZ() - disc.z(), cell.centreX() - disc.x());
+                // The back of an open shelf meets the bowl's slope. A source there needs a carved dome to expose it;
+                // these alternatives keep the feeder on the open part and also avoid a cupped platform's high shoulder.
+                for (double share : new double[] {0, 0.25, 0.5}) {
+                    int x = (int) Math.round(disc.x() + share * disc.radius() * Math.cos(inward));
+                    int z = (int) Math.round(disc.z() + share * disc.radius() * Math.sin(inward));
+                    for (double angle : surfaceAngles(i, x, z)) {
+                        found.add(new Start(firstId + found.size(), i, x, z, angle, true));
+                    }
+                }
+            }
+            return found;
+        }
+
+        /** Directions into the safe interior of a receiving shelf, followed by the ordinary inward fan. */
+        private List<Double> surfaceAngles(int from, double x, double z) {
+            Disc disc = discs.get(from);
+            var angles = new ArrayList<Double>();
+            for (int i = 0; i < discs.size(); i++) {
+                Disc lower = discs.get(i);
+                if (!layout.isSurface(lower) || disc.floor() - lower.floor() <= falls.minDrop()
+                        || themes.get(i).filter(theme -> !theme.holdsLava()).isEmpty()) {
+                    continue;
+                }
+                double angle = Math.atan2(lower.z() - z, lower.x() - x);
+                double ux = Math.cos(angle);
+                double uz = Math.sin(angle);
+                if (ux * (cell.centreX() - x) + uz * (cell.centreZ() - z) <= 0) {
+                    continue;
+                }
+                double offsetX = x - disc.x();
+                double offsetZ = z - disc.z();
+                double along = offsetX * ux + offsetZ * uz;
+                double toLip = -along + Math.sqrt(Math.max(0,
+                        along * along + disc.radius() * disc.radius() - offsetX * offsetX - offsetZ * offsetZ));
+                double room = themes.get(i).flatMap(DiscTheme::water).map(DiscWater::bank).orElse(BANK)
+                        + falls.pool().radius() + 1;
+                // Landing at an edge cannot hold a pool. Coarse fan angles often miss the usable centre of a receiver.
+                if (Math.hypot(x + (toLip + 1) * ux - lower.x(), z + (toLip + 1) * uz - lower.z()) <= lower.radius() - room) {
+                    angles.add(angle);
+                }
+            }
+            double inward = Math.atan2(cell.centreZ() - z, cell.centreX() - x);
+            for (double turn : TURNS) {
+                angles.add(inward + turn);
+            }
+            return angles;
+        }
+
         private boolean start(Start start, boolean ontoADiscOnly) {
             Disc disc = discs.get(start.disc());
-            int level = disc.topBlockAt(fromAxis(disc, start.x(), start.z()));
             int width = widthFor(start, disc);
-            return run(start.disc(), start.x(), start.z(), start.angle(), level, width, 0, ontoADiscOnly)
-                    || width > falls.width() && run(start.disc(), start.x(), start.z(), start.angle(), level, falls.width(), 0, ontoADiscOnly);
+            return start(start, width, ontoADiscOnly)
+                    || width > falls.width() && start(start, falls.width(), ontoADiscOnly);
+        }
+
+        private boolean start(Start start, int width, boolean ontoADiscOnly) {
+            Disc disc = discs.get(start.disc());
+            if (!start.fed()) {
+                int level = disc.topBlockAt(fromAxis(disc, start.x(), start.z()));
+                return run(start.disc(), start.x(), start.z(), start.angle(), level, width, 0, ontoADiscOnly);
+            }
+            Optional<List<Column>> source = pool(start.disc(), start.x(), start.z(), width, false);
+            if (source.isEmpty()) {
+                return false;
+            }
+            int level = source.get().getFirst().level();
+            if (source.get().stream().anyMatch(column -> {
+                Column held = taken.get(new Key(column.disc(), column.x(), column.z()));
+                return held != null && held.level() != level;
+            })) {
+                return false;
+            }
+            // The channel must see the pool's water beside it rather than the theme water that pool replaces. A failed
+            // outlet leaves no isolated pool behind and never removes water an earlier fall already held.
+            var added = new ArrayList<Key>();
+            for (Column column : source.get()) {
+                var key = new Key(column.disc(), column.x(), column.z());
+                if (taken.putIfAbsent(key, column) == null) {
+                    added.add(key);
+                }
+            }
+            boolean made = run(start.disc(), start.x(), start.z(), start.angle(), level, width, 0, ontoADiscOnly);
+            if (!made) {
+                added.forEach(taken::remove);
+            }
+            return made;
         }
 
         private int widthFor(Start start, Disc disc) {
@@ -440,6 +559,9 @@ final class DiscFalls {
             }
             keep(channel.get());
             keep(pool);
+            for (int[] drop : drops) {
+                flows.add(new Flow(drop[0], drop[1], level, landing.get().y() + 1));
+            }
             grown.add(new Fall(i, x, z, level, width, level - landing.get().y() - 1, landing.get().onto(), step));
             if (!pool.isEmpty() && step + 1 < falls.maxSteps() && RavineCells.unit(cell.hash(), CHAIN_DRAWS + grown.size()) < falls.chain()) {
                 goOn(landing.get().onto().getAsInt(), x, z, pool.getFirst().level(), width, step + 1);
@@ -451,6 +573,13 @@ final class DiscFalls {
         // of the hole's middle and in the wall on the other, so that is the side to make for.
         private void goOn(int i, int poolX, int poolZ, int level, int width, int step) {
             double inward = Math.atan2(cell.centreZ() - poolZ, cell.centreX() - poolX);
+            if (layout.isSurface(discs.get(i))) {
+                for (double angle : surfaceAngles(i, poolX, poolZ)) {
+                    if (run(i, poolX, poolZ, angle, level, width, step, true)) {
+                        return;
+                    }
+                }
+            }
             for (double turn : TURNS) {
                 if (run(i, poolX, poolZ, inward + turn, level, width, step, false)) {
                     return;

@@ -64,7 +64,10 @@ final class RootLayout {
         if (settings.roots().isEmpty() || settings.cone().isEmpty()) {
             return NONE;
         }
-        var space = new RootSpace(settings, settings.cone().get(), bounds, cell, layout, new HoleGround(ground, bounds.topY()));
+        // Bowl platforms may climb above the surveyed lip; their links need the actual wall and ground at those heights.
+        int surveyTop = Math.max(bounds.topY(), (int) Math.ceil(layout.discs().stream()
+                .mapToDouble(disc -> disc.floor() + disc.height()).max().orElse(bounds.topY())));
+        var space = new RootSpace(settings, settings.cone().get(), bounds, cell, layout, new HoleGround(ground, surveyTop));
         return new RootLayout(RootRoutes.grow(space, settings.roots().get()));
     }
 

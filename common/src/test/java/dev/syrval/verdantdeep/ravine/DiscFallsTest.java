@@ -145,6 +145,18 @@ class DiscFallsTest {
                 assertTrue(falls.columns().stream().anyMatch(column -> column.disc() == fall.from() && column.lip() && column.level() == fall.level()
                         && Math.hypot(column.x() - fall.x(), column.z() - fall.z()) < 1.5), "no lip beside the column " + fall + " falls down");
                 int landsOn = fall.level() - fall.drop() - 1;
+                var flowing = new ArrayList<DiscFalls.Flow>();
+                DiscBlocks.forEachFallWater(hole.discs(), Math.floorDiv(fall.x(), 16) * 16, Math.floorDiv(fall.z(), 16) * 16, new DiscFallSink() {
+                    @Override
+                    public void accept(int x, int level, int z, int depth, int cut, boolean lip) {}
+
+                    @Override
+                    public void flow(int x, int z, int top, int bottom) {
+                        flowing.add(new DiscFalls.Flow(x, z, top, bottom));
+                    }
+                });
+                assertTrue(flowing.contains(new DiscFalls.Flow(fall.x(), fall.z(), fall.level(), landsOn + 1)),
+                        "the visible drop is emitted from its lip down to its receiver: " + fall);
                 for (Root root : hole.discs().roots().roots()) {
                     for (Root.Knot knot : root.knots()) {
                         assertTrue(knot.y() < landsOn || knot.y() > fall.level() || Math.hypot(knot.x() - fall.x(), knot.z() - fall.z()) >= knot.radius() + 1,

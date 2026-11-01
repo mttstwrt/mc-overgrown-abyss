@@ -12,6 +12,16 @@ interface DiscLayout {
     /** Every disc, in a fixed order, each with the support it has among the others. */
     List<Disc> discs();
 
+    /** An open bowl shelf: surface themes and water apply, and it does not excavate an underground dome. */
+    default boolean isSurface(Disc disc) {
+        return false;
+    }
+
+    /** The theme's volume; surface layouts can exclude the buried backs of wall-attached shelves. */
+    default boolean biomeContains(Disc disc, DiscShape shape, double x, double y, double z, double margin) {
+        return disc.biomeContains(shape, x, y, z, margin);
+    }
+
     /**
      * The discs that can matter to the carve at a column, in the same order: every disc within the carve's falloff of it, and
      * maybe more. A layout of few discs gives all of them.

@@ -70,17 +70,50 @@ The mod's own hole is now the cone: a single round hole, `base_radius` 150 at th
 136) and narrowing to `top_radius` 45, with free-standing discs in layers at least `layer_spacing` 20 apart around the clear air
 in its middle. Its numbers:
 
-- Where: a hole only opens where the ground all round its mouth stands at least `rim.min_above_sea` 20 blocks over the
-  level's sea level (y=83 where the sea is at 63), so none opens in a plain or on a shore. One low column alone does not
+- Where: a hole only opens where the ground all round its mouth stands at least `rim.min_above_sea` 48 blocks over the
+  level's sea level (y=111 where the sea is at 63), favoring mountains and highlands over low hills and plains. One low column alone does not
   count; two next to each other do.
-- Top: each hole has a lip of its own, `rim.dip` 3 blocks under the ground round its mouth and never above `top`, which is 64
+- Top: each hole has a lip of its own, `rim.dip` 12 blocks under the ground round its mouth and never above `top`, which is 64
   under the level's top (y=255 on vanilla height). `rim.low_share` 0.5 puts the lip under the middle ground: half the mouth's
   edge is lower than the lip and is simply the ground there, with the top layers of discs left out on that side. 0 puts it
   under the lowest ground (a shallower hole, level all round), 1 under the highest (the deepest).
-- Above the lip the hole opens as a bowl (`rim.collar`). The hole's wall runs straight up to the ground on every side, and
-  outside the mouth the ground is removed only above a surface that rises from the mouth's edge on that side, by `height` 34
-  at `width` 30 blocks out and on beyond (`profile` 2 starts it level), uneven by `roughness` 2. So level ground gets a dip
-  about 9 blocks wide, and a slope of one block in one is cut about 12 blocks deep at most, all round.
+- The entrance opens as a bowl (`rim.collar`) starting up to `depth` 48 blocks below the lip. Seeded
+  `bottom_variation` 24 raises that join by 0–24 blocks, so some bowls meet the upper platforms and roots while
+  others leave a short drop to the upper platform layer. The disc layers stay at their original heights. At that depth
+  the approach joins the cone's radius, then rises by `height` 32 at `width` 72 blocks out and on beyond (`profile` 2).
+  Each side's extra uphill height eases in across that width. `roughness` 4 over `roughness_wavelength` 32 adds broad
+  irregularity, fading in from the lower join. Level ground meets the approach roughly 100 blocks outside its lower
+  join; mountain sides meet it at different distances. `weathering` 6 adds broad worn shelves and finer gullies,
+  fading in from the lower join. The existing wall noise also varies the outline.
+  A datapack that omits `depth` keeps the older bowl above the lip. Root wall anchors follow the actual entrance cut.
+- `rim.collar.disc_bands` 4 allows up to four surface tiers, at shared heights `disc_layer_spacing` 20 blocks apart.
+  The lowest is just above the bowl's lower join. Each tier follows the bowl wall at its own height, so it recedes
+  outward as it rises; low sides may hold fewer tiers. `disc_spacing` 40 places overlapping round platforms along
+  the tier, separately from underground `cone.spacing` 56. `disc_gap_share` 0.18 leaves a seeded open wedge shared
+  across the tiers, with slightly staggered neighbors elsewhere. Omitted spacing fields are 0, following the cone's
+  normal horizontal/vertical spacing; omitted gap share is 0.
+  Radial surveys every 8 blocks find the exposed slope. Shelf sizes are bounded by half its radial width and fitted
+  at fixed heights, with their centres 65% of a radius inward from the local wall. Their backs remain buried in that
+  wall; their fronts project into the bowl. Surface shelves carve no domes and have no separate support stems.
+  With no dome to excavate outside the bowl, a buried back may extend into intact terrain beyond the exposed rim;
+  its ground still stays `cone.ceiling_margin` (12) below local natural ground. Eight footprint samples check
+  irregular sides, and all platforms remain within `outer_radius` and the total layout cap of 512. The natural rim
+  should partly hide the entrance biome; full canopy concealment remains a visual check. Omitting `disc_bands`,
+  `bottom_variation` or `weathering` disables that addition for existing datapacks.
+- `rim.collar.surface_themes` explicitly allows `verdant_deep:disc_jungle` and `verdant_deep:disc_mangrove` on
+  surface discs, including ordinary upper discs exposed by the bowl. Selection keeps the allowed themes' weights and
+  limits; there is no fallback to a disallowed biome. Omitted or empty leaves older datapacks unrestricted.
+  `surface_size_bias` 0.8 favors larger discs within the normal radius range (20–64), with local placement bounds
+  still limiting them. Bowl discs no longer have the previous 28-block radius cap or require a buried dome roof;
+  their backs must still attach to retained bowl terrain. `surface_bowl_depth` 0 makes their tops flat, so a feeder
+  channel does not have to cross the lower middle of a cupped top. The cap also applies to exposed ordinary discs.
+  Omitted depth is 16, leaving the normal disc shape unchanged. Surface membership is fixed when the layout is built:
+  these shelves and exposed upper discs use the bowl's air rather than carving dome-shaped pockets. Their biome
+  ownership excludes buried backs. Underground discs retain their domes and their normal theme selection.
+  Omitted size bias is 0.
+  Placement surveys terrain without consulting theme IDs. Future native-biome weighting at the bowl's edges belongs
+  in theme assignment, which already receives the layout and each disc's position; it can select from an expanded
+  surface allow list without changing terrace placement. That weighting and new disc biomes are deferred.
 - Walls: `wall_noise` makes the hole's own wall uneven, from the city floor to the mouth and the bowl's start, so the hole is
   not an exact circle. Each layer moves the wall towards or away from the middle by up to `amplitude` blocks; `wavelength`
   is how far apart its bulges are round the hole (where the hole is of middling width: they are narrower at the mouth and
@@ -131,7 +164,9 @@ in its middle. Its numbers:
   the theme: `"only": {"distance": {"min": 0.55}, "size": {"max": 0.4}}` keeps a theme to small discs far from the centre.
 - `palette`: what the disc is made of. Blocks for the platform's `top` and `underside` (layers counted in from the surface), its
   `body`, and the `stem` (`surface` layers and `core`). Each block is a vanilla block-state provider, so it can be one block, a
-  weighted mix or noise patches. A part left out stays the terrain's own rock.
+  weighted mix or noise patches. A part left out stays the terrain's own rock. The shipped jungle and mangrove
+  platforms use cobblestone and packed-mud bodies, respectively, so original gravel veins cannot remain inside their
+  thin shelves and fall out from under ponds. These materials also resist vanilla stone-replacing ore features.
 - `water`: ponds and streams lying in the platform's top (see `DiscWater`). `ponds` is the share of the top that is pond (0.1 is
   a tenth) and `pond_size` about how far apart ponds are; `stream_width` is how wide a stream is in blocks (0 for none) and
   `stream_spacing` about how far apart streams and their bends are. `depth` (1 or 2, default 2) is how deep the middle of a pond
@@ -470,19 +505,28 @@ the hole.
 `falls` (optional, see `FallSettings`) is water that leaves a disc over its rim. Without the block a hole has none. A hole has
 a number of them, not each disc a chance of one, so they stay something to come upon; and only a cone has them.
 
-- `count` 2 to 4: how many falls a hole starts. Fewer where it has fewer places for one.
+- `count` 3 to 5: how many falls a hole starts. Fewer where it has fewer places for one.
 - Where one starts: where a disc's own stream or pond comes up against the bank inside its rim, on the side of the hole's
-  middle (the rest of a disc's rim is in the wall). So only a theme with `water` starts falls, and a wetter theme more of
-  them; a theme whose `water` is lava starts none. `by_height` (0.5 at the lowest disc, 2 at the highest) makes a start likelier high up; `max_per_disc` 1.
+  middle (the rest of a disc's rim is in the wall). These starts need a theme with `water`, and a wetter theme gives more
+  candidates. Surface gardens also try a source pool at their centre or on the open inward half and a shallow channel toward
+  the chasm. Up to half the start budget, rounded up, is first offered to these feeders; unused places go back to ordinary
+  falls. They need a non-lava theme with a palette deep enough to hold the pool, but no existing theme stream. Surface
+  outlets face inward. Receiver-targeted directions aim inside the lower shelf's bank far enough to hold a pool,
+  before trying the ordinary inward fan. Both feeders and onward cascades try a lower receiving shelf before a direct fall to
+  the floor. A theme whose `water` is lava starts none. `by_height` (0.5 at the lowest disc, 2 at the highest) makes a start
+  likelier high up; `max_per_disc` 1.
 - What one needs: `min_drop` 10 blocks of open air under its lip, and to come down either on the hole's floor or on the top
   of a lower disc where there is room for a pool. Never on a ruin, a root, a stem or the wall, nor on a disc that holds lava. Most places have only the
   floor under them, so half of a hole's falls, rounded up, are first looked for among those that land on a disc.
 - `pool`: `radius` 3, `depth` 2 in its middle and 1 at its edge, inside the disc's bank, on a disc whose palette gives its
   top 3 blocks of material (all of the mod's do; a disc with no theme has no pool, so nothing falls on it).
-- `chain` 0.6: the chance that a fall which landed in a pool goes on, by a channel from the pool towards the hole's middle
+- `chain` 0.85: the chance that a fall which landed in a pool goes on, by a channel from the pool towards the hole's middle
   to that disc's rim and over. `max_steps` 4 is the most falls one after another.
-- `width` 1 is the water at an ordinary lip. `curtain`: with `chance` 0.2 a fall that starts on a disc of `min_radius` 40 or
+- `width` 1 is the water at an ordinary lip. `curtain`: with `chance` 0.4 a fall that starts on a disc of `min_radius` 40 or
   more is `width` 3 to 5 wide instead, with a wider pool.
+- Channels, receiving pools and the validated falling columns are placed during generation. The falling columns use
+  vanilla falling-water states; source lips still tick so flow continues normally after the chunk loads. Placement leaves
+  solid blocks alone rather than cutting a new waterfall through them.
 
 - `springs` (optional): water that comes out of the hole's wall behind a disc. `count` 1 to 2 a hole. One is over a disc
   on its side away from the hole's middle, where the disc's dome is cut into the wall, `height` 3 to 7 blocks over the

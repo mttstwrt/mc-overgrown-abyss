@@ -7,7 +7,8 @@ import java.util.OptionalInt;
  * One disc, in world coordinates with a vertical axis, whatever geometry placed it: the middle of its platform's top is at
  * {@code floor}, {@code radius} is the platform's radius, {@code height} is the dome of clear air above it, {@code bowl} is
  * how far the platform rises from the middle to the rim (a shallow bowl, top and underside alike; 0 is flat), and
- * {@code support} is what holds it up. All volumes are signed distances in blocks, negative inside, infinity where the disc
+ * {@code support} is a wall attachment, a stem or a hanging root. The layout decides whether its dome carves a room.
+ * All volumes are signed distances in blocks, negative inside, infinity where the disc
  * has none.
  *
  * <p>Nothing here knows about ravines or cones. A biome or structure for a disc can be tied to this record and the same
@@ -20,6 +21,9 @@ record Disc(double x, double z, double floor, double radius, double height, doub
      * discs (see {@link Discs#standing}) instead of on every sample.
      */
     sealed interface Support {
+
+        /** A shelf held by the bowl wall, without a stem or hanging root. */
+        record Attached() implements Support {}
 
         /** A stem under the platform, down to {@code bottom}; negative infinity is the floor of the hole. */
         record Standing(double bottom) implements Support {
@@ -139,6 +143,7 @@ record Disc(double x, double z, double floor, double radius, double height, doub
     /** The stem or root, ended where the disc's support says. */
     double supportDistance(DiscShape shape, double px, double py, double pz) {
         return switch (support) {
+            case Support.Attached attached -> Double.POSITIVE_INFINITY;
             case Support.Standing standing -> py < standing.bottom() ? Double.POSITIVE_INFINITY : stemDistance(shape, px, py, pz);
             case Support.Hanging hanging -> rootDistance(shape, hanging, px, py, pz);
         };

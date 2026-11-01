@@ -21,7 +21,7 @@ record CellDiscs(
     static CellDiscs of(RavineSettings settings, RavineBounds bounds, RavineCell cell, SurfaceProbe ground, RuinPieces pieces) {
         DiscLayout layout = DiscLayouts.of(settings, bounds, cell, ground);
         List<DiscTraits> traits = DiscTraits.of(settings, cell, layout.discs());
-        List<Optional<DiscTheme>> themes = DiscThemes.assign(settings, cell, traits);
+        List<Optional<DiscTheme>> themes = DiscThemes.assign(settings, cell, traits, layout);
         RootLayout roots = RootLayout.of(settings, bounds, cell, layout, ground);
         DiscRuinSites.Stood stood = DiscRuinSites.onDiscs(settings, bounds, cell, layout, themes, traits, pieces, roots);
         List<List<DiscGround.Flat>> rounds = DiscGround.roundsOf(layout.discs().size(), stood.all());
@@ -51,7 +51,7 @@ record CellDiscs(
         for (int i = 0; i < discs.size(); i++) {
             Disc disc = discs.get(i);
             if ((owner < 0 || disc.floor() > discs.get(owner).floor())
-                    && themes.get(i).flatMap(DiscTheme::biome).isPresent() && disc.biomeContains(shape, x, y, z, margin)) {
+                    && themes.get(i).flatMap(DiscTheme::biome).isPresent() && layout.biomeContains(disc, shape, x, y, z, margin)) {
                 owner = i;
             }
         }

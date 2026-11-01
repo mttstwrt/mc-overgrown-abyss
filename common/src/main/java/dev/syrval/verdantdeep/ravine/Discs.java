@@ -11,10 +11,13 @@ import java.util.OptionalDouble;
 final class Discs {
     private Discs() {}
 
-    /** Distance to the nearest dome: negative inside, infinity if none is close. */
+    /** Distance to an underground disc's dome; surface shelves use the bowl's open air instead. */
     static double domeDistance(DiscLayout layout, double x, double y, double z) {
         double nearest = Double.POSITIVE_INFINITY;
         for (Disc disc : layout.near(x, z)) {
+            if (layout.isSurface(disc)) {
+                continue;
+            }
             nearest = Math.min(nearest, disc.domeDistance(x, y, z));
         }
         return nearest;

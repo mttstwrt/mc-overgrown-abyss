@@ -76,6 +76,13 @@ class DiscThemeTest {
     /** The mod's own hole with one theme on every disc, which grows what is given and nothing else. */
     static RavineSettings growing(DiscTheme.Wildness wildness, DiscTheme.Growth... growth) throws Exception {
         RavineSettings base = shipped();
+        // This fixture replaces the biome themes with one synthetic growth-only theme, so its surface pool is unrestricted.
+        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, base).getOrThrow().getAsJsonObject();
+        var collar = json.getAsJsonObject("cone").getAsJsonObject("rim").getAsJsonObject("collar");
+        collar.remove("surface_themes");
+        // Growth density is measured on one platform, without contributions from overlapping surface terraces.
+        collar.addProperty("disc_bands", 0);
+        base = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
         var theme = new DiscTheme(Optional.empty(), Optional.empty(), 1, EVEN, EVEN, EVEN, DiscTheme.Limits.NONE, DiscPalette.UNPAINTED, Optional.empty(), List.of(growth), wildness, DiscRelief.FLAT, Optional.empty(), Optional.empty(), Optional.empty());
         return new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
@@ -205,18 +212,25 @@ class DiscThemeTest {
             List<Disc> all = cellDiscs.layout().discs();
             for (int i = 0; i < all.size(); i++) {
                 Disc d = all.get(i);
+                if (cellDiscs.layout().isSurface(d)) {
+                    assertTrue(settings.cone().orElseThrow().rim().orElseThrow().collar().surfaceThemes()
+                            .contains(cellDiscs.themes().get(i).orElseThrow().biome().orElseThrow()),
+                            "exposed upper platforms use the surface allow list");
+                }
                 int x = (int) Math.floor(d.x());
                 int y = (int) d.floor() + 2;
                 int z = (int) Math.floor(d.z());
-                // The highest disc whose space holds the point: this one, unless a higher disc's space reaches down here too.
-                Disc highest = d;
+                // The highest theme volume owns the point; the buried back of a surface shelf owns none of it.
+                Disc highest = null;
                 for (Disc other : all) {
-                    if (other.floor() > highest.floor() && other.biomeContains(settings.discs(), x, y, z, 4)) {
+                    if ((highest == null || other.floor() > highest.floor())
+                            && cellDiscs.layout().biomeContains(other, settings.discs(), x, y, z, 4)) {
                         highest = other;
                     }
                 }
                 overridden += highest != d ? 1 : 0;
-                assertEquals(cellDiscs.themes().get(all.indexOf(highest)).orElseThrow().biome(), bound.discBiomeAt(x, y, z), "over the middle of " + d);
+                var expected = highest == null ? Optional.empty() : cellDiscs.themes().get(all.indexOf(highest)).orElseThrow().biome();
+                assertEquals(expected, bound.discBiomeAt(x, y, z), "over the middle of " + d);
                 inDomes++;
             }
             assertEquals(Optional.empty(), bound.discBiomeAt((int) cell.centreX(), VANILLA.floorY() + 2, (int) cell.centreZ()), "the city's floor is no disc's");
@@ -424,7 +438,7 @@ class DiscThemeTest {
                 var found = new ArrayList<DiscPlot>();
                 bound.forEachInheritingDisc(minX, minZ, (what, plot) -> {
                     if (plot.groundAt(x, z).isPresent() && plot.groundAt(x, z).getAsInt() == open
-                            && plot.groundAt((int) (d.x() + d.radius() + 2), z).isEmpty() && plot.groundAt((int) (d.x() - d.radius() - 2), z).isEmpty()
+                            && matchesFootprint(plot, d)
                             && what.equals(inherits.orElse(null))) {
                         found.add(plot);
                     }
@@ -438,10 +452,14 @@ class DiscThemeTest {
                 int ground = plot.groundAt(x, z).getAsInt();
                 boolean ownsItsGround = plot.owns(x, ground, z);
                 boolean higherDiscThere = false;
-                for (Disc other : all) {
-                    higherDiscThere |= other.floor() > d.floor() && other.biomeContains(live.discs(), x, ground, z, 4);
+                for (int j = 0; j < all.size(); j++) {
+                    Disc other = all.get(j);
+                    boolean takesPrecedence = other.floor() > d.floor() || other.floor() == d.floor() && j < i;
+                    higherDiscThere |= takesPrecedence && cellDiscs.layout().biomeContains(other, live.discs(), x, ground, z, 4);
                 }
-                assertEquals(!higherDiscThere, ownsItsGround, "a disc owns the block over its middle unless a higher disc's space holds it: " + d);
+                boolean overItsExposedGround = cellDiscs.layout().biomeContains(d, live.discs(), x, ground, z, 4);
+                assertEquals(overItsExposedGround && !higherDiscThere, ownsItsGround,
+                        "a disc owns its exposed ground unless a higher or earlier same-tier disc holds it: " + d);
                 yieldedToAHigherDisc += higherDiscThere ? 1 : 0;
                 assertTrue(!plot.owns(x, (int) (d.floor() + d.height() + 12), z), "nothing far over its dome is its own");
                 assertTrue(!plot.owns((int) (d.x() + d.radius() + 12), ground, z), "nor far beside it");
@@ -541,6 +559,20 @@ class DiscThemeTest {
     private static double widthRound(DiscTheme.RimFade fade, Disc disc, int index, int step, int steps) {
         double angle = 2 * Math.PI * step / steps;
         return fade.widthAt(77L, index, disc, (int) Math.round(disc.radius() * Math.cos(angle)), (int) Math.round(disc.radius() * Math.sin(angle)));
+    }
+
+    private static boolean matchesFootprint(DiscPlot plot, Disc disc) {
+        // Overlapping terraces can share a centre-column height; identify the whole footprint instead of that height alone.
+        for (int[] step : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+            int insideX = (int) Math.floor(disc.x() + step[0] * (disc.radius() - 2));
+            int insideZ = (int) Math.floor(disc.z() + step[1] * (disc.radius() - 2));
+            int outsideX = (int) Math.floor(disc.x() + step[0] * (disc.radius() + 2));
+            int outsideZ = (int) Math.floor(disc.z() + step[1] * (disc.radius() + 2));
+            if (plot.groundAt(insideX, insideZ).isEmpty() || plot.groundAt(outsideX, outsideZ).isPresent()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Test

@@ -3,6 +3,7 @@ package dev.syrval.verdantdeep.ravine;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.mojang.serialization.JsonOps;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,13 @@ class DiscGroundTest {
     /** The mod's own hole with one theme on every disc. */
     static RavineSettings with(DiscTheme theme) throws Exception {
         RavineSettings base = DiscThemeTest.shipped();
+        // This fixture gives every disc its one test theme, including the largest surface shelf.
+        var json = RavineSettings.MAP_CODEC.codec().encodeStart(JsonOps.INSTANCE, base).getOrThrow().getAsJsonObject();
+        var collar = json.getAsJsonObject("cone").getAsJsonObject("rim").getAsJsonObject("collar");
+        collar.remove("surface_themes");
+        // Ground relief is measured on one disc, without overlapping amphitheatre neighbors covering its footprint.
+        collar.addProperty("disc_bands", 0);
+        base = RavineSettings.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
         return new RavineSettings(base.salt(), base.cellSize(), 1F, base.sizeBias(), VerticalAnchor.absolute(-40), VerticalAnchor.absolute(80),
                 base.cavernRadius(), base.cavernHeight(), base.edgeFalloff(), base.discs(), List.of(theme), base.environment(), base.wallNoise(), base.ravine(), base.cone(), base.dressing());
     }

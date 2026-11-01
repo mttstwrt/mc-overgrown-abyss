@@ -5,7 +5,8 @@ import java.util.OptionalDouble;
 /**
  * Signed distance, in blocks, from a point to the open volume of a cone-shaped hole (see {@link ConeSettings}): negative
  * inside (air), positive outside. The volume is the cone, widest at the floor, the city cavern's dome, and the domes of the
- * discs ({@link ConeDiscLayout}), which cut pockets into the wall. The discs' platforms, stems and roots are separate: they are rock to be
+ * underground discs ({@link ConeDiscLayout}), which cut pockets into the wall. Surface shelves use the open bowl instead
+ * of carving domes. The discs' platforms, stems and roots are separate: they are rock to be
  * added back, which the original terrain cannot always provide, so they have their own distance, {@link #rockDistance}. Rooms
  * are carved first and the rock put back after, as in a ravine, so a dome stays clear except for the stems and platforms of
  * other discs. The cone has no roof over the cavern, so unlike a ravine's the rock is not cut off by the cavern's dome: stems run
@@ -47,6 +48,17 @@ final class ConeShape {
         double radial = cell.distanceToCentre(x, z);
         WallNoise noise = settings.wallNoise();
         double reach = noise.maxDisplacement();
+        if (cone.rim().map(rim -> rim.collar().depth() > 0).orElse(false)) {
+            // The entrance removes some of the old wall. Hanging supports must find the rock actually left behind.
+            double turn = turnOf(cell, x, z);
+            for (double y = bounds.floorY(); y <= bounds.topY(); y++) {
+                double moved = radial - noise.offset(cell.hash(), around(cone), turn, y);
+                if (cutDistance(settings, cone, bounds, cell, radial, moved, x, y, z) > 0) {
+                    return OptionalDouble.of(y);
+                }
+            }
+            return OptionalDouble.empty();
+        }
         if (reach == 0) {
             return heightAt(settings, cone, bounds, radial);
         }
@@ -118,6 +130,24 @@ final class ConeShape {
      * floor and the top: the cone's, or the cavern's where that is wider.
      */
     static double wallRadiusAt(RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, double x, double z, double y) {
+        if (cone.rim().map(rim -> rim.collar().depth() > 0).orElse(false) && y > entranceFloor(cone, bounds, cell)) {
+            double angle = Math.atan2(z - cell.centreZ(), x - cell.centreX());
+            double offset = settings.wallNoise().offset(cell.hash(), around(cone), turnOf(cell, x, z), y);
+            double inside = 0;
+            double outside = cone.outerRadius();
+            // Roots ask for a wall anchor infrequently; invert the same entrance surface rather than anchoring them in air.
+            for (int i = 0; i < 14; i++) {
+                double radius = (inside + outside) / 2;
+                double distance = cutDistance(settings, cone, bounds, cell, radius, radius - offset,
+                        cell.centreX() + radius * Math.cos(angle), y, cell.centreZ() + radius * Math.sin(angle));
+                if (distance < 0) {
+                    inside = radius;
+                } else {
+                    outside = radius;
+                }
+            }
+            return (inside + outside) / 2;
+        }
         double t = (y - bounds.floorY()) / settings.cavernHeight();
         double cavern = t >= 0 && t < 1 ? settings.cavernRadius() * Math.sqrt(1 - t * t) : 0;
         double even = Math.max(radiusAt(settings, cone, bounds, y), cavern);
@@ -145,10 +175,21 @@ final class ConeShape {
      */
     private static double cutDistance(
             RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, double radial, double moved, double x, double y, double z) {
-        double hole = y > bounds.topY() && cone.rim().isPresent()
-                ? bowlDistance(cone, cone.rim().get().collar(), bounds, cell, radial, moved, x, y, z)
-                : coneDistance(settings, cone, bounds, moved, y);
+        double hole = coneDistance(settings, cone, bounds, moved, y);
+        if (cone.rim().isPresent() && y > entranceFloor(cone, bounds, cell)) {
+            double bowl = bowlDistance(settings, cone, cone.rim().get().collar(), bounds, cell, radial, moved, x, y, z);
+            hole = Math.min(hole, bowl);
+        }
         return Math.min(hole, RavineShape.cavernDistance(settings, bounds, moved, y));
+    }
+
+    static double entranceFloor(ConeSettings cone, RavineBounds bounds, RavineCell cell) {
+        double depth = cone.rim().map(rim -> {
+            RimSettings.Collar collar = rim.collar();
+            // Some entrances reach below the upper platforms; others leave a short rock drop to that layer.
+            return Math.max(0, collar.depth() - collar.bottomVariation() * RavineCells.unit(cell.hash(), COLLAR_HASH + 1));
+        }).orElse(0.0);
+        return Math.max(bounds.floorY() + cone.ceilingMargin(), bounds.topY() - depth);
     }
 
     private static double domes(
@@ -188,13 +229,15 @@ final class ConeShape {
     }
 
     /**
-     * The bowl above the top: open inside the mouth, and outside it above the collar's surface, which rises from the mouth's
-     * edge on that side. The surface has no upper end, so however high the ground stands it is cut back to a slope and never
-     * to a wall. Dividing by the slope's length makes this the distance to the surface rather than the vertical gap.
+     * The entrance bowl: open inside its join with the cone, and outside it above the collar's surface, which rises from
+     * the configured depth below the lip towards the ground on that side. The surface has no upper end, so however high
+     * the ground stands it is cut back to a slope and never to a wall. Dividing by the slope's length makes this the distance
+     * to the surface rather than the vertical gap.
      */
     private static double bowlDistance(
-            ConeSettings cone, RimSettings.Collar collar, RavineBounds bounds, RavineCell cell, double radial, double moved, double x, double y, double z) {
-        double out = moved - cone.topRadius();
+            RavineSettings settings, ConeSettings cone, RimSettings.Collar collar, RavineBounds bounds, RavineCell cell, double radial, double moved, double x, double y, double z) {
+        double bottom = entranceFloor(cone, bounds, cell);
+        double out = moved - radiusAt(settings, cone, bounds, bottom);
         if (out <= 0) {
             return out;
         }
@@ -202,12 +245,44 @@ final class ConeShape {
         if (radial > cone.outerRadius()) {
             return Double.POSITIVE_INFINITY;
         }
-        double rough = RavineCells.smoothOver(cell.hash(), COLLAR_HASH, (int) Math.floor(x), (int) Math.floor(z), collar.roughnessWavelength()) * 2 - 1;
-        double surface = bounds.edgeAt(x - cell.centreX(), z - cell.centreZ()) + collar.riseAt(out) + rough * collar.roughness();
-        double slope = collar.slopeAt(out);
+        double uphill = bounds.edgeAt(x - cell.centreX(), z - cell.centreZ()) - bounds.topY();
+        double t = Math.clamp(out / collar.width(), 0, 1);
+        double surface = entranceSurface(collar, bounds, cell, bottom, out, x, z);
+        double slope = collar.slopeAt(out) + uphill * 6 * t * (1 - t) / collar.width();
         double under = (surface - y) / Math.sqrt(1 + slope * slope);
         // Where the edge stands above the top, the mouth beside this rock is open too, and may be the nearer air.
         return under > 0 ? Math.min(under, out) : under;
+    }
+
+    /** The same bowl surface used by carving and by terrain-following disc placement. */
+    static double entranceSurface(RavineSettings settings, ConeSettings cone, RavineBounds bounds, RavineCell cell, double x, double z) {
+        RimSettings.Collar collar = cone.rim().orElseThrow().collar();
+        double bottom = entranceFloor(cone, bounds, cell);
+        double out = Math.max(0, cell.distanceToCentre(x, z) - radiusAt(settings, cone, bounds, bottom));
+        return entranceSurface(collar, bounds, cell, bottom, out, x, z);
+    }
+
+    private static double entranceSurface(RimSettings.Collar collar, RavineBounds bounds, RavineCell cell,
+                                          double bottom, double out, double x, double z) {
+        double rough = RavineCells.smoothOver(cell.hash(), COLLAR_HASH, (int) Math.floor(x), (int) Math.floor(z), collar.roughnessWavelength()) * 2 - 1;
+        double uphill = bounds.edgeAt(x - cell.centreX(), z - cell.centreZ()) - bounds.topY();
+        double t = Math.clamp(out / collar.width(), 0, 1);
+        // Starting at the uphill edge's height leaves a vertical cliff beside the mouth. Ease that height in across the
+        // collar instead, with a level tangent at both ends so the approach joins the cone without a step.
+        double blend = t * t * (3 - 2 * t);
+        // Fade small roughness in from the join so it cannot cut a step into the cone below the entrance.
+        double roughBlend = collar.depth() == 0 ? 1 : blend;
+        double surface = bottom + uphill * blend + collar.riseAt(out) + rough * collar.roughness() * roughBlend;
+        if (collar.weathering() == 0) {
+            return surface;
+        }
+        // Broad worn shelves and finer gullies share the lower join's fade, so erosion cannot open a seam below it.
+        double broad = RavineCells.smoothOver(cell.hash(), COLLAR_HASH + 2, (int) Math.floor(x), (int) Math.floor(z),
+                collar.roughnessWavelength() * 2) * 2 - 1;
+        double fine = RavineCells.smoothOver(cell.hash(), COLLAR_HASH + 3, (int) Math.floor(x), (int) Math.floor(z),
+                Math.max(4, collar.roughnessWavelength() / 3)) * 2 - 1;
+        double weathered = collar.weathering() * (broad + 0.35 * fine) * blend;
+        return surface + weathered;
     }
 
     // Dividing by the slope's length makes this the distance to the wall's surface rather than just the horizontal gap.
